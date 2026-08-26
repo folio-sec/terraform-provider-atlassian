@@ -9,22 +9,34 @@ func TestNew(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		siteURL  string
-		email    string
-		apiToken string
-		wantErr  bool
+		config  Config
+		wantErr bool
 	}{
-		"valid":            {siteURL: "https://example.atlassian.net/", email: "admin@example.com", apiToken: "token"},
-		"missing site URL": {email: "admin@example.com", apiToken: "token", wantErr: true},
-		"non HTTPS URL":    {siteURL: "http://example.atlassian.net", email: "admin@example.com", apiToken: "token", wantErr: true},
-		"missing email":    {siteURL: "https://example.atlassian.net", apiToken: "token", wantErr: true},
-		"missing token":    {siteURL: "https://example.atlassian.net", email: "admin@example.com", wantErr: true},
+		"site credentials": {
+			config: Config{SiteURL: "https://example.atlassian.net/", Email: "admin@example.com", APIToken: "token"},
+		},
+		"Admin API key": {
+			config: Config{AdminAPIKey: "admin-key"},
+		},
+		"both credential sets": {
+			config: Config{SiteURL: "https://example.atlassian.net", Email: "admin@example.com", APIToken: "token", AdminAPIKey: "admin-key"},
+		},
+		"missing all credentials": {wantErr: true},
+		"partial site credentials": {
+			config:  Config{SiteURL: "https://example.atlassian.net", Email: "admin@example.com"},
+			wantErr: true,
+		},
+		"non HTTPS site URL": {
+			config:  Config{SiteURL: "http://example.atlassian.net", Email: "admin@example.com", APIToken: "token"},
+			wantErr: true,
+		},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			got, err := New(tt.siteURL, tt.email, tt.apiToken, &http.Client{})
+			tt.config.HTTPClient = &http.Client{}
+			got, err := New(tt.config)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("New() returned no error")
@@ -34,8 +46,11 @@ func TestNew(t *testing.T) {
 			if err != nil {
 				t.Fatalf("New() error = %v", err)
 			}
-			if got.BaseURL.String() != "https://example.atlassian.net" {
-				t.Fatalf("BaseURL = %q", got.BaseURL.String())
+			if tt.config.SiteURL != "" && got.Site == nil {
+				t.Fatal("Site is nil")
+			}
+			if tt.config.AdminAPIKey != "" && (got.Admin == nil || got.Organization == nil) {
+				t.Fatal("Admin API services are nil")
 			}
 		})
 	}

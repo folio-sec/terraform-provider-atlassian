@@ -1,0 +1,21 @@
+overlay: 1.0.0
+info:
+  title: Atlassian Organization API corrections
+  version: 1.0.0
+actions:
+  # The upstream path uses {userId}, but references accountIdParam. OpenAPI
+  # requires the path template and parameter name to match, so generation fails
+  # without this correction. Keep the downloaded specification untouched so an
+  # upstream update remains easy to review.
+  - target: "$['paths']['/v2/orgs/{orgId}/directories/{directoryId}/users/{userId}']['get']['parameters'][2]['$ref']"
+    description: Reference a path parameter whose name matches {userId}.
+    update: "#/components/parameters/userIdParam"
+  - target: "$['components']['parameters']"
+    description: Add the matching userId path parameter.
+    update:
+      userIdParam:
+        name: userId
+        in: path
+        required: true
+        schema:
+          type: string

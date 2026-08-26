@@ -7,7 +7,5 @@ terraform {
 }
 
 provider "atlassian" {
-  site_url = "https://example.atlassian.net"
-  email    = "admin@example.com"
-  # Set ATLASSIAN_API_TOKEN instead of committing a token here.
+  # Set ATLASSIAN_ADMIN_API_KEY instead of committing an organization API key.
 }

@@ -27,9 +27,21 @@ func TestProviderSchema(t *testing.T) {
 	var resp provider.SchemaResponse
 	New("test")().Schema(context.Background(), provider.SchemaRequest{}, &resp)
 
-	for _, name := range []string{"site_url", "email", "api_token"} {
+	for _, name := range []string{"admin_api_key", "site_url", "email", "api_token"} {
 		if _, ok := resp.Schema.Attributes[name]; !ok {
 			t.Errorf("schema attribute %q is missing", name)
 		}
+	}
+}
+
+func TestProviderRegistersOrganizationTypes(t *testing.T) {
+	t.Parallel()
+
+	p := New("test")()
+	if got := len(p.DataSources(context.Background())); got != 1 {
+		t.Fatalf("DataSources() length = %d, want 1", got)
+	}
+	if got := len(p.Resources(context.Background())); got != 1 {
+		t.Fatalf("Resources() length = %d, want 1", got)
 	}
 }

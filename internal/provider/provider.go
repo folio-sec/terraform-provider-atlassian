@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
+	organizationservice "github.com/folio-sec/terraform-provider-atlassian/internal/services/admin/organization"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -22,9 +23,10 @@ type AtlassianProvider struct {
 }
 
 type providerModel struct {
-	SiteURL  types.String `tfsdk:"site_url"`
-	Email    types.String `tfsdk:"email"`
-	APIToken types.String `tfsdk:"api_token"`
+	SiteURL     types.String `tfsdk:"site_url"`
+	Email       types.String `tfsdk:"email"`
+	APIToken    types.String `tfsdk:"api_token"`
+	AdminAPIKey types.String `tfsdk:"admin_api_key"`
 }
 
 func New(version string) func() provider.Provider {
@@ -42,6 +44,11 @@ func (p *AtlassianProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 	resp.Schema = schema.Schema{
 		Description: "Manage Atlassian Cloud resources.",
 		Attributes: map[string]schema.Attribute{
+			"admin_api_key": schema.StringAttribute{
+				Description: "Atlassian organization API key used for Cloud Admin APIs. May also be set with ATLASSIAN_ADMIN_API_KEY.",
+				Optional:    true,
+				Sensitive:   true,
+			},
 			"site_url": schema.StringAttribute{
 				Description: "Atlassian Cloud site URL. May also be set with ATLASSIAN_SITE_URL.",
 				Optional:    true,
@@ -65,15 +72,21 @@ func (p *AtlassianProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	if config.SiteURL.IsUnknown() || config.Email.IsUnknown() || config.APIToken.IsUnknown() {
+	if config.SiteURL.IsUnknown() || config.Email.IsUnknown() || config.APIToken.IsUnknown() || config.AdminAPIKey.IsUnknown() {
 		return
 	}
 
 	siteURL := configuredValue(config.SiteURL, "ATLASSIAN_SITE_URL")
 	email := configuredValue(config.Email, "ATLASSIAN_EMAIL")
 	apiToken := configuredValue(config.APIToken, "ATLASSIAN_API_TOKEN")
+	adminAPIKey := configuredValue(config.AdminAPIKey, "ATLASSIAN_ADMIN_API_KEY")
 
-	atlassianClient, err := client.New(siteURL, email, apiToken, nil)
+	atlassianClient, err := client.New(client.Config{
+		SiteURL:     siteURL,
+		Email:       email,
+		APIToken:    apiToken,
+		AdminAPIKey: adminAPIKey,
+	})
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to configure Atlassian client", fmt.Sprintf("Invalid provider configuration: %s", err))
 		return
@@ -84,11 +97,15 @@ func (p *AtlassianProvider) Configure(ctx context.Context, req provider.Configur
 }
 
 func (p *AtlassianProvider) Resources(_ context.Context) []func() resource.Resource {
-	return nil
+	return []func() resource.Resource{
+		organizationservice.NewUserRoleAssignmentResource,
+	}
 }
 
 func (p *AtlassianProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return nil
+	return []func() datasource.DataSource{
+		organizationservice.NewUserDataSource,
+	}
 }
 
 func configuredValue(value types.String, environmentVariable string) string {
