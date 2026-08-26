@@ -1,0 +1,23 @@
+{
+  extends: [
+    "config:best-practices",
+    "github>aquaproj/aqua-renovate-config#2.10.0",
+    "schedule:earlyMondays",
+    "group:allNonMajor",
+  ],
+  automerge: true,
+  platformAutomerge: true,
+  dependencyDashboard: false,
+  labels: ["dependencies"],
+  postUpdateOptions: ["gomodTidy", "gomodUpdateImportPaths"],
+  prHourlyLimit: 0,
+  prConcurrentLimit: 5,
+  lockFileMaintenance: {
+    enabled: true,
+    schedule: ["before 3am on sunday"],
+  },
+  vulnerabilityAlerts: {
+    enabled: true,
+    labels: ["security"],
+  },
+}

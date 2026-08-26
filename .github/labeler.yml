@@ -1,0 +1,15 @@
+provider:
+  - changed-files:
+      - any-glob-to-any-file: internal/provider/**/*
+client:
+  - changed-files:
+      - any-glob-to-any-file: internal/client/**/*
+ci:
+  - changed-files:
+      - any-glob-to-any-file: .github/**/*
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - docs/**/*
+          - examples/**/*
+          - templates/**/*

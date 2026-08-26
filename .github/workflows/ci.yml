@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci.yml"
+      - "**.go"
+      - go.mod
+      - go.sum
+      - Makefile
+      - "templates/**"
+      - "examples/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go mod download
+      - run: make build
+      - run: make test TESTARGS="-race -cover"
+      - run: make fmt
+      - name: Check formatted files
+        run: |
+          git add .
+          git diff --cached --exit-code
+
+  provider-docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: make generate
+      - name: Check generated docs are up to date
+        run: |
+          git add docs examples
+          git diff --cached --exit-code -- docs examples || \
+            (echo "::error::Generated documentation is out of date. Run 'make generate' and commit the changes." && exit 1)
