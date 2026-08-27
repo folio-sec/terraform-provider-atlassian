@@ -22,7 +22,7 @@ resource &#34;atlassian_organization_user_role_assignment&#34; &#34;jira&#34; {
   organization_id = &#34;your-organization-id&#34;
   directory_id    = &#34;your-directory-id&#34;
   account_id      = one(data.atlassian_organization_user.example.users).account_id
-  resource        = &#34;ari&#58;cloud&#58;jira::site/your-site-id&#34;
+  resource        = &#34;ari:<span>cloud</span>:jira::site/your-site-id&#34;
   role            = &#34;atlassian/user&#34;
 }
 </code></pre></div>
@@ -35,7 +35,7 @@ resource &#34;atlassian_organization_user_role_assignment&#34; &#34;jira&#34; {
 - `account_id` (String) Atlassian account ID.
 - `directory_id` (String) Directory ID used to read the assignment.
 - `organization_id` (String) Atlassian organization ID used in the Organization API path.
-- `resource` (String) Application resource ARI beginning with <samp>ari&#58;cloud&#58;</samp>, such as <samp>ari&#58;cloud&#58;jira::site/&lt;site-id&gt;</samp>.
+- `resource` (String) Application resource ARI beginning with <samp>ari:<span>cloud</span>:</samp>, such as <samp>ari:<span>cloud</span>:jira::site/&lt;site-id&gt;</samp>.
 - `role` (String) Atlassian application role. Organization-level atlassian/org-admin is not supported by this resource.
 
 ### Read-Only
@@ -55,7 +55,7 @@ In Terraform v1.12.0 and later, the [`import` block](https://developer.hashicorp
     organization_id = &#34;your-organization-id&#34;
     directory_id    = &#34;your-directory-id&#34;
     account_id      = &#34;your-account-id&#34;
-    resource        = &#34;ari&#58;cloud&#58;jira::site/your-site-id&#34;
+    resource        = &#34;ari:<span>cloud</span>:jira::site/your-site-id&#34;
     role            = &#34;atlassian/user&#34;
   }
 }
@@ -76,11 +76,11 @@ In Terraform v1.5.0 and later, the [`import` block](https://developer.hashicorp.
 
 <div><pre><code class="language-terraform">import {
   to = atlassian_organization_user_role_assignment.jira
-  id = &#34;organization-id,directory-id,account-id,ari&#58;cloud&#58;jira::site/site-id,atlassian/user&#34;
+  id = &#34;organization-id,directory-id,account-id,ari:<span>cloud</span>:jira::site/site-id,atlassian/user&#34;
 }
 </code></pre></div>
 
 The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
-<div><pre><code class="language-shell">terraform import atlassian_organization_user_role_assignment.jira &#39;organization-id,directory-id,account-id,ari&#58;cloud&#58;jira::site/site-id,atlassian/user&#39;
+<div><pre><code class="language-shell">terraform import atlassian_organization_user_role_assignment.jira &#39;organization-id,directory-id,account-id,ari:<span>cloud</span>:jira::site/site-id,atlassian/user&#39;
 </code></pre></div>

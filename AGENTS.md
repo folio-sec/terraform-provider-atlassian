@@ -3,6 +3,19 @@
 Keep this file limited to project-specific rules that are not obvious from the
 code. Update it when the same implementation or review mistake recurs.
 
+## Language
+
+- Write commit messages and repository artifacts in English by default. Use
+  another language only when the artifact's intended audience or an external
+  requirement makes it necessary.
+
+## Contribution workflow
+
+- Sign off every commit for Developer Certificate of Origin (DCO) compliance,
+  for example by using `git commit --signoff`.
+- When opening a pull request, follow and complete the repository's pull
+  request template.
+
 ## Architecture
 
 - Separate clients and Terraform services by Atlassian API surface when their
