@@ -26,9 +26,7 @@ upstream specification and opens a pull request when it changes. Local Overlay
 corrections remain separate from the untouched upstream document.
 
 Organization resources use an Atlassian organization API key supplied with
-`admin_api_key` or `ATLASSIAN_ADMIN_API_KEY`. The provider also retains the
-independent `site_url`, `email`, and `api_token` credential set for future Jira
-and Confluence APIs.
+`admin_api_key` or `ATLASSIAN_ADMIN_API_KEY`.
 
 ```hcl
 provider "atlassian" {

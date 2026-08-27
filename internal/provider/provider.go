@@ -23,9 +23,6 @@ type AtlassianProvider struct {
 }
 
 type providerModel struct {
-	SiteURL     types.String `tfsdk:"site_url"`
-	Email       types.String `tfsdk:"email"`
-	APIToken    types.String `tfsdk:"api_token"`
 	AdminAPIKey types.String `tfsdk:"admin_api_key"`
 }
 
@@ -49,19 +46,6 @@ func (p *AtlassianProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 				Optional:    true,
 				Sensitive:   true,
 			},
-			"site_url": schema.StringAttribute{
-				Description: "Atlassian Cloud site URL. May also be set with ATLASSIAN_SITE_URL.",
-				Optional:    true,
-			},
-			"email": schema.StringAttribute{
-				Description: "Email address used for Atlassian API authentication. May also be set with ATLASSIAN_EMAIL.",
-				Optional:    true,
-			},
-			"api_token": schema.StringAttribute{
-				Description: "Atlassian API token. May also be set with ATLASSIAN_API_TOKEN.",
-				Optional:    true,
-				Sensitive:   true,
-			},
 		},
 	}
 }
@@ -72,19 +56,13 @@ func (p *AtlassianProvider) Configure(ctx context.Context, req provider.Configur
 		return
 	}
 
-	if config.SiteURL.IsUnknown() || config.Email.IsUnknown() || config.APIToken.IsUnknown() || config.AdminAPIKey.IsUnknown() {
+	if config.AdminAPIKey.IsUnknown() {
 		return
 	}
 
-	siteURL := configuredValue(config.SiteURL, "ATLASSIAN_SITE_URL")
-	email := configuredValue(config.Email, "ATLASSIAN_EMAIL")
-	apiToken := configuredValue(config.APIToken, "ATLASSIAN_API_TOKEN")
 	adminAPIKey := configuredValue(config.AdminAPIKey, "ATLASSIAN_ADMIN_API_KEY")
 
 	atlassianClient, err := client.New(client.Config{
-		SiteURL:     siteURL,
-		Email:       email,
-		APIToken:    apiToken,
 		AdminAPIKey: adminAPIKey,
 	})
 	if err != nil {
