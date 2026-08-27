@@ -39,10 +39,16 @@ data "atlassian_organization_user" "example" {
   emails           = ["user@example.com"]
 }
 
+data "atlassian_organization_group" "jira_users" {
+  organization_id = "your-organization-id"
+  directory_id    = "your-directory-id"
+  group_names     = ["jira-users"]
+}
+
 resource "atlassian_organization_group_membership" "example" {
   organization_id = "your-organization-id"
   directory_id    = "your-directory-id"
-  group_id        = "your-group-id"
+  group_id        = one(data.atlassian_organization_group.jira_users.groups).group_id
   account_id      = one(data.atlassian_organization_user.example.users).account_id
 }
 

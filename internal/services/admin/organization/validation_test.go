@@ -39,6 +39,29 @@ func TestUserDataSourceSchemaReturnsUsersAsSet(t *testing.T) {
 	}
 }
 
+func TestGroupDataSourceSchemaReturnsGroupsAsSet(t *testing.T) {
+	t.Parallel()
+
+	var response datasource.SchemaResponse
+	NewGroupDataSource().Schema(context.Background(), datasource.SchemaRequest{}, &response)
+	if response.Diagnostics.HasError() {
+		t.Fatalf("Schema() diagnostics = %v", response.Diagnostics)
+	}
+	groups, ok := response.Schema.Attributes["groups"].(datasourceschema.SetNestedAttribute)
+	if !ok {
+		t.Fatalf("groups attribute type = %T, want schema.SetNestedAttribute", response.Schema.Attributes["groups"])
+	}
+	if !groups.Computed {
+		t.Fatal("groups attribute must be computed")
+	}
+	if _, exists := response.Schema.Attributes["sort_by"]; exists {
+		t.Fatal("schema exposes response ordering control sort_by")
+	}
+	if _, exists := response.Schema.Attributes["expand"]; exists {
+		t.Fatal("schema exposes response shaping control expand")
+	}
+}
+
 func TestUserRoleAssignmentIdentitySchema(t *testing.T) {
 	t.Parallel()
 
