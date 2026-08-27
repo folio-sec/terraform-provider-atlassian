@@ -67,6 +67,139 @@ func TestSearchUsersFollowsAllPages(t *testing.T) {
 	}
 }
 
+func TestSearchGroupsFollowsAllPages(t *testing.T) {
+	t.Parallel()
+
+	var calls atomic.Int32
+	handler := func(r *http.Request) *http.Response {
+		if r.URL.Path != "/admin/v2/orgs/org/directories/directory/groups/search" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+		var request map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+		}
+		call := calls.Add(1)
+		if call == 1 {
+			if request["limit"] != float64(100) || request["cursor"] != nil {
+				t.Errorf("first request = %#v", request)
+			}
+			if got := request["groupNames"]; !reflect.DeepEqual(got, []any{"jira-users"}) {
+				t.Errorf("groupNames = %#v", got)
+			}
+			return jsonResponse(r, http.StatusOK, `{"data":[{"id":"group-1","name":"jira-users","managementAccess":{"deletable":false,"modifiable":true,"readable":true}}],"links":{"next":"next-page"}}`)
+		}
+		if request["cursor"] != "next-page" || request["limit"] != float64(100) {
+			t.Errorf("second request = %#v", request)
+		}
+		return jsonResponse(r, http.StatusOK, `{"data":[{"id":"group-2","name":"confluence-users"}],"links":{}}`)
+	}
+
+	service := newTestService(t, handler)
+	groups, err := service.SearchGroups(context.Background(), "org", "directory", SearchGroupsRequest{GroupNames: []string{"jira-users"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := []string{groups[0].ID, groups[1].ID}; !reflect.DeepEqual(got, []string{"group-1", "group-2"}) {
+		t.Fatalf("groups = %#v", got)
+	}
+	if groups[0].ManagementAccess == nil || groups[0].ManagementAccess.Modifiable == nil || !*groups[0].ManagementAccess.Modifiable {
+		t.Fatalf("management access = %#v", groups[0].ManagementAccess)
+	}
+	if groups[1].ManagementAccess != nil {
+		t.Fatalf("management access = %#v, want nil", groups[1].ManagementAccess)
+	}
+	if calls.Load() != 2 {
+		t.Fatalf("calls = %d", calls.Load())
+	}
+}
+
+func TestHasGroupMembershipFiltersByAccountAndGroup(t *testing.T) {
+	t.Parallel()
+
+	handler := func(r *http.Request) *http.Response {
+		var request map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+		}
+		if got := request["accountIds"]; !reflect.DeepEqual(got, []any{"712020:account"}) {
+			t.Errorf("accountIds = %#v", got)
+		}
+		if got := request["groupIds"]; !reflect.DeepEqual(got, []any{"group"}) {
+			t.Errorf("groupIds = %#v", got)
+		}
+		return jsonResponse(r, http.StatusOK, `{"data":[{"accountId":"712020:account"}],"links":{}}`)
+	}
+
+	service := newTestService(t, handler)
+	present, err := service.HasGroupMembership(context.Background(), "org", "directory", "group", "712020:account")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !present {
+		t.Fatal("HasGroupMembership() = false, want true")
+	}
+}
+
+func TestGroupMembershipMutationsUseV2EndpointsWithoutRetry(t *testing.T) {
+	t.Parallel()
+
+	var calls atomic.Int32
+	handler := func(r *http.Request) *http.Response {
+		calls.Add(1)
+		switch r.Method {
+		case http.MethodPost:
+			if r.URL.Path != "/admin/v2/orgs/org/directories/directory/groups/group/memberships" {
+				t.Errorf("add path = %q", r.URL.Path)
+			}
+			var request map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+				t.Error(err)
+			}
+			if request["accountId"] != "712020:account" {
+				t.Errorf("add request = %#v", request)
+			}
+		case http.MethodDelete:
+			if r.URL.Path != "/admin/v2/orgs/org/directories/directory/groups/group/memberships/712020:account" {
+				t.Errorf("remove path = %q", r.URL.Path)
+			}
+		default:
+			t.Errorf("method = %q", r.Method)
+		}
+		return jsonResponse(r, http.StatusNoContent, "")
+	}
+
+	service := newTestService(t, handler)
+	if err := service.AddGroupMembership(context.Background(), "org", "directory", "group", "712020:account"); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.RemoveGroupMembership(context.Background(), "org", "directory", "group", "712020:account"); err != nil {
+		t.Fatal(err)
+	}
+	if calls.Load() != 2 {
+		t.Fatalf("calls = %d, want 2", calls.Load())
+	}
+}
+
+func TestAddGroupMembershipDoesNotRetryMutation(t *testing.T) {
+	t.Parallel()
+
+	var calls atomic.Int32
+	handler := func(r *http.Request) *http.Response {
+		calls.Add(1)
+		return jsonResponse(r, http.StatusInternalServerError, `{"message":"temporary failure"}`)
+	}
+
+	service := newTestService(t, handler)
+	err := service.AddGroupMembership(context.Background(), "org", "directory", "group", "account")
+	if err == nil {
+		t.Fatal("AddGroupMembership() error = nil")
+	}
+	if calls.Load() != 1 {
+		t.Fatalf("calls = %d, want 1", calls.Load())
+	}
+}
+
 func TestHasDirectUserRoleIgnoresInheritedRole(t *testing.T) {
 	t.Parallel()
 

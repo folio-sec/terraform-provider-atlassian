@@ -15,9 +15,12 @@ const pageLimit = 100
 
 type apiClient interface {
 	SearchDirectoryUsersWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.SearchDirectoryUsersJSONRequestBody, ...generated.RequestEditorFn) (*generated.SearchDirectoryUsersResponse, error)
+	SearchDirectoryGroupsWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.SearchDirectoryGroupsJSONRequestBody, ...generated.RequestEditorFn) (*generated.SearchDirectoryGroupsResponse, error)
 	GetUserRoleAssignmentsWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.AccountIdParam, *generated.GetUserRoleAssignmentsParams, ...generated.RequestEditorFn) (*generated.GetUserRoleAssignmentsResponse, error)
 	AssignRoleWithResponse(context.Context, generated.OrgIdParam, uuid.UUID, generated.AssignRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.AssignRoleResponse, error)
 	RevokeRoleWithResponse(context.Context, generated.OrgIdParam, uuid.UUID, generated.RevokeRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.RevokeRoleResponse, error)
+	AddUserToGroupWithResponse(context.Context, string, string, string, generated.AddUserToGroupJSONRequestBody, ...generated.RequestEditorFn) (*generated.AddUserToGroupResponse, error)
+	RemoveUserFromGroupWithResponse(context.Context, string, string, string, string, ...generated.RequestEditorFn) (*generated.RemoveUserFromGroupResponse, error)
 }
 
 // Service implements Organization API behavior on top of the generated API
@@ -78,6 +81,33 @@ type User struct {
 	TimeZone         *string
 }
 
+type SearchGroupsRequest struct {
+	AccountIDs     []string
+	DirectoryIDs   []string
+	RoleIDs        []string
+	ResourceOwners []string
+	ResourceIDs    []string
+	SearchTerm     string
+	GroupIDs       []string
+	GroupNames     []string
+}
+
+type Group struct {
+	ID               string
+	Name             *string
+	Description      *string
+	DirectoryID      *string
+	ExternalSynced   *bool
+	ManagedBy        *string
+	ManagementAccess *ManagementAccess
+}
+
+type ManagementAccess struct {
+	Deletable  *bool
+	Modifiable *bool
+	Readable   *bool
+}
+
 // SearchUsers follows all cursors and returns every user matching the supplied
 // filters. Pagination controls are intentionally internal to the provider.
 func (s *Service) SearchUsers(ctx context.Context, organizationID, directoryID string, filters SearchUsersRequest) ([]User, error) {
@@ -85,38 +115,93 @@ func (s *Service) SearchUsers(ctx context.Context, organizationID, directoryID s
 	limit := int32(pageLimit)
 	request.Limit = &limit
 	request.Cursor = nil
-
-	var users []User
-	seenCursors := map[string]struct{}{}
-	for {
-		response, err := s.client.SearchDirectoryUsersWithResponse(ctx, organizationID, directoryID, request)
-		if err != nil {
-			return nil, fmt.Errorf("search users: %w", err)
-		}
-		if response.StatusCode() != http.StatusOK {
-			return nil, fmt.Errorf("search users: %w", responseError(response.HTTPResponse, response.Body))
-		}
-		if response.JSON200 == nil {
-			return nil, fmt.Errorf("search users: API returned an invalid success response")
-		}
-		for _, user := range response.JSON200.Data {
-			converted, err := userFromGenerated(user)
-			if err != nil {
-				return nil, fmt.Errorf("search users: %w", err)
-			}
-			users = append(users, converted)
-		}
-
-		next := nextCursor(response.JSON200.Links)
-		if next == "" {
-			return users, nil
-		}
-		if _, exists := seenCursors[next]; exists {
-			return nil, fmt.Errorf("search users: API returned repeated pagination cursor %q", next)
-		}
-		seenCursors[next] = struct{}{}
-		request.Cursor = &next
+	fetch := func(ctx context.Context, request generated.MultiDirectoryUserSearchRequest) (searchPage[generated.MultiDirectoryUser], error) {
+		return s.searchUserPage(ctx, organizationID, directoryID, request)
 	}
+	return collectSearchPages(ctx, "search users", request, fetch, func(request *generated.MultiDirectoryUserSearchRequest, cursor string) {
+		request.Cursor = &cursor
+	}, userFromGenerated)
+}
+
+func (s *Service) searchUserPage(ctx context.Context, organizationID, directoryID string, request generated.MultiDirectoryUserSearchRequest) (searchPage[generated.MultiDirectoryUser], error) {
+	response, err := s.client.SearchDirectoryUsersWithResponse(ctx, organizationID, directoryID, request)
+	if err != nil {
+		return searchPage[generated.MultiDirectoryUser]{}, fmt.Errorf("request user page: %w", err)
+	}
+	return checkedSearchPage(response.StatusCode(), response.HTTPResponse, response.Body, response.JSON200,
+		func(page *generated.MultiDirectoryUserSearchPage) ([]generated.MultiDirectoryUser, *generated.LinkPageCursor) {
+			return page.Data, page.Links
+		})
+}
+
+// SearchGroups follows all cursors and returns every group matching the
+// supplied filters. Pagination controls are intentionally internal to the
+// provider.
+func (s *Service) SearchGroups(ctx context.Context, organizationID, directoryID string, filters SearchGroupsRequest) ([]Group, error) {
+	request := groupSearchRequest(filters)
+	limit := int32(pageLimit)
+	request.Limit = &limit
+	request.Cursor = nil
+	fetch := func(ctx context.Context, request generated.MultiDirectoryGroupSearchRequest) (searchPage[generated.MultiDirectoryGroup], error) {
+		return s.searchGroupPage(ctx, organizationID, directoryID, request)
+	}
+	return collectSearchPages(ctx, "search groups", request, fetch, func(request *generated.MultiDirectoryGroupSearchRequest, cursor string) {
+		request.Cursor = &cursor
+	}, groupFromGenerated)
+}
+
+func (s *Service) searchGroupPage(ctx context.Context, organizationID, directoryID string, request generated.MultiDirectoryGroupSearchRequest) (searchPage[generated.MultiDirectoryGroup], error) {
+	response, err := s.client.SearchDirectoryGroupsWithResponse(ctx, organizationID, directoryID, request)
+	if err != nil {
+		return searchPage[generated.MultiDirectoryGroup]{}, fmt.Errorf("request group page: %w", err)
+	}
+	return checkedSearchPage(response.StatusCode(), response.HTTPResponse, response.Body, response.JSON200,
+		func(page *generated.MultiDirectoryGroupSearchPage) ([]generated.MultiDirectoryGroup, *generated.LinkPageCursor) {
+			return page.Data, page.Links
+		})
+}
+
+// HasGroupMembership reports whether the user belongs to the group in the
+// specified directory.
+func (s *Service) HasGroupMembership(ctx context.Context, organizationID, directoryID, groupID, accountID string) (bool, error) {
+	users, err := s.SearchUsers(ctx, organizationID, directoryID, SearchUsersRequest{
+		AccountIDs: []string{accountID},
+		GroupIDs:   []string{groupID},
+	})
+	if err != nil {
+		return false, fmt.Errorf("check group membership: %w", err)
+	}
+	for _, user := range users {
+		if user.AccountID == accountID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// AddGroupMembership adds a user to a group in the specified directory.
+func (s *Service) AddGroupMembership(ctx context.Context, organizationID, directoryID, groupID, accountID string) error {
+	request := generated.AddUserToGroupJSONRequestBody{AccountId: accountID}
+	response, err := s.client.AddUserToGroupWithResponse(admin.WithoutRetry(ctx), organizationID, directoryID, groupID, request)
+	if err != nil {
+		return fmt.Errorf("add group membership: %w", err)
+	}
+	if response.StatusCode() != http.StatusNoContent {
+		return fmt.Errorf("add group membership: %w", responseError(response.HTTPResponse, response.Body))
+	}
+	return nil
+}
+
+// RemoveGroupMembership removes a user from a group in the specified directory.
+func (s *Service) RemoveGroupMembership(ctx context.Context, organizationID, directoryID, groupID, accountID string) error {
+	response, err := s.client.RemoveUserFromGroupWithResponse(admin.WithoutRetry(ctx), organizationID, directoryID, groupID, accountID)
+	if err != nil {
+		return fmt.Errorf("remove group membership: %w", err)
+	}
+	if response.StatusCode() != http.StatusNoContent {
+		return fmt.Errorf("remove group membership: %w", responseError(response.HTTPResponse, response.Body))
+	}
+	return nil
 }
 
 // AssignUserRole grants a platform role for a resource to a user.
@@ -266,6 +351,27 @@ func searchRequest(filters SearchUsersRequest) generated.MultiDirectoryUserSearc
 	return request
 }
 
+func groupSearchRequest(filters SearchGroupsRequest) generated.MultiDirectoryGroupSearchRequest {
+	request := generated.MultiDirectoryGroupSearchRequest{}
+	setStrings := func(values []string, target **[]string) {
+		if len(values) > 0 {
+			copied := append([]string(nil), values...)
+			*target = &copied
+		}
+	}
+	setStrings(filters.AccountIDs, &request.AccountIds)
+	setStrings(filters.DirectoryIDs, &request.DirectoryIds)
+	setStrings(filters.RoleIDs, &request.RoleIds)
+	setStrings(filters.ResourceOwners, &request.ResourceOwners)
+	setStrings(filters.ResourceIDs, &request.ResourceIds)
+	setStrings(filters.GroupIDs, &request.GroupIds)
+	setStrings(filters.GroupNames, &request.GroupNames)
+	if filters.SearchTerm != "" {
+		request.SearchTerm = &filters.SearchTerm
+	}
+	return request
+}
+
 func userFromGenerated(user generated.MultiDirectoryUser) (User, error) {
 	if user.AccountId == nil || strings.TrimSpace(*user.AccountId) == "" {
 		return User{}, fmt.Errorf("API returned a user without accountId")
@@ -299,6 +405,29 @@ func userFromGenerated(user generated.MultiDirectoryUser) (User, error) {
 	}, nil
 }
 
+func groupFromGenerated(group generated.MultiDirectoryGroup) (Group, error) {
+	if group.Id == nil || strings.TrimSpace(*group.Id) == "" {
+		return Group{}, fmt.Errorf("API returned a group without id")
+	}
+	var managementAccess *ManagementAccess
+	if group.ManagementAccess != nil {
+		managementAccess = &ManagementAccess{
+			Deletable:  group.ManagementAccess.Deletable,
+			Modifiable: group.ManagementAccess.Modifiable,
+			Readable:   group.ManagementAccess.Readable,
+		}
+	}
+	return Group{
+		ID:               *group.Id,
+		Name:             group.Name,
+		Description:      group.Description,
+		DirectoryID:      group.DirectoryId,
+		ExternalSynced:   group.ExternalSynced,
+		ManagedBy:        group.ManagedBy,
+		ManagementAccess: managementAccess,
+	}, nil
+}
+
 func enumPointer[T ~string](value *T) *string {
 	if value == nil {
 		return nil
@@ -312,6 +441,63 @@ func nextCursor(links *generated.LinkPageCursor) string {
 		return ""
 	}
 	return *links.Next
+}
+
+type searchPage[T any] struct {
+	data  []T
+	links *generated.LinkPageCursor
+}
+
+func checkedSearchPage[Page, Result any](
+	statusCode int,
+	response *http.Response,
+	body []byte,
+	payload *Page,
+	values func(*Page) ([]Result, *generated.LinkPageCursor),
+) (searchPage[Result], error) {
+	if statusCode != http.StatusOK {
+		return searchPage[Result]{}, responseError(response, body)
+	}
+	if payload == nil {
+		return searchPage[Result]{}, fmt.Errorf("API returned an invalid success response")
+	}
+	data, links := values(payload)
+	return searchPage[Result]{data: data, links: links}, nil
+}
+
+func collectSearchPages[Request, APIResult, Result any](
+	ctx context.Context,
+	operation string,
+	request Request,
+	fetch func(context.Context, Request) (searchPage[APIResult], error),
+	setCursor func(*Request, string),
+	convert func(APIResult) (Result, error),
+) ([]Result, error) {
+	var results []Result
+	seenCursors := map[string]struct{}{}
+	for {
+		page, err := fetch(ctx, request)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", operation, err)
+		}
+		for _, value := range page.data {
+			converted, err := convert(value)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", operation, err)
+			}
+			results = append(results, converted)
+		}
+
+		next := nextCursor(page.links)
+		if next == "" {
+			return results, nil
+		}
+		if _, exists := seenCursors[next]; exists {
+			return nil, fmt.Errorf("%s: API returned repeated pagination cursor %q", operation, next)
+		}
+		seenCursors[next] = struct{}{}
+		setCursor(&request, next)
+	}
 }
 
 func responseError(response *http.Response, body []byte) error {

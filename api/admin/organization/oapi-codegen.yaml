@@ -7,9 +7,12 @@ generate:
 output-options:
   include-operation-ids:
     - searchDirectoryUsers
+    - searchDirectoryGroups
     - getUserRoleAssignments
     - assignRole
     - revokeRole
+    - addUserToGroup
+    - removeUserFromGroup
   nullable-type: true
   overlay:
     path: api/admin/organization/overlay.yaml

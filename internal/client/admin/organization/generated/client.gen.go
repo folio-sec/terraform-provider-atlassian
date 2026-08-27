@@ -73,6 +73,39 @@ func (e ClaimStatus) Valid() bool {
 	}
 }
 
+// Defines values for GroupSortByDirection.
+const (
+	GroupSortByDirectionAsc  GroupSortByDirection = "asc"
+	GroupSortByDirectionDesc GroupSortByDirection = "desc"
+)
+
+// Valid indicates whether the value is a known member of the GroupSortByDirection enum.
+func (e GroupSortByDirection) Valid() bool {
+	switch e {
+	case GroupSortByDirectionAsc:
+		return true
+	case GroupSortByDirectionDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GroupSortByField.
+const (
+	Name GroupSortByField = "name"
+)
+
+// Valid indicates whether the value is a known member of the GroupSortByField enum.
+func (e GroupSortByField) Valid() bool {
+	switch e {
+	case Name:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MembershipStatus.
 const (
 	MembershipStatusActive       MembershipStatus = "active"
@@ -88,6 +121,24 @@ func (e MembershipStatus) Valid() bool {
 	case MembershipStatusNoMembership:
 		return true
 	case MembershipStatusSuspended:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MultiDirectoryGroupSearchRequestExpand.
+const (
+	MultiDirectoryGroupSearchRequestExpandCountsResources MultiDirectoryGroupSearchRequestExpand = "counts.resources"
+	MultiDirectoryGroupSearchRequestExpandCountsUsers     MultiDirectoryGroupSearchRequestExpand = "counts.users"
+)
+
+// Valid indicates whether the value is a known member of the MultiDirectoryGroupSearchRequestExpand enum.
+func (e MultiDirectoryGroupSearchRequestExpand) Valid() bool {
+	switch e {
+	case MultiDirectoryGroupSearchRequestExpandCountsResources:
+		return true
+	case MultiDirectoryGroupSearchRequestExpandCountsUsers:
 		return true
 	default:
 		return false
@@ -195,22 +246,22 @@ func (e MultiDirectoryUserSearchRequestClaimStatus) Valid() bool {
 
 // Defines values for MultiDirectoryUserSearchRequestExpand.
 const (
-	CountsResources MultiDirectoryUserSearchRequestExpand = "counts.resources"
-	Groups          MultiDirectoryUserSearchRequestExpand = "groups"
-	PlatformRoles   MultiDirectoryUserSearchRequestExpand = "platformRoles"
-	ProductAccess   MultiDirectoryUserSearchRequestExpand = "productAccess"
+	MultiDirectoryUserSearchRequestExpandCountsResources MultiDirectoryUserSearchRequestExpand = "counts.resources"
+	MultiDirectoryUserSearchRequestExpandGroups          MultiDirectoryUserSearchRequestExpand = "groups"
+	MultiDirectoryUserSearchRequestExpandPlatformRoles   MultiDirectoryUserSearchRequestExpand = "platformRoles"
+	MultiDirectoryUserSearchRequestExpandProductAccess   MultiDirectoryUserSearchRequestExpand = "productAccess"
 )
 
 // Valid indicates whether the value is a known member of the MultiDirectoryUserSearchRequestExpand enum.
 func (e MultiDirectoryUserSearchRequestExpand) Valid() bool {
 	switch e {
-	case CountsResources:
+	case MultiDirectoryUserSearchRequestExpandCountsResources:
 		return true
-	case Groups:
+	case MultiDirectoryUserSearchRequestExpandGroups:
 		return true
-	case PlatformRoles:
+	case MultiDirectoryUserSearchRequestExpandPlatformRoles:
 		return true
-	case ProductAccess:
+	case MultiDirectoryUserSearchRequestExpandProductAccess:
 		return true
 	default:
 		return false
@@ -285,16 +336,16 @@ func (e MultiDirectoryUserSearchRequestRoleIds) Valid() bool {
 
 // Defines values for MultiDirectoryUserSearchRequestSortByDirection.
 const (
-	Asc  MultiDirectoryUserSearchRequestSortByDirection = "asc"
-	Desc MultiDirectoryUserSearchRequestSortByDirection = "desc"
+	MultiDirectoryUserSearchRequestSortByDirectionAsc  MultiDirectoryUserSearchRequestSortByDirection = "asc"
+	MultiDirectoryUserSearchRequestSortByDirectionDesc MultiDirectoryUserSearchRequestSortByDirection = "desc"
 )
 
 // Valid indicates whether the value is a known member of the MultiDirectoryUserSearchRequestSortByDirection enum.
 func (e MultiDirectoryUserSearchRequestSortByDirection) Valid() bool {
 	switch e {
-	case Asc:
+	case MultiDirectoryUserSearchRequestSortByDirectionAsc:
 		return true
-	case Desc:
+	case MultiDirectoryUserSearchRequestSortByDirectionDesc:
 		return true
 	default:
 		return false
@@ -662,6 +713,32 @@ type FieldOperand struct {
 	} `json:"field,omitempty"`
 }
 
+// GroupCounts The number of objects associated with the group.
+type GroupCounts struct {
+	// Resources The number of resources the group has roles assigned to, linked to the  directories the requestor can manage.
+	Resources *int `json:"resources,omitempty"`
+
+	// Users The number of users that belong to the group.
+	//
+	// Example: 10
+	Users *int `json:"users,omitempty"`
+}
+
+// GroupSortBy Single sort specification for groups.
+type GroupSortBy struct {
+	// Direction Sort direction.
+	Direction GroupSortByDirection `json:"direction"`
+
+	// Field Field with which to sort results.
+	Field GroupSortByField `json:"field"`
+}
+
+// GroupSortByDirection Sort direction.
+type GroupSortByDirection string
+
+// GroupSortByField Field with which to sort results.
+type GroupSortByField string
+
 // LinkPageCursor Links for a paginated response, for use in a cursor parameter.
 type LinkPageCursor struct {
 	// Next Cursor to fetch the next page.
@@ -688,11 +765,136 @@ type LinkSelfCursor struct {
 	Self *string `json:"self,omitempty"`
 }
 
+// ManagementAccess Management access for the group. This is used to determine if the group can be deleted, modified, or read.
+type ManagementAccess struct {
+	// Deletable If true, the group can be deleted.
+	//
+	// Example: true
+	Deletable *bool `json:"deletable,omitempty"`
+
+	// Modifiable If true, the group can be modified.
+	Modifiable *bool `json:"modifiable,omitempty"`
+
+	// Readable If true, the group can be read.
+	Readable *bool `json:"readable,omitempty"`
+}
+
 // MembershipStatus The membership status is the status of the user account in the organization.
 //   - `active` - the account has an active membership for one or more directories within the organization.
 //   - `suspended` - the account is suspended in all directories within the organization, to which the requestor has permission to access.
 //   - `no_membership` - the account is in none of the organization’s directories.
 type MembershipStatus string
+
+// MultiDirectoryGroup defines model for MultiDirectoryGroup.
+type MultiDirectoryGroup struct {
+	// Counts The number of objects associated with the group.
+	Counts *GroupCounts `json:"counts,omitempty"`
+
+	// Description The group description.
+	//
+	// Example: This group provides admin access to Jira.
+	Description *string `json:"description,omitempty"`
+
+	// DirectoryId The ID of the directory.
+	//
+	// Example: 12345678-1234-1234-1234-123456789012
+	DirectoryId *string `json:"directoryId,omitempty"`
+
+	// ExternalSynced Indication if group was created via IdP Sync.
+	//
+	// Example: true
+	ExternalSynced *bool `json:"externalSynced,omitempty"`
+
+	// Id Unique ID of the group.
+	//
+	// Example: 12345678-1234-1234-1234-123456789012
+	Id *string `json:"id,omitempty"`
+
+	// Links Links for a resource with a self cursor, for use in a cursor parameter.
+	Links *LinkSelfCursor `json:"links,omitempty"`
+
+	// ManagedBy Specifies how the group is managed: external, admins, team-members, or open.
+	//
+	// Example: external
+	ManagedBy *string `json:"managedBy,omitempty"`
+
+	// ManagementAccess Management access for the group. This is used to determine if the group can be deleted, modified, or read.
+	ManagementAccess *ManagementAccess `json:"managementAccess,omitempty"`
+
+	// Name The group name.
+	//
+	// Example: jira-administrators
+	Name *string `json:"name,omitempty"`
+}
+
+// MultiDirectoryGroupSearchPage defines model for MultiDirectoryGroupSearchPage.
+type MultiDirectoryGroupSearchPage struct {
+	// Data A page of groups matching the search criteria.
+	Data []MultiDirectoryGroup `json:"data"`
+
+	// Links Links for a paginated response, for use in a cursor parameter.
+	Links *LinkPageCursor `json:"links,omitempty"`
+}
+
+// MultiDirectoryGroupSearchRequest Filters for searching groups in a directory.
+//
+// The request body is optional — sending an empty body returns the first page of all groups in the directory.
+//
+// Use `expand` to include additional count fields. Other count toggles are not exposed on this endpoint; the `expand` array is the only way to request `counts.resources` or `counts.users`.
+type MultiDirectoryGroupSearchRequest struct {
+	// AccountIds Filter by account IDs of group members.
+	AccountIds *[]string `json:"accountIds,omitempty"`
+
+	// Cursor Sets the starting point for the page of results to return.
+	Cursor *string `json:"cursor,omitempty"`
+
+	// DirectoryIds Filter by directory IDs.
+	DirectoryIds *[]string `json:"directoryIds,omitempty"`
+
+	// Expand List of additional fields to include in the response. Available values:
+	//
+	// - `counts.resources` — the number of resources the group has access to.
+	// - `counts.users` — the number of users in the group.
+	Expand *[]MultiDirectoryGroupSearchRequestExpand `json:"expand,omitempty"`
+
+	// GroupIds Filter by group IDs.
+	//
+	// Mutually exclusive with `groupNames` — providing both returns a `400 Bad Request` error.
+	GroupIds *[]string `json:"groupIds,omitempty"`
+
+	// GroupNames List of full group names to filter by (case-insensitive). Only exact matches are returned.
+	//
+	// Mutually exclusive with `searchTerm` and `groupIds` — providing either combination returns a `400 Bad Request` error.
+	GroupNames *[]string `json:"groupNames,omitempty"`
+
+	// Limit The number of results to return per page. Defaults to 20.
+	//
+	// Example: 20
+	Limit *int32 `json:"limit,omitempty"`
+
+	// ResourceIds Filter by resource IDs.
+	ResourceIds *[]string `json:"resourceIds,omitempty"`
+
+	// ResourceOwners Filter by resource type keys.
+	ResourceOwners *[]string `json:"resourceOwners,omitempty"`
+
+	// RoleIds Filter by canonical Atlassian role IDs.
+	RoleIds *[]string `json:"roleIds,omitempty"`
+
+	// SearchTerm Free-text search term. Matched against the group name.
+	//
+	// Mutually exclusive with `groupNames` — providing both returns a `400 Bad Request` error.
+	//
+	//
+	// Example: engineering
+	SearchTerm *string `json:"searchTerm,omitempty"`
+
+	// SortBy List of sort fields. Currently only a single sort field is supported.
+	SortBy *[]GroupSortBy `json:"sortBy,omitempty"`
+}
+
+// MultiDirectoryGroupSearchRequestExpand defines model for MultiDirectoryGroupSearchRequest.Expand.
+type MultiDirectoryGroupSearchRequestExpand string
 
 // MultiDirectoryMembershipStatus The user's membership status in the directory mapped to this resource.
 //   - `active` - The user has an active membership in the directory.
@@ -1226,6 +1428,12 @@ type RevokeRole401JSONResponseBody struct {
 	union json.RawMessage
 }
 
+// AddUserToGroupJSONBody defines parameters for AddUserToGroup.
+type AddUserToGroupJSONBody struct {
+	// AccountId Every user has a unique ID. Find a user’s account ID by using the [Get users endpoint](https://developer.atlassian.com/cloud/admin/organization/rest/api-group-users/#api-v2-orgs-orgid-directories-directoryid-users-get).
+	AccountId string `json:"accountId"`
+}
+
 // GetUserRoleAssignmentsParams defines parameters for GetUserRoleAssignments.
 type GetUserRoleAssignmentsParams struct {
 	// Cursor Sets the cursor position to retrieve the next set of results. If present, all other parameters are discarded when searching.
@@ -1266,6 +1474,12 @@ type AssignRoleJSONRequestBody = RoleApiRequest
 
 // RevokeRoleJSONRequestBody defines body for RevokeRole for application/json ContentType.
 type RevokeRoleJSONRequestBody = RoleApiRequest
+
+// SearchDirectoryGroupsJSONRequestBody defines body for SearchDirectoryGroups for application/json ContentType.
+type SearchDirectoryGroupsJSONRequestBody = MultiDirectoryGroupSearchRequest
+
+// AddUserToGroupJSONRequestBody defines body for AddUserToGroup for application/json ContentType.
+type AddUserToGroupJSONRequestBody AddUserToGroupJSONBody
 
 // SearchDirectoryUsersJSONRequestBody defines body for SearchDirectoryUsers for application/json ContentType.
 type SearchDirectoryUsersJSONRequestBody = MultiDirectoryUserSearchRequest
@@ -1670,6 +1884,65 @@ type ClientInterface interface {
 	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/revoke (the `RevokeRole` operationId).
 	RevokeRole(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, body RevokeRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// SearchDirectoryGroupsWithBody Search for groups in an organization
+	//
+	// Return a page of groups in an organization that match the supplied parameters.
+	//
+	// Use `searchTerm` for free-text search across group names. Filter by IDs, role assignments, resources, members, or specific group identifiers using the corresponding request fields. Use the `expand` field to include additional fields such as `counts.resources` and `counts.users` in the response.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/search (the `SearchDirectoryGroups` operationId).
+	SearchDirectoryGroupsWithBody(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SearchDirectoryGroups Search for groups in an organization
+	//
+	// Return a page of groups in an organization that match the supplied parameters.
+	//
+	// Use `searchTerm` for free-text search across group names. Filter by IDs, role assignments, resources, members, or specific group identifiers using the corresponding request fields. Use the `expand` field to include additional fields such as `counts.resources` and `counts.users` in the response.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/search (the `SearchDirectoryGroups` operationId).
+	SearchDirectoryGroups(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, body SearchDirectoryGroupsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AddUserToGroupWithBody Add user to group
+	//
+	// Add a user to a group. This gives the user the same app access and permissions as the group. The user must be in the same directory as the group.
+	//
+	// **Note:** Adding a user to the org-admin group through this API will return an error after the Units rollout. The org-admin group will no longer grant organization admin access after the rollout. To grant organization admin, use the [Assign organization-level role endpoint](https://developer.atlassian.com/cloud/admin/organization/rest/api-group-users/#api-v1-orgs-orgid-users-userid-role-assignments-assign-post) instead. This applies to all organizations, not just unit organizations.
+	//
+	// You can’t add a user to a group synced from an identity provider. Manage this group in your identity provider instead.
+	//
+	// You can’t add a user to a group if you’ve exceeded your user limit for an app that the group grants access to. Increase your user limit or suspend another user from the app first.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships (the `AddUserToGroup` operationId).
+	AddUserToGroupWithBody(ctx context.Context, orgId string, directoryId string, groupId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AddUserToGroup Add user to group
+	//
+	// Add a user to a group. This gives the user the same app access and permissions as the group. The user must be in the same directory as the group.
+	//
+	// **Note:** Adding a user to the org-admin group through this API will return an error after the Units rollout. The org-admin group will no longer grant organization admin access after the rollout. To grant organization admin, use the [Assign organization-level role endpoint](https://developer.atlassian.com/cloud/admin/organization/rest/api-group-users/#api-v1-orgs-orgid-users-userid-role-assignments-assign-post) instead. This applies to all organizations, not just unit organizations.
+	//
+	// You can’t add a user to a group synced from an identity provider. Manage this group in your identity provider instead.
+	//
+	// You can’t add a user to a group if you’ve exceeded your user limit for an app that the group grants access to. Increase your user limit or suspend another user from the app first.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships (the `AddUserToGroup` operationId).
+	AddUserToGroup(ctx context.Context, orgId string, directoryId string, groupId string, body AddUserToGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RemoveUserFromGroup Remove user from group
+	//
+	// Remove a user from a group. This removes any app access and permissions granted by this group, but the user may still be in other groups that grant the same app access and permissions.
+	//
+	// Corresponds with DELETE /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships/{accountId} (the `RemoveUserFromGroup` operationId).
+	RemoveUserFromGroup(ctx context.Context, orgId string, directoryId string, groupId string, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// SearchDirectoryUsersWithBody Search for users in an organization
 	//
 	// Return a page of users in an organization that match the supplied parameters.
@@ -1769,6 +2042,115 @@ func (c *Client) RevokeRoleWithBody(ctx context.Context, orgId OrgIdParam, userI
 // Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/revoke (the `RevokeRole` operationId).
 func (c *Client) RevokeRole(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, body RevokeRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRevokeRoleRequest(c.Server, orgId, userId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchDirectoryGroupsWithBody Search for groups in an organization
+//
+// Return a page of groups in an organization that match the supplied parameters.
+//
+// Use `searchTerm` for free-text search across group names. Filter by IDs, role assignments, resources, members, or specific group identifiers using the corresponding request fields. Use the `expand` field to include additional fields such as `counts.resources` and `counts.users` in the response.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/search (the `SearchDirectoryGroups` operationId).
+func (c *Client) SearchDirectoryGroupsWithBody(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchDirectoryGroupsRequestWithBody(c.Server, orgId, directoryId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SearchDirectoryGroups Search for groups in an organization
+//
+// Return a page of groups in an organization that match the supplied parameters.
+//
+// Use `searchTerm` for free-text search across group names. Filter by IDs, role assignments, resources, members, or specific group identifiers using the corresponding request fields. Use the `expand` field to include additional fields such as `counts.resources` and `counts.users` in the response.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/search (the `SearchDirectoryGroups` operationId).
+func (c *Client) SearchDirectoryGroups(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, body SearchDirectoryGroupsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSearchDirectoryGroupsRequest(c.Server, orgId, directoryId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AddUserToGroupWithBody Add user to group
+//
+// Add a user to a group. This gives the user the same app access and permissions as the group. The user must be in the same directory as the group.
+//
+// **Note:** Adding a user to the org-admin group through this API will return an error after the Units rollout. The org-admin group will no longer grant organization admin access after the rollout. To grant organization admin, use the [Assign organization-level role endpoint](https://developer.atlassian.com/cloud/admin/organization/rest/api-group-users/#api-v1-orgs-orgid-users-userid-role-assignments-assign-post) instead. This applies to all organizations, not just unit organizations.
+//
+// You can’t add a user to a group synced from an identity provider. Manage this group in your identity provider instead.
+//
+// You can’t add a user to a group if you’ve exceeded your user limit for an app that the group grants access to. Increase your user limit or suspend another user from the app first.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships (the `AddUserToGroup` operationId).
+func (c *Client) AddUserToGroupWithBody(ctx context.Context, orgId string, directoryId string, groupId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAddUserToGroupRequestWithBody(c.Server, orgId, directoryId, groupId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AddUserToGroup Add user to group
+//
+// Add a user to a group. This gives the user the same app access and permissions as the group. The user must be in the same directory as the group.
+//
+// **Note:** Adding a user to the org-admin group through this API will return an error after the Units rollout. The org-admin group will no longer grant organization admin access after the rollout. To grant organization admin, use the [Assign organization-level role endpoint](https://developer.atlassian.com/cloud/admin/organization/rest/api-group-users/#api-v1-orgs-orgid-users-userid-role-assignments-assign-post) instead. This applies to all organizations, not just unit organizations.
+//
+// You can’t add a user to a group synced from an identity provider. Manage this group in your identity provider instead.
+//
+// You can’t add a user to a group if you’ve exceeded your user limit for an app that the group grants access to. Increase your user limit or suspend another user from the app first.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships (the `AddUserToGroup` operationId).
+func (c *Client) AddUserToGroup(ctx context.Context, orgId string, directoryId string, groupId string, body AddUserToGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAddUserToGroupRequest(c.Server, orgId, directoryId, groupId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RemoveUserFromGroup Remove user from group
+//
+// Remove a user from a group. This removes any app access and permissions granted by this group, but the user may still be in other groups that grant the same app access and permissions.
+//
+// Corresponds with DELETE /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships/{accountId} (the `RemoveUserFromGroup` operationId).
+func (c *Client) RemoveUserFromGroup(ctx context.Context, orgId string, directoryId string, groupId string, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRemoveUserFromGroupRequest(c.Server, orgId, directoryId, groupId, accountId)
 	if err != nil {
 		return nil, err
 	}
@@ -1945,6 +2327,176 @@ func NewRevokeRoleRequestWithBody(server string, orgId OrgIdParam, userId openap
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSearchDirectoryGroupsRequest calls the generic SearchDirectoryGroups builder with application/json body
+func NewSearchDirectoryGroupsRequest(server string, orgId OrgIdParam, directoryId DirectoryIdParam, body SearchDirectoryGroupsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSearchDirectoryGroupsRequestWithBody(server, orgId, directoryId, "application/json", bodyReader)
+}
+
+// NewSearchDirectoryGroupsRequestWithBody constructs an http.Request for the SearchDirectoryGroups method, with any body, and a specified content type
+func NewSearchDirectoryGroupsRequestWithBody(server string, orgId OrgIdParam, directoryId DirectoryIdParam, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "directoryId", directoryId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v2/orgs/%s/directories/%s/groups/search", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewAddUserToGroupRequest calls the generic AddUserToGroup builder with application/json body
+func NewAddUserToGroupRequest(server string, orgId string, directoryId string, groupId string, body AddUserToGroupJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAddUserToGroupRequestWithBody(server, orgId, directoryId, groupId, "application/json", bodyReader)
+}
+
+// NewAddUserToGroupRequestWithBody constructs an http.Request for the AddUserToGroup method, with any body, and a specified content type
+func NewAddUserToGroupRequestWithBody(server string, orgId string, directoryId string, groupId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "directoryId", directoryId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithOptions("simple", false, "groupId", groupId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v2/orgs/%s/directories/%s/groups/%s/memberships", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRemoveUserFromGroupRequest constructs an http.Request for the RemoveUserFromGroup method
+func NewRemoveUserFromGroupRequest(server string, orgId string, directoryId string, groupId string, accountId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "directoryId", directoryId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithOptions("simple", false, "groupId", groupId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam3 string
+
+	pathParam3, err = runtime.StyleParamWithOptions("simple", false, "accountId", accountId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v2/orgs/%s/directories/%s/groups/%s/memberships/%s", pathParam0, pathParam1, pathParam2, pathParam3)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -2218,6 +2770,67 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/revoke (the `RevokeRole` operationId).
 	RevokeRoleWithResponse(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, body RevokeRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*RevokeRoleResponse, error)
 
+	// SearchDirectoryGroupsWithBodyWithResponse Search for groups in an organization
+	//
+	// Return a page of groups in an organization that match the supplied parameters.
+	//
+	// Use `searchTerm` for free-text search across group names. Filter by IDs, role assignments, resources, members, or specific group identifiers using the corresponding request fields. Use the `expand` field to include additional fields such as `counts.resources` and `counts.users` in the response.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/search (the `SearchDirectoryGroups` operationId).
+	SearchDirectoryGroupsWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchDirectoryGroupsResponse, error)
+
+	// SearchDirectoryGroupsWithResponse Search for groups in an organization
+	//
+	// Return a page of groups in an organization that match the supplied parameters.
+	//
+	// Use `searchTerm` for free-text search across group names. Filter by IDs, role assignments, resources, members, or specific group identifiers using the corresponding request fields. Use the `expand` field to include additional fields such as `counts.resources` and `counts.users` in the response.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/search (the `SearchDirectoryGroups` operationId).
+	SearchDirectoryGroupsWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, body SearchDirectoryGroupsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchDirectoryGroupsResponse, error)
+
+	// AddUserToGroupWithBodyWithResponse Add user to group
+	//
+	// Add a user to a group. This gives the user the same app access and permissions as the group. The user must be in the same directory as the group.
+	//
+	// **Note:** Adding a user to the org-admin group through this API will return an error after the Units rollout. The org-admin group will no longer grant organization admin access after the rollout. To grant organization admin, use the [Assign organization-level role endpoint](https://developer.atlassian.com/cloud/admin/organization/rest/api-group-users/#api-v1-orgs-orgid-users-userid-role-assignments-assign-post) instead. This applies to all organizations, not just unit organizations.
+	//
+	// You can’t add a user to a group synced from an identity provider. Manage this group in your identity provider instead.
+	//
+	// You can’t add a user to a group if you’ve exceeded your user limit for an app that the group grants access to. Increase your user limit or suspend another user from the app first.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships (the `AddUserToGroup` operationId).
+	AddUserToGroupWithBodyWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddUserToGroupResponse, error)
+
+	// AddUserToGroupWithResponse Add user to group
+	//
+	// Add a user to a group. This gives the user the same app access and permissions as the group. The user must be in the same directory as the group.
+	//
+	// **Note:** Adding a user to the org-admin group through this API will return an error after the Units rollout. The org-admin group will no longer grant organization admin access after the rollout. To grant organization admin, use the [Assign organization-level role endpoint](https://developer.atlassian.com/cloud/admin/organization/rest/api-group-users/#api-v1-orgs-orgid-users-userid-role-assignments-assign-post) instead. This applies to all organizations, not just unit organizations.
+	//
+	// You can’t add a user to a group synced from an identity provider. Manage this group in your identity provider instead.
+	//
+	// You can’t add a user to a group if you’ve exceeded your user limit for an app that the group grants access to. Increase your user limit or suspend another user from the app first.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships (the `AddUserToGroup` operationId).
+	AddUserToGroupWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, body AddUserToGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*AddUserToGroupResponse, error)
+
+	// RemoveUserFromGroupWithResponse Remove user from group
+	//
+	// Remove a user from a group. This removes any app access and permissions granted by this group, but the user may still be in other groups that grant the same app access and permissions.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships/{accountId} (the `RemoveUserFromGroup` operationId).
+	RemoveUserFromGroupWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, accountId string, reqEditors ...RequestEditorFn) (*RemoveUserFromGroupResponse, error)
+
 	// SearchDirectoryUsersWithBodyWithResponse Search for users in an organization
 	//
 	// Return a page of users in an organization that match the supplied parameters.
@@ -2413,6 +3026,157 @@ func (r RevokeRoleResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r RevokeRoleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SearchDirectoryGroupsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MultiDirectoryGroupSearchPage
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *Errors
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Errors
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Errors
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *Errors
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *Errors
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *Errors
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SearchDirectoryGroupsResponse) GetJSON200() *MultiDirectoryGroupSearchPage {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SearchDirectoryGroupsResponse) GetJSON400() *Errors {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SearchDirectoryGroupsResponse) GetJSON401() *Errors {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r SearchDirectoryGroupsResponse) GetJSON403() *Errors {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r SearchDirectoryGroupsResponse) GetJSON404() *Errors {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r SearchDirectoryGroupsResponse) GetJSON429() *Errors {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r SearchDirectoryGroupsResponse) GetJSON500() *Errors {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r SearchDirectoryGroupsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SearchDirectoryGroupsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SearchDirectoryGroupsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SearchDirectoryGroupsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AddUserToGroupResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// GetBody returns the raw response body bytes
+func (r AddUserToGroupResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r AddUserToGroupResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AddUserToGroupResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AddUserToGroupResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RemoveUserFromGroupResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// GetBody returns the raw response body bytes
+func (r RemoveUserFromGroupResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RemoveUserFromGroupResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RemoveUserFromGroupResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RemoveUserFromGroupResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -2638,6 +3402,97 @@ func (c *ClientWithResponses) RevokeRoleWithResponse(ctx context.Context, orgId 
 	return ParseRevokeRoleResponse(rsp)
 }
 
+// SearchDirectoryGroupsWithBodyWithResponse Search for groups in an organization
+//
+// Return a page of groups in an organization that match the supplied parameters.
+//
+// Use `searchTerm` for free-text search across group names. Filter by IDs, role assignments, resources, members, or specific group identifiers using the corresponding request fields. Use the `expand` field to include additional fields such as `counts.resources` and `counts.users` in the response.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/search (the `SearchDirectoryGroups` operationId).
+func (c *ClientWithResponses) SearchDirectoryGroupsWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SearchDirectoryGroupsResponse, error) {
+	rsp, err := c.SearchDirectoryGroupsWithBody(ctx, orgId, directoryId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchDirectoryGroupsResponse(rsp)
+}
+
+// SearchDirectoryGroupsWithResponse Search for groups in an organization
+//
+// Return a page of groups in an organization that match the supplied parameters.
+//
+// Use `searchTerm` for free-text search across group names. Filter by IDs, role assignments, resources, members, or specific group identifiers using the corresponding request fields. Use the `expand` field to include additional fields such as `counts.resources` and `counts.users` in the response.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/search (the `SearchDirectoryGroups` operationId).
+func (c *ClientWithResponses) SearchDirectoryGroupsWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, body SearchDirectoryGroupsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchDirectoryGroupsResponse, error) {
+	rsp, err := c.SearchDirectoryGroups(ctx, orgId, directoryId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSearchDirectoryGroupsResponse(rsp)
+}
+
+// AddUserToGroupWithBodyWithResponse Add user to group
+//
+// Add a user to a group. This gives the user the same app access and permissions as the group. The user must be in the same directory as the group.
+//
+// **Note:** Adding a user to the org-admin group through this API will return an error after the Units rollout. The org-admin group will no longer grant organization admin access after the rollout. To grant organization admin, use the [Assign organization-level role endpoint](https://developer.atlassian.com/cloud/admin/organization/rest/api-group-users/#api-v1-orgs-orgid-users-userid-role-assignments-assign-post) instead. This applies to all organizations, not just unit organizations.
+//
+// You can’t add a user to a group synced from an identity provider. Manage this group in your identity provider instead.
+//
+// You can’t add a user to a group if you’ve exceeded your user limit for an app that the group grants access to. Increase your user limit or suspend another user from the app first.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships (the `AddUserToGroup` operationId).
+func (c *ClientWithResponses) AddUserToGroupWithBodyWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddUserToGroupResponse, error) {
+	rsp, err := c.AddUserToGroupWithBody(ctx, orgId, directoryId, groupId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAddUserToGroupResponse(rsp)
+}
+
+// AddUserToGroupWithResponse Add user to group
+//
+// Add a user to a group. This gives the user the same app access and permissions as the group. The user must be in the same directory as the group.
+//
+// **Note:** Adding a user to the org-admin group through this API will return an error after the Units rollout. The org-admin group will no longer grant organization admin access after the rollout. To grant organization admin, use the [Assign organization-level role endpoint](https://developer.atlassian.com/cloud/admin/organization/rest/api-group-users/#api-v1-orgs-orgid-users-userid-role-assignments-assign-post) instead. This applies to all organizations, not just unit organizations.
+//
+// You can’t add a user to a group synced from an identity provider. Manage this group in your identity provider instead.
+//
+// You can’t add a user to a group if you’ve exceeded your user limit for an app that the group grants access to. Increase your user limit or suspend another user from the app first.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships (the `AddUserToGroup` operationId).
+func (c *ClientWithResponses) AddUserToGroupWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, body AddUserToGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*AddUserToGroupResponse, error) {
+	rsp, err := c.AddUserToGroup(ctx, orgId, directoryId, groupId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAddUserToGroupResponse(rsp)
+}
+
+// RemoveUserFromGroupWithResponse Remove user from group
+//
+// Remove a user from a group. This removes any app access and permissions granted by this group, but the user may still be in other groups that grant the same app access and permissions.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships/{accountId} (the `RemoveUserFromGroup` operationId).
+func (c *ClientWithResponses) RemoveUserFromGroupWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, accountId string, reqEditors ...RequestEditorFn) (*RemoveUserFromGroupResponse, error) {
+	rsp, err := c.RemoveUserFromGroup(ctx, orgId, directoryId, groupId, accountId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRemoveUserFromGroupResponse(rsp)
+}
+
 // SearchDirectoryUsersWithBodyWithResponse Search for users in an organization
 //
 // Return a page of users in an organization that match the supplied parameters.
@@ -2827,6 +3682,106 @@ func ParseRevokeRoleResponse(rsp *http.Response) (*RevokeRoleResponse, error) {
 		}
 		response.JSON500 = &dest
 
+	}
+
+	return response, nil
+}
+
+// ParseSearchDirectoryGroupsResponse parses an HTTP response from a SearchDirectoryGroupsWithResponse call
+func ParseSearchDirectoryGroupsResponse(rsp *http.Response) (*SearchDirectoryGroupsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SearchDirectoryGroupsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MultiDirectoryGroupSearchPage
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAddUserToGroupResponse parses an HTTP response from a AddUserToGroupWithResponse call
+func ParseAddUserToGroupResponse(rsp *http.Response) (*AddUserToGroupResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AddUserToGroupResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseRemoveUserFromGroupResponse parses an HTTP response from a RemoveUserFromGroupWithResponse call
+func ParseRemoveUserFromGroupResponse(rsp *http.Response) (*RemoveUserFromGroupResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RemoveUserFromGroupResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil

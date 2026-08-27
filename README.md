@@ -2,9 +2,9 @@
 
 Terraform provider for managing Atlassian Cloud resources.
 
-The first supported workflow finds an existing organization user and manages a
-direct application role assignment for that user. Invitations are intentionally
-outside the provider's scope.
+Supported organization workflows find an existing user and manage either the
+user's group membership or a direct application role assignment. Invitations
+are intentionally outside the provider's scope.
 
 ## Requirements
 
@@ -37,6 +37,19 @@ data "atlassian_organization_user" "example" {
   organization_id = "your-organization-id"
   directory_id    = "your-directory-id"
   emails           = ["user@example.com"]
+}
+
+data "atlassian_organization_group" "jira_users" {
+  organization_id = "your-organization-id"
+  directory_id    = "your-directory-id"
+  group_names     = ["jira-users"]
+}
+
+resource "atlassian_organization_group_membership" "example" {
+  organization_id = "your-organization-id"
+  directory_id    = "your-directory-id"
+  group_id        = one(data.atlassian_organization_group.jira_users.groups).group_id
+  account_id      = one(data.atlassian_organization_user.example.users).account_id
 }
 
 resource "atlassian_organization_user_role_assignment" "jira" {

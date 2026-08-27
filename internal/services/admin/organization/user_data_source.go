@@ -331,11 +331,15 @@ func stringSet(values ...string) map[string]struct{} {
 }
 
 func validateStringSet(name string, value types.Set, maximum int, allowed map[string]struct{}, resp *datasource.ValidateConfigResponse) {
+	validateStringSetWithSummary("Invalid organization user filters", name, value, maximum, allowed, resp)
+}
+
+func validateStringSetWithSummary(summary, name string, value types.Set, maximum int, allowed map[string]struct{}, resp *datasource.ValidateConfigResponse) {
 	if value.IsNull() || value.IsUnknown() {
 		return
 	}
 	if length := len(value.Elements()); length == 0 || length > maximum {
-		resp.Diagnostics.AddError("Invalid organization user filters", fmt.Sprintf("%s must contain between 1 and %d values.", name, maximum))
+		resp.Diagnostics.AddError(summary, fmt.Sprintf("%s must contain between 1 and %d values.", name, maximum))
 		return
 	}
 	for _, element := range value.Elements() {
@@ -345,12 +349,12 @@ func validateStringSet(name string, value types.Set, maximum int, allowed map[st
 		}
 		item := itemValue.ValueString()
 		if strings.TrimSpace(item) == "" {
-			resp.Diagnostics.AddError("Invalid organization user filters", fmt.Sprintf("%s must not contain empty values.", name))
+			resp.Diagnostics.AddError(summary, fmt.Sprintf("%s must not contain empty values.", name))
 			continue
 		}
 		if allowed != nil {
 			if _, valid := allowed[item]; !valid {
-				resp.Diagnostics.AddError("Invalid organization user filters", fmt.Sprintf("%q is not a supported value for %s.", item, name))
+				resp.Diagnostics.AddError(summary, fmt.Sprintf("%q is not a supported value for %s.", item, name))
 			}
 		}
 	}
