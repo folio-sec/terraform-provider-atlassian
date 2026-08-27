@@ -11,6 +11,8 @@ code. Update it when the same implementation or review mistake recurs.
 
 ## Contribution workflow
 
+- Sign off every commit for Developer Certificate of Origin (DCO) compliance,
+  for example by using `git commit --signoff`.
 - When opening a pull request, follow and complete the repository's pull
   request template.
 
