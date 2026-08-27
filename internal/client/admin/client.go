@@ -26,8 +26,8 @@ type Client struct {
 type disableRetryContextKey struct{}
 
 // WithoutRetry marks a request context so the shared retry transport sends the
-// request only once. Use this for non-idempotent mutations whose outcome would
-// be ambiguous if their response were lost.
+// request only once, apart from rate limiting. Use this for non-idempotent
+// mutations whose outcome would be ambiguous if their response were lost.
 func WithoutRetry(ctx context.Context) context.Context {
 	return context.WithValue(ctx, disableRetryContextKey{}, true)
 }
@@ -78,6 +78,12 @@ func NewWithBaseURL(baseURL *url.URL, apiKey string, httpClient *http.Client) (*
 	retryClient.ErrorHandler = retryablehttp.PassthroughErrorHandler
 	retryClient.CheckRetry = func(ctx context.Context, response *http.Response, err error) (bool, error) {
 		if disableRetry, _ := ctx.Value(disableRetryContextKey{}).(bool); disableRetry {
+			// A rate limited request is rejected before the server applies it, so
+			// resending it cannot duplicate a mutation. Any other outcome stays
+			// single shot because the mutation may already have taken effect.
+			if err == nil && response != nil && response.StatusCode == http.StatusTooManyRequests {
+				return true, nil
+			}
 			return false, nil
 		}
 		return retryablehttp.DefaultRetryPolicy(ctx, response, err)
