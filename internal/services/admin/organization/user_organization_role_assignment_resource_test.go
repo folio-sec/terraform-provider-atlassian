@@ -153,17 +153,22 @@ func TestValidateUserOrganizationRoleAssignment(t *testing.T) {
 func TestUserOrganizationRoleAttachmentCreatePollsUntilVisible(t *testing.T) {
 	t.Parallel()
 
-	var readCalls int
+	var readCalls, assignCalls int
 	client := &fakeOrganizationRoleAssignmentClient{
 		assign: func(_ context.Context, organizationID, accountID, role string) error {
+			assignCalls++
 			if organizationID != "org" || accountID != "5b361abdf2886739ae9da236" || role != organizationAdminRole {
 				t.Errorf("assign arguments = %q, %q, %q", organizationID, accountID, role)
+			}
+			if readCalls != 1 {
+				t.Errorf("assign was sent after %d reads, want the existence check only", readCalls)
 			}
 			return nil
 		},
 		has: func(context.Context, string, string, string, string) (bool, error) {
 			readCalls++
-			return readCalls >= 3, nil
+			// The first read is the existence check, the rest poll for visibility.
+			return readCalls >= 4, nil
 		},
 	}
 	subject := newTestUserOrganizationRoleAttachmentResource(client)
@@ -173,8 +178,11 @@ func TestUserOrganizationRoleAttachmentCreatePollsUntilVisible(t *testing.T) {
 	if response.Diagnostics.HasError() {
 		t.Fatalf("Create() diagnostics = %v", response.Diagnostics)
 	}
-	if readCalls != 3 {
-		t.Fatalf("read calls = %d, want 3", readCalls)
+	if assignCalls != 1 {
+		t.Fatalf("assign calls = %d, want 1", assignCalls)
+	}
+	if readCalls != 4 {
+		t.Fatalf("read calls = %d, want 4", readCalls)
 	}
 	var state userOrganizationRoleAssignmentResourceModel
 	response.Diagnostics.Append(response.State.Get(context.Background(), &state)...)
@@ -190,21 +198,159 @@ func TestUserOrganizationRoleAttachmentCreateVerifiesAmbiguousOutcomes(t *testin
 	t.Parallel()
 
 	tests := map[string]error{
-		"transport error": errors.New("connection reset after request"),
-		"conflict":        &admin.HTTPError{StatusCode: http.StatusConflict},
+		"transport error":       errors.New("connection reset after request"),
+		"internal server error": &admin.HTTPError{StatusCode: http.StatusInternalServerError},
 	}
 	for name, mutationErr := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+			reads := 0
 			client := &fakeOrganizationRoleAssignmentClient{
 				assign: func(context.Context, string, string, string) error { return mutationErr },
-				has:    func(context.Context, string, string, string, string) (bool, error) { return true, nil },
+				has: func(context.Context, string, string, string, string) (bool, error) {
+					reads++
+					// Absent for the existence check, present once the ambiguous
+					// mutation is verified.
+					return reads > 1, nil
+				},
 			}
 			subject := newTestUserOrganizationRoleAttachmentResource(client)
 			request, response := newUserOrganizationRoleAttachmentCreateData(t, subject, testUserOrganizationRoleAssignmentModel())
 			subject.Create(context.Background(), request, response)
 			if response.Diagnostics.HasError() {
 				t.Fatalf("Create() diagnostics = %v", response.Diagnostics)
+			}
+		})
+	}
+}
+
+func TestUserOrganizationRoleAssignmentCreateRefusesToAdoptExistingAssignment(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		alreadyAssigned bool
+		assignErr       error
+		wantAssigns     int
+	}{
+		"existence check finds the assignment": {alreadyAssigned: true},
+		"assign reports a conflict":            {assignErr: &admin.HTTPError{StatusCode: http.StatusConflict}, wantAssigns: 1},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			assigns := 0
+			client := &fakeOrganizationRoleAssignmentClient{
+				assign: func(context.Context, string, string, string) error {
+					assigns++
+					return test.assignErr
+				},
+				has: func(context.Context, string, string, string, string) (bool, error) {
+					return test.alreadyAssigned, nil
+				},
+			}
+			subject := newTestUserOrganizationRoleAttachmentResource(client)
+			request, response := newUserOrganizationRoleAttachmentCreateData(t, subject, testUserOrganizationRoleAssignmentModel())
+			subject.Create(context.Background(), request, response)
+			if !response.Diagnostics.HasError() {
+				t.Fatal("Create() adopted an assignment Terraform did not grant")
+			}
+			if assigns != test.wantAssigns {
+				t.Errorf("assign calls = %d, want %d", assigns, test.wantAssigns)
+			}
+			detail := response.Diagnostics.Errors()[0].Detail()
+			if !strings.Contains(detail, "org,directory,5b361abdf2886739ae9da236,atlassian/org-admin") {
+				t.Errorf("detail = %q, want the composite import identifier", detail)
+			}
+			if !response.State.Raw.IsNull() {
+				t.Errorf("state = %v, want null for a resource Terraform did not create", response.State.Raw)
+			}
+		})
+	}
+}
+
+func TestUserOrganizationRoleAssignmentCreateStopsBeforeAssigningWhenExistenceCheckFails(t *testing.T) {
+	t.Parallel()
+
+	client := &fakeOrganizationRoleAssignmentClient{
+		assign: func(context.Context, string, string, string) error {
+			t.Fatal("assign must not be sent when the existence check fails")
+			return nil
+		},
+		has: func(context.Context, string, string, string, string) (bool, error) {
+			return false, &admin.HTTPError{StatusCode: http.StatusForbidden}
+		},
+	}
+	subject := newTestUserOrganizationRoleAttachmentResource(client)
+	request, response := newUserOrganizationRoleAttachmentCreateData(t, subject, testUserOrganizationRoleAssignmentModel())
+	subject.Create(context.Background(), request, response)
+	if !response.Diagnostics.HasError() {
+		t.Fatal("Create() diagnostics = nil, want an existence check error")
+	}
+	if !response.State.Raw.IsNull() {
+		t.Errorf("state = %v, want null", response.State.Raw)
+	}
+}
+
+func TestUserOrganizationRoleAssignmentCreateKeepsPartialStateWhenVerificationFails(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		// has is called with the 1-based read count. The first read is the
+		// existence check that runs before the assignment is sent.
+		has       func(int) (bool, error)
+		wantReads int
+	}{
+		"assignment never becomes visible": {
+			has: func(int) (bool, error) { return false, nil },
+		},
+		"verification becomes unreadable after assigning": {
+			has: func(reads int) (bool, error) {
+				if reads == 1 {
+					return false, nil
+				}
+				return false, &admin.HTTPError{StatusCode: http.StatusForbidden}
+			},
+			wantReads: 2,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			reads := 0
+			client := &fakeOrganizationRoleAssignmentClient{
+				assign: func(context.Context, string, string, string) error { return nil },
+				has: func(context.Context, string, string, string, string) (bool, error) {
+					reads++
+					return test.has(reads)
+				},
+			}
+			subject := newTestUserOrganizationRoleAttachmentResource(client)
+			request, response := newUserOrganizationRoleAttachmentCreateData(t, subject, testUserOrganizationRoleAssignmentModel())
+			subject.Create(context.Background(), request, response)
+			if !response.Diagnostics.HasError() {
+				t.Fatal("Create() diagnostics = nil, want a verification error")
+			}
+			if test.wantReads > 0 && reads != test.wantReads {
+				t.Errorf("read calls = %d, want %d", reads, test.wantReads)
+			}
+
+			// The assignment may have been granted, so Terraform must keep tracking it.
+			var state userOrganizationRoleAssignmentResourceModel
+			if diagnostics := response.State.Get(context.Background(), &state); diagnostics.HasError() {
+				t.Fatalf("State.Get() diagnostics = %v", diagnostics)
+			}
+			if got := state.ID.ValueString(); got != "org,directory,5b361abdf2886739ae9da236,atlassian/org-admin" {
+				t.Errorf("id = %q, want the composite assignment identifier", got)
+			}
+			if got := state.AccountID.ValueString(); got != "5b361abdf2886739ae9da236" {
+				t.Errorf("account_id = %q", got)
+			}
+			var identity userOrganizationRoleAssignmentResourceIdentityModel
+			if diagnostics := response.Identity.Get(context.Background(), &identity); diagnostics.HasError() {
+				t.Fatalf("Identity.Get() diagnostics = %v", diagnostics)
+			}
+			if identity.Role.ValueString() != organizationAdminRole {
+				t.Errorf("identity role = %q", identity.Role.ValueString())
 			}
 		})
 	}

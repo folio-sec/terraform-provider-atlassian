@@ -163,11 +163,44 @@ func (r *userOrganizationRoleAssignmentResource) Create(ctx context.Context, req
 		return
 	}
 
-	mutationErr := r.client.AssignOrganizationRole(ctx, plan.OrganizationID.ValueString(), plan.AccountID.ValueString(), plan.Role.ValueString())
-	if mutationErr != nil && !organizationRoleMutationNeedsVerification(mutationErr) {
-		resp.Diagnostics.AddError("Unable to assign organization-level role", mutationErr.Error())
+	// The assign endpoint is an upsert, so check for an existing assignment
+	// first. Without this check Terraform would adopt a role it did not grant
+	// and revoke it on destroy.
+	present, err := r.client.HasDirectOrganizationRole(ctx, plan.OrganizationID.ValueString(), plan.DirectoryID.ValueString(), plan.AccountID.ValueString(), plan.Role.ValueString())
+	switch {
+	case err != nil && !hasHTTPStatus(err, http.StatusNotFound):
+		resp.Diagnostics.AddError("Unable to check for an existing organization-level role assignment", err.Error())
+		return
+	case present:
+		resp.Diagnostics.Append(existingOrganizationRoleAssignmentError(plan))
 		return
 	}
+
+	mutationErr := r.client.AssignOrganizationRole(ctx, plan.OrganizationID.ValueString(), plan.AccountID.ValueString(), plan.Role.ValueString())
+	if mutationErr != nil {
+		// A conflict means the role is already assigned, which the existence
+		// check above raced with rather than an ambiguous outcome to verify.
+		if hasHTTPStatus(mutationErr, http.StatusConflict) {
+			resp.Diagnostics.Append(existingOrganizationRoleAssignmentError(plan))
+			return
+		}
+		if !mutationOutcomeMayBeAmbiguous(mutationErr) {
+			resp.Diagnostics.AddError("Unable to assign organization-level role", mutationErr.Error())
+			return
+		}
+	}
+
+	// The assignment request has been sent, so record state before verifying it.
+	// Terraform persists the response state even alongside error diagnostics and
+	// marks the resource tainted, which keeps a possibly granted role tracked
+	// instead of leaving it behind with nothing in state.
+	plan.ID = types.StringValue(userOrganizationRoleAssignmentID(plan))
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	resp.Diagnostics.Append(resp.Identity.Set(ctx, userOrganizationRoleAssignmentIdentity(plan))...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	if err := r.waitForDirectRole(ctx, plan, true); err != nil {
 		if mutationErr != nil {
 			resp.Diagnostics.AddError("Unable to verify organization-level role assignment", fmt.Sprintf("The assignment response was ambiguous (%s), and the resulting state could not be verified: %s", mutationErr, err))
@@ -176,10 +209,6 @@ func (r *userOrganizationRoleAssignmentResource) Create(ctx context.Context, req
 		}
 		return
 	}
-
-	plan.ID = types.StringValue(userOrganizationRoleAssignmentID(plan))
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
-	resp.Diagnostics.Append(resp.Identity.Set(ctx, userOrganizationRoleAssignmentIdentity(plan))...)
 }
 
 func (r *userOrganizationRoleAssignmentResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -213,14 +242,9 @@ func (r *userOrganizationRoleAssignmentResource) Delete(ctx context.Context, req
 	}
 
 	mutationErr := r.client.RevokeOrganizationRole(ctx, state.OrganizationID.ValueString(), state.AccountID.ValueString(), state.Role.ValueString())
-	if mutationErr != nil {
-		var httpErr *admin.HTTPError
-		if !errors.As(mutationErr, &httpErr) || httpErr.StatusCode != http.StatusNotFound {
-			if !organizationRoleMutationNeedsVerification(mutationErr) {
-				resp.Diagnostics.AddError("Unable to revoke organization-level role", mutationErr.Error())
-				return
-			}
-		}
+	if mutationErr != nil && !hasHTTPStatus(mutationErr, http.StatusNotFound) && !mutationOutcomeMayBeAmbiguous(mutationErr) {
+		resp.Diagnostics.AddError("Unable to revoke organization-level role", mutationErr.Error())
+		return
 	}
 	if err := r.waitForDirectRole(ctx, state, false); err != nil {
 		if mutationErr != nil {
@@ -335,12 +359,12 @@ func readOutcomeMayBeTransient(err error) bool {
 	return httpErr.StatusCode == http.StatusTooManyRequests || httpErr.StatusCode >= http.StatusInternalServerError
 }
 
-func organizationRoleMutationNeedsVerification(err error) bool {
-	var httpErr *admin.HTTPError
-	if errors.As(err, &httpErr) {
-		return httpErr.StatusCode == http.StatusConflict || httpErr.StatusCode >= http.StatusInternalServerError
-	}
-	return true
+func existingOrganizationRoleAssignmentError(model userOrganizationRoleAssignmentResourceModel) diag.Diagnostic {
+	return diag.NewErrorDiagnostic(
+		"Organization-level role is already assigned",
+		fmt.Sprintf("%s is already assigned directly to account %s. To manage the existing assignment with Terraform it needs to be imported into the state, for example:\n\n  terraform import <resource address> %q",
+			model.Role.ValueString(), model.AccountID.ValueString(), userOrganizationRoleAssignmentID(model)),
+	)
 }
 
 func hasHTTPStatus(err error, statusCode int) bool {
