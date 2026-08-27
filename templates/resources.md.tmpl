@@ -4,7 +4,7 @@
 page_title: "{{.Name}} {{.Type}} - {{.RenderedProviderName}}"
 subcategory: "{{if eq $service "organization"}}Cloud Admin{{else}}{{$service | title}}{{end}}"
 description: |-
-{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+{{/* Only the leading paragraph, so Registry callouts stay out of the front matter. */}}{{ index (split (.Description | plainmarkdown | trimspace) "\n") 0 | prefixlines "  " }}
 ---
 
 # {{.Name}} ({{.Type}})

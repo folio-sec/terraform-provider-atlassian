@@ -11,6 +11,7 @@ import (
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/docs"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
@@ -84,7 +85,17 @@ func (r *userOrganizationRoleAssignmentResource) Schema(_ context.Context, _ res
 		}
 	}
 	resp.Schema = schema.Schema{
-		Description: "Assigns an organization-level role directly to an Atlassian organization user.",
+		MarkdownDescription: docs.Description(
+			"Assigns an organization-level role directly to an Atlassian organization user.",
+			docs.Callout{Sigil: docs.Warning, Label: "Warning", Text: "`" + organizationAdminRole + "`" + ` grants full administrative access to the organization.
+				Destroying this resource revokes the role, which can leave the organization without an administrator.`},
+			docs.Callout{Sigil: docs.Warning, Label: "Note", Text: `This resource uses organization-level role assignment endpoints that the
+				Atlassian Organization API marks as experimental. Atlassian may change or remove them without notice.`},
+			docs.Callout{Sigil: docs.Warning, Label: "Note", Text: `Role assignments are eventually consistent. After assigning or revoking a
+				role the provider polls the role assignment API for up to 35 seconds to confirm the result.`},
+			docs.Callout{Sigil: docs.Info, Label: "Tip", Text: `A role that is already assigned directly cannot be created. Import the
+				existing assignment instead; the error message reports the import identifier to use.`},
+		),
 		Attributes: map[string]schema.Attribute{
 			"id":              schema.StringAttribute{Description: "Composite organization-level role assignment identifier.", Computed: true},
 			"organization_id": requiredReplace("Atlassian organization ID used in the Organization API path."),

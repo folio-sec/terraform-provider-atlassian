@@ -10,6 +10,14 @@ description: |-
 
 Assigns an organization-level role directly to an Atlassian organization user.
 
+~> **Warning:** `atlassian/org-admin` grants full administrative access to the organization. Destroying this resource revokes the role, which can leave the organization without an administrator.
+
+~> **Note:** This resource uses organization-level role assignment endpoints that the Atlassian Organization API marks as experimental. Atlassian may change or remove them without notice.
+
+~> **Note:** Role assignments are eventually consistent. After assigning or revoking a role the provider polls the role assignment API for up to 35 seconds to confirm the result.
+
+-> **Tip:** A role that is already assigned directly cannot be created. Import the existing assignment instead; the error message reports the import identifier to use.
+
 ## Example Usage
 
 ```terraform
