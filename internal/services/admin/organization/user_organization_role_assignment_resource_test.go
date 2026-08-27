@@ -150,31 +150,39 @@ func TestValidateUserOrganizationRoleAssignment(t *testing.T) {
 	}
 }
 
-func TestUserOrganizationRoleAttachmentCreatePollsUntilVisible(t *testing.T) {
+func TestUserOrganizationRoleAssignmentCreatePollsUntilVisible(t *testing.T) {
 	t.Parallel()
 
-	var readCalls int
+	var readCalls, assignCalls int
 	client := &fakeOrganizationRoleAssignmentClient{
 		assign: func(_ context.Context, organizationID, accountID, role string) error {
+			assignCalls++
 			if organizationID != "org" || accountID != "5b361abdf2886739ae9da236" || role != organizationAdminRole {
 				t.Errorf("assign arguments = %q, %q, %q", organizationID, accountID, role)
+			}
+			if readCalls != 1 {
+				t.Errorf("assign was sent after %d reads, want the existence check only", readCalls)
 			}
 			return nil
 		},
 		has: func(context.Context, string, string, string, string) (bool, error) {
 			readCalls++
-			return readCalls >= 3, nil
+			// The first read is the existence check, the rest poll for visibility.
+			return readCalls >= 4, nil
 		},
 	}
-	subject := newTestUserOrganizationRoleAttachmentResource(client)
+	subject := newTestUserOrganizationRoleAssignmentResource(client)
 	model := testUserOrganizationRoleAssignmentModel()
-	request, response := newUserOrganizationRoleAttachmentCreateData(t, subject, model)
+	request, response := newUserOrganizationRoleAssignmentCreateData(t, subject, model)
 	subject.Create(context.Background(), request, response)
 	if response.Diagnostics.HasError() {
 		t.Fatalf("Create() diagnostics = %v", response.Diagnostics)
 	}
-	if readCalls != 3 {
-		t.Fatalf("read calls = %d, want 3", readCalls)
+	if assignCalls != 1 {
+		t.Fatalf("assign calls = %d, want 1", assignCalls)
+	}
+	if readCalls != 4 {
+		t.Fatalf("read calls = %d, want 4", readCalls)
 	}
 	var state userOrganizationRoleAssignmentResourceModel
 	response.Diagnostics.Append(response.State.Get(context.Background(), &state)...)
@@ -186,22 +194,28 @@ func TestUserOrganizationRoleAttachmentCreatePollsUntilVisible(t *testing.T) {
 	}
 }
 
-func TestUserOrganizationRoleAttachmentCreateVerifiesAmbiguousOutcomes(t *testing.T) {
+func TestUserOrganizationRoleAssignmentCreateVerifiesAmbiguousOutcomes(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]error{
-		"transport error": errors.New("connection reset after request"),
-		"conflict":        &admin.HTTPError{StatusCode: http.StatusConflict},
+		"transport error":       errors.New("connection reset after request"),
+		"internal server error": &admin.HTTPError{StatusCode: http.StatusInternalServerError},
 	}
 	for name, mutationErr := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
+			reads := 0
 			client := &fakeOrganizationRoleAssignmentClient{
 				assign: func(context.Context, string, string, string) error { return mutationErr },
-				has:    func(context.Context, string, string, string, string) (bool, error) { return true, nil },
+				has: func(context.Context, string, string, string, string) (bool, error) {
+					reads++
+					// Absent for the existence check, present once the ambiguous
+					// mutation is verified.
+					return reads > 1, nil
+				},
 			}
-			subject := newTestUserOrganizationRoleAttachmentResource(client)
-			request, response := newUserOrganizationRoleAttachmentCreateData(t, subject, testUserOrganizationRoleAssignmentModel())
+			subject := newTestUserOrganizationRoleAssignmentResource(client)
+			request, response := newUserOrganizationRoleAssignmentCreateData(t, subject, testUserOrganizationRoleAssignmentModel())
 			subject.Create(context.Background(), request, response)
 			if response.Diagnostics.HasError() {
 				t.Fatalf("Create() diagnostics = %v", response.Diagnostics)
@@ -210,7 +224,139 @@ func TestUserOrganizationRoleAttachmentCreateVerifiesAmbiguousOutcomes(t *testin
 	}
 }
 
-func TestUserOrganizationRoleAttachmentDeletePollsAndVerifiesAmbiguousOutcome(t *testing.T) {
+func TestUserOrganizationRoleAssignmentCreateRefusesToAdoptExistingAssignment(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		alreadyAssigned bool
+		assignErr       error
+		wantAssigns     int
+	}{
+		"existence check finds the assignment": {alreadyAssigned: true},
+		"assign reports a conflict":            {assignErr: &admin.HTTPError{StatusCode: http.StatusConflict}, wantAssigns: 1},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			assigns := 0
+			client := &fakeOrganizationRoleAssignmentClient{
+				assign: func(context.Context, string, string, string) error {
+					assigns++
+					return test.assignErr
+				},
+				has: func(context.Context, string, string, string, string) (bool, error) {
+					return test.alreadyAssigned, nil
+				},
+			}
+			subject := newTestUserOrganizationRoleAssignmentResource(client)
+			request, response := newUserOrganizationRoleAssignmentCreateData(t, subject, testUserOrganizationRoleAssignmentModel())
+			subject.Create(context.Background(), request, response)
+			if !response.Diagnostics.HasError() {
+				t.Fatal("Create() adopted an assignment Terraform did not grant")
+			}
+			if assigns != test.wantAssigns {
+				t.Errorf("assign calls = %d, want %d", assigns, test.wantAssigns)
+			}
+			detail := response.Diagnostics.Errors()[0].Detail()
+			if !strings.Contains(detail, "org,directory,5b361abdf2886739ae9da236,atlassian/org-admin") {
+				t.Errorf("detail = %q, want the composite import identifier", detail)
+			}
+			if !response.State.Raw.IsNull() {
+				t.Errorf("state = %v, want null for a resource Terraform did not create", response.State.Raw)
+			}
+		})
+	}
+}
+
+func TestUserOrganizationRoleAssignmentCreateStopsBeforeAssigningWhenExistenceCheckFails(t *testing.T) {
+	t.Parallel()
+
+	client := &fakeOrganizationRoleAssignmentClient{
+		assign: func(context.Context, string, string, string) error {
+			t.Fatal("assign must not be sent when the existence check fails")
+			return nil
+		},
+		has: func(context.Context, string, string, string, string) (bool, error) {
+			return false, &admin.HTTPError{StatusCode: http.StatusForbidden}
+		},
+	}
+	subject := newTestUserOrganizationRoleAssignmentResource(client)
+	request, response := newUserOrganizationRoleAssignmentCreateData(t, subject, testUserOrganizationRoleAssignmentModel())
+	subject.Create(context.Background(), request, response)
+	if !response.Diagnostics.HasError() {
+		t.Fatal("Create() diagnostics = nil, want an existence check error")
+	}
+	if !response.State.Raw.IsNull() {
+		t.Errorf("state = %v, want null", response.State.Raw)
+	}
+}
+
+func TestUserOrganizationRoleAssignmentCreateKeepsPartialStateWhenVerificationFails(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		// has is called with the 1-based read count. The first read is the
+		// existence check that runs before the assignment is sent.
+		has       func(int) (bool, error)
+		wantReads int
+	}{
+		"assignment never becomes visible": {
+			has: func(int) (bool, error) { return false, nil },
+		},
+		"verification becomes unreadable after assigning": {
+			has: func(reads int) (bool, error) {
+				if reads == 1 {
+					return false, nil
+				}
+				return false, &admin.HTTPError{StatusCode: http.StatusForbidden}
+			},
+			wantReads: 2,
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			reads := 0
+			client := &fakeOrganizationRoleAssignmentClient{
+				assign: func(context.Context, string, string, string) error { return nil },
+				has: func(context.Context, string, string, string, string) (bool, error) {
+					reads++
+					return test.has(reads)
+				},
+			}
+			subject := newTestUserOrganizationRoleAssignmentResource(client)
+			request, response := newUserOrganizationRoleAssignmentCreateData(t, subject, testUserOrganizationRoleAssignmentModel())
+			subject.Create(context.Background(), request, response)
+			if !response.Diagnostics.HasError() {
+				t.Fatal("Create() diagnostics = nil, want a verification error")
+			}
+			if test.wantReads > 0 && reads != test.wantReads {
+				t.Errorf("read calls = %d, want %d", reads, test.wantReads)
+			}
+
+			// The assignment may have been granted, so Terraform must keep tracking it.
+			var state userOrganizationRoleAssignmentResourceModel
+			if diagnostics := response.State.Get(context.Background(), &state); diagnostics.HasError() {
+				t.Fatalf("State.Get() diagnostics = %v", diagnostics)
+			}
+			if got := state.ID.ValueString(); got != "org,directory,5b361abdf2886739ae9da236,atlassian/org-admin" {
+				t.Errorf("id = %q, want the composite assignment identifier", got)
+			}
+			if got := state.AccountID.ValueString(); got != "5b361abdf2886739ae9da236" {
+				t.Errorf("account_id = %q", got)
+			}
+			var identity userOrganizationRoleAssignmentResourceIdentityModel
+			if diagnostics := response.Identity.Get(context.Background(), &identity); diagnostics.HasError() {
+				t.Fatalf("Identity.Get() diagnostics = %v", diagnostics)
+			}
+			if identity.Role.ValueString() != organizationAdminRole {
+				t.Errorf("identity role = %q", identity.Role.ValueString())
+			}
+		})
+	}
+}
+
+func TestUserOrganizationRoleAssignmentDeletePollsAndVerifiesAmbiguousOutcome(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -232,8 +378,8 @@ func TestUserOrganizationRoleAttachmentDeletePollsAndVerifiesAmbiguousOutcome(t 
 					return state, nil
 				},
 			}
-			subject := newTestUserOrganizationRoleAttachmentResource(client)
-			request, response := newUserOrganizationRoleAttachmentDeleteData(t, subject, testUserOrganizationRoleAssignmentModel())
+			subject := newTestUserOrganizationRoleAssignmentResource(client)
+			request, response := newUserOrganizationRoleAssignmentDeleteData(t, subject, testUserOrganizationRoleAssignmentModel())
 			subject.Delete(context.Background(), request, response)
 			if response.Diagnostics.HasError() {
 				t.Fatalf("Delete() diagnostics = %v", response.Diagnostics)
@@ -245,7 +391,7 @@ func TestUserOrganizationRoleAttachmentDeletePollsAndVerifiesAmbiguousOutcome(t 
 	}
 }
 
-func TestUserOrganizationRoleAttachmentDeleteSurfacesProtectedRoleError(t *testing.T) {
+func TestUserOrganizationRoleAssignmentDeleteSurfacesProtectedRoleError(t *testing.T) {
 	t.Parallel()
 
 	client := &fakeOrganizationRoleAssignmentClient{
@@ -257,32 +403,86 @@ func TestUserOrganizationRoleAttachmentDeleteSurfacesProtectedRoleError(t *testi
 			return false, nil
 		},
 	}
-	subject := newTestUserOrganizationRoleAttachmentResource(client)
-	request, response := newUserOrganizationRoleAttachmentDeleteData(t, subject, testUserOrganizationRoleAssignmentModel())
+	subject := newTestUserOrganizationRoleAssignmentResource(client)
+	request, response := newUserOrganizationRoleAssignmentDeleteData(t, subject, testUserOrganizationRoleAssignmentModel())
 	subject.Delete(context.Background(), request, response)
 	if !response.Diagnostics.HasError() || !strings.Contains(response.Diagnostics.Errors()[0].Detail(), "last organization administrator") {
 		t.Fatalf("Delete() diagnostics = %v", response.Diagnostics)
 	}
 }
 
-func TestUserOrganizationRoleAttachmentReadRemovesAbsentResource(t *testing.T) {
+func TestUserOrganizationRoleAssignmentReadRemovesAbsentResource(t *testing.T) {
 	t.Parallel()
 
-	client := &fakeOrganizationRoleAssignmentClient{
-		has: func(context.Context, string, string, string, string) (bool, error) { return false, nil },
+	tests := map[string]func(context.Context, string, string, string, string) (bool, error){
+		"role is no longer assigned": func(context.Context, string, string, string, string) (bool, error) {
+			return false, nil
+		},
+		"user or directory is gone": func(context.Context, string, string, string, string) (bool, error) {
+			return false, &admin.HTTPError{StatusCode: http.StatusNotFound}
+		},
 	}
-	subject := newTestUserOrganizationRoleAttachmentResource(client)
-	request, response := newUserOrganizationRoleAttachmentReadData(t, subject, testUserOrganizationRoleAssignmentModel())
-	subject.Read(context.Background(), request, response)
-	if response.Diagnostics.HasError() {
-		t.Fatalf("Read() diagnostics = %v", response.Diagnostics)
-	}
-	if !response.State.Raw.IsNull() {
-		t.Fatalf("state = %v, want null", response.State.Raw)
+	for name, has := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			subject := newTestUserOrganizationRoleAssignmentResource(&fakeOrganizationRoleAssignmentClient{has: has})
+			request, response := newUserOrganizationRoleAssignmentReadData(t, subject, testUserOrganizationRoleAssignmentModel())
+			subject.Read(context.Background(), request, response)
+			if response.Diagnostics.HasError() {
+				t.Fatalf("Read() diagnostics = %v", response.Diagnostics)
+			}
+			if !response.State.Raw.IsNull() {
+				t.Fatalf("state = %v, want null", response.State.Raw)
+			}
+		})
 	}
 }
 
-func TestUserOrganizationRoleAttachmentImportParsingAndValidation(t *testing.T) {
+func TestUserOrganizationRoleAssignmentReadKeepsStateOnFailure(t *testing.T) {
+	t.Parallel()
+
+	client := &fakeOrganizationRoleAssignmentClient{
+		has: func(context.Context, string, string, string, string) (bool, error) {
+			return false, &admin.HTTPError{StatusCode: http.StatusForbidden}
+		},
+	}
+	subject := newTestUserOrganizationRoleAssignmentResource(client)
+	request, response := newUserOrganizationRoleAssignmentReadData(t, subject, testUserOrganizationRoleAssignmentModel())
+	subject.Read(context.Background(), request, response)
+	if !response.Diagnostics.HasError() {
+		t.Fatal("Read() diagnostics = nil, want a read error")
+	}
+	// A read that cannot answer must not be reported as a deleted assignment.
+	if response.State.Raw.IsNull() {
+		t.Error("state = null, want the prior state retained")
+	}
+}
+
+func TestUserOrganizationRoleAssignmentDeleteTreatsMissingAssignmentAsDone(t *testing.T) {
+	t.Parallel()
+
+	reads := 0
+	client := &fakeOrganizationRoleAssignmentClient{
+		revoke: func(context.Context, string, string, string) error {
+			return &admin.HTTPError{StatusCode: http.StatusNotFound}
+		},
+		has: func(context.Context, string, string, string, string) (bool, error) {
+			reads++
+			return false, &admin.HTTPError{StatusCode: http.StatusNotFound}
+		},
+	}
+	subject := newTestUserOrganizationRoleAssignmentResource(client)
+	request, response := newUserOrganizationRoleAssignmentDeleteData(t, subject, testUserOrganizationRoleAssignmentModel())
+	subject.Delete(context.Background(), request, response)
+	if response.Diagnostics.HasError() {
+		t.Fatalf("Delete() diagnostics = %v", response.Diagnostics)
+	}
+	if reads != 1 {
+		t.Errorf("read calls = %d, want 1", reads)
+	}
+}
+
+func TestUserOrganizationRoleAssignmentImportParsingAndValidation(t *testing.T) {
 	t.Parallel()
 
 	identity, err := parseUserOrganizationRoleAssignmentImportID(" org , directory , 712020:account , atlassian/org-admin ")
@@ -304,7 +504,7 @@ func TestUserOrganizationRoleAttachmentImportParsingAndValidation(t *testing.T) 
 
 	ctx := context.Background()
 	subject := NewUserOrganizationRoleAssignmentResource().(*userOrganizationRoleAssignmentResource)
-	requestIdentity, response := newUserOrganizationRoleAttachmentImportData(t, ctx, subject)
+	requestIdentity, response := newUserOrganizationRoleAssignmentImportData(t, ctx, subject)
 	subject.ImportState(ctx, resource.ImportStateRequest{
 		ID:       "org,directory,5b361abdf2886739ae9da236,atlassian/org-admin",
 		Identity: requestIdentity,
@@ -313,7 +513,7 @@ func TestUserOrganizationRoleAttachmentImportParsingAndValidation(t *testing.T) 
 		t.Fatalf("ImportState() diagnostics = %v", response.Diagnostics)
 	}
 
-	_, invalidResponse := newUserOrganizationRoleAttachmentImportData(t, ctx, subject)
+	_, invalidResponse := newUserOrganizationRoleAssignmentImportData(t, ctx, subject)
 	subject.ImportState(ctx, resource.ImportStateRequest{
 		ID:       "org,directory,account,atlassian/admin",
 		Identity: requestIdentity,
@@ -323,12 +523,12 @@ func TestUserOrganizationRoleAttachmentImportParsingAndValidation(t *testing.T) 
 	}
 }
 
-func TestUserOrganizationRoleAttachmentImportByIdentity(t *testing.T) {
+func TestUserOrganizationRoleAssignmentImportByIdentity(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	subject := NewUserOrganizationRoleAssignmentResource().(*userOrganizationRoleAssignmentResource)
-	requestIdentity, response := newUserOrganizationRoleAttachmentImportData(t, ctx, subject)
+	requestIdentity, response := newUserOrganizationRoleAssignmentImportData(t, ctx, subject)
 	identity := userOrganizationRoleAssignmentResourceIdentityModel{
 		OrganizationID: types.StringValue("org"),
 		DirectoryID:    types.StringValue("directory"),
@@ -350,7 +550,7 @@ func TestUserOrganizationRoleAttachmentImportByIdentity(t *testing.T) {
 	}
 }
 
-func newTestUserOrganizationRoleAttachmentResource(client organizationRoleAssignmentClient) *userOrganizationRoleAssignmentResource {
+func newTestUserOrganizationRoleAssignmentResource(client organizationRoleAssignmentClient) *userOrganizationRoleAssignmentResource {
 	return &userOrganizationRoleAssignmentResource{
 		client:              client,
 		pollTimeout:         100 * time.Millisecond,
@@ -368,10 +568,10 @@ func testUserOrganizationRoleAssignmentModel() userOrganizationRoleAssignmentRes
 	}
 }
 
-func newUserOrganizationRoleAttachmentCreateData(t *testing.T, subject *userOrganizationRoleAssignmentResource, model userOrganizationRoleAssignmentResourceModel) (resource.CreateRequest, *resource.CreateResponse) {
+func newUserOrganizationRoleAssignmentCreateData(t *testing.T, subject *userOrganizationRoleAssignmentResource, model userOrganizationRoleAssignmentResourceModel) (resource.CreateRequest, *resource.CreateResponse) {
 	t.Helper()
 	ctx := context.Background()
-	schemaValue, identitySchemaValue := userOrganizationRoleAttachmentSchemas(t, ctx, subject)
+	schemaValue, identitySchemaValue := userOrganizationRoleAssignmentSchemas(t, ctx, subject)
 	plan := tfsdk.Plan{Raw: tftypes.NewValue(schemaValue.Type().TerraformType(ctx), nil), Schema: schemaValue}
 	if diagnostics := plan.Set(ctx, &model); diagnostics.HasError() {
 		t.Fatalf("Plan.Set() diagnostics = %v", diagnostics)
@@ -383,10 +583,10 @@ func newUserOrganizationRoleAttachmentCreateData(t *testing.T, subject *userOrga
 	}
 }
 
-func newUserOrganizationRoleAttachmentDeleteData(t *testing.T, subject *userOrganizationRoleAssignmentResource, model userOrganizationRoleAssignmentResourceModel) (resource.DeleteRequest, *resource.DeleteResponse) {
+func newUserOrganizationRoleAssignmentDeleteData(t *testing.T, subject *userOrganizationRoleAssignmentResource, model userOrganizationRoleAssignmentResourceModel) (resource.DeleteRequest, *resource.DeleteResponse) {
 	t.Helper()
 	ctx := context.Background()
-	schemaValue, _ := userOrganizationRoleAttachmentSchemas(t, ctx, subject)
+	schemaValue, _ := userOrganizationRoleAssignmentSchemas(t, ctx, subject)
 	state := tfsdk.State{Raw: tftypes.NewValue(schemaValue.Type().TerraformType(ctx), nil), Schema: schemaValue}
 	model.ID = types.StringValue(userOrganizationRoleAssignmentID(model))
 	if diagnostics := state.Set(ctx, &model); diagnostics.HasError() {
@@ -395,10 +595,10 @@ func newUserOrganizationRoleAttachmentDeleteData(t *testing.T, subject *userOrga
 	return resource.DeleteRequest{State: state}, &resource.DeleteResponse{}
 }
 
-func newUserOrganizationRoleAttachmentReadData(t *testing.T, subject *userOrganizationRoleAssignmentResource, model userOrganizationRoleAssignmentResourceModel) (resource.ReadRequest, *resource.ReadResponse) {
+func newUserOrganizationRoleAssignmentReadData(t *testing.T, subject *userOrganizationRoleAssignmentResource, model userOrganizationRoleAssignmentResourceModel) (resource.ReadRequest, *resource.ReadResponse) {
 	t.Helper()
 	ctx := context.Background()
-	schemaValue, identitySchemaValue := userOrganizationRoleAttachmentSchemas(t, ctx, subject)
+	schemaValue, identitySchemaValue := userOrganizationRoleAssignmentSchemas(t, ctx, subject)
 	state := tfsdk.State{Raw: tftypes.NewValue(schemaValue.Type().TerraformType(ctx), nil), Schema: schemaValue}
 	model.ID = types.StringValue(userOrganizationRoleAssignmentID(model))
 	if diagnostics := state.Set(ctx, &model); diagnostics.HasError() {
@@ -411,9 +611,9 @@ func newUserOrganizationRoleAttachmentReadData(t *testing.T, subject *userOrgani
 	}
 }
 
-func newUserOrganizationRoleAttachmentImportData(t *testing.T, ctx context.Context, subject *userOrganizationRoleAssignmentResource) (*tfsdk.ResourceIdentity, *resource.ImportStateResponse) {
+func newUserOrganizationRoleAssignmentImportData(t *testing.T, ctx context.Context, subject *userOrganizationRoleAssignmentResource) (*tfsdk.ResourceIdentity, *resource.ImportStateResponse) {
 	t.Helper()
-	schemaValue, identitySchemaValue := userOrganizationRoleAttachmentSchemas(t, ctx, subject)
+	schemaValue, identitySchemaValue := userOrganizationRoleAssignmentSchemas(t, ctx, subject)
 	identityType := identitySchemaValue.Type().TerraformType(ctx)
 	requestIdentity := &tfsdk.ResourceIdentity{Raw: tftypes.NewValue(identityType, nil), Schema: identitySchemaValue}
 	return requestIdentity, &resource.ImportStateResponse{
@@ -422,7 +622,7 @@ func newUserOrganizationRoleAttachmentImportData(t *testing.T, ctx context.Conte
 	}
 }
 
-func userOrganizationRoleAttachmentSchemas(t *testing.T, ctx context.Context, subject *userOrganizationRoleAssignmentResource) (resourceschema.Schema, resourceIdentitySchema) {
+func userOrganizationRoleAssignmentSchemas(t *testing.T, ctx context.Context, subject *userOrganizationRoleAssignmentResource) (resourceschema.Schema, identityschema.Schema) {
 	t.Helper()
 	var schemaResponse resource.SchemaResponse
 	subject.Schema(ctx, resource.SchemaRequest{}, &schemaResponse)
@@ -436,5 +636,3 @@ func userOrganizationRoleAttachmentSchemas(t *testing.T, ctx context.Context, su
 	}
 	return schemaResponse.Schema, identitySchemaResponse.IdentitySchema
 }
-
-type resourceIdentitySchema = identityschema.Schema

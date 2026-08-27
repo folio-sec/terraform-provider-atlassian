@@ -29,6 +29,14 @@ actions:
     description: Add an operation ID for removing a user from a group.
     update:
       operationId: removeUserFromGroup
+  # The upstream resource-scoped role operations also constrain the account ID
+  # to a UUID, which rejects every account ID Atlassian issues.
+  - target: "$['paths']['/v1/orgs/{orgId}/users/{userId}/roles/assign']['post']['parameters'][1]['schema']['format']"
+    description: Treat the role assign endpoint user ID as an opaque Atlassian account ID.
+    remove: true
+  - target: "$['paths']['/v1/orgs/{orgId}/users/{userId}/roles/revoke']['post']['parameters'][1]['schema']['format']"
+    description: Treat the role revoke endpoint user ID as an opaque Atlassian account ID.
+    remove: true
   # The upstream organization-level role operations omit operationId and
   # incorrectly constrain Atlassian account IDs to UUIDs. Account IDs are
   # opaque strings and may use legacy or 712020-prefixed forms.

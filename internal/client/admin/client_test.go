@@ -98,6 +98,35 @@ func TestClientDoWithoutRetry(t *testing.T) {
 	}
 }
 
+func TestClientDoWithoutRetryStillRetriesRateLimits(t *testing.T) {
+	t.Parallel()
+
+	attempts := 0
+	httpClient := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		attempts++
+		if attempts == 1 {
+			// Retry-After keeps the retry immediate instead of waiting out the
+			// default backoff.
+			rateLimited := response(request, http.StatusTooManyRequests, "")
+			rateLimited.Header.Set("Retry-After", "0")
+			return rateLimited, nil
+		}
+		return response(request, http.StatusNoContent, ""), nil
+	})}
+	baseURL, _ := url.Parse("https://api.example.test")
+	client, err := NewWithBaseURL(baseURL, "secret", httpClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := client.DoWithoutRetry(context.Background(), http.MethodPost, "admin/v1/test", nil, map[string]string{"value": "test"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if attempts != 2 {
+		t.Fatalf("attempts = %d, want 2", attempts)
+	}
+}
+
 func response(request *http.Request, statusCode int, body string) *http.Response {
 	return &http.Response{
 		StatusCode: statusCode,
