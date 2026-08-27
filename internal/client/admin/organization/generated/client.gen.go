@@ -394,6 +394,21 @@ func (e MultiDirectoryUserSearchRequestStatus) Valid() bool {
 	}
 }
 
+// Defines values for OrganizationLevelRoleApiRequestRole.
+const (
+	OrganizationLevelRoleApiRequestRoleAtlassianorgAdmin OrganizationLevelRoleApiRequestRole = "atlassian/org-admin"
+)
+
+// Valid indicates whether the value is a known member of the OrganizationLevelRoleApiRequestRole enum.
+func (e OrganizationLevelRoleApiRequestRole) Valid() bool {
+	switch e {
+	case OrganizationLevelRoleApiRequestRoleAtlassianorgAdmin:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PlatformRole.
 const (
 	PlatformRoleAtlassianaiAccess        PlatformRole = "atlassian/ai-access"
@@ -1303,6 +1318,14 @@ type NorOperator struct {
 	Nor *[]nullable.Nullable[QueryVariants] `json:"nor,omitempty"`
 }
 
+// OrganizationLevelRoleApiRequest defines model for OrganizationLevelRoleApiRequest.
+type OrganizationLevelRoleApiRequest struct {
+	Role OrganizationLevelRoleApiRequestRole `json:"role"`
+}
+
+// OrganizationLevelRoleApiRequestRole defines model for OrganizationLevelRoleApiRequest.Role.
+type OrganizationLevelRoleApiRequestRole string
+
 // PlatformRole Example: ["atlassian/org-admin"]
 type PlatformRole string
 
@@ -1418,6 +1441,16 @@ type ResourceOwnersParam = []string
 // RoleIdsParam defines model for roleIdsParam.
 type RoleIdsParam = []string
 
+// AssignOrganizationLevelRole401JSONResponseBody defines parameters for AssignOrganizationLevelRole.
+type AssignOrganizationLevelRole401JSONResponseBody struct {
+	union json.RawMessage
+}
+
+// RevokeOrganizationLevelRole401JSONResponseBody defines parameters for RevokeOrganizationLevelRole.
+type RevokeOrganizationLevelRole401JSONResponseBody struct {
+	union json.RawMessage
+}
+
 // AssignRole401JSONResponseBody defines parameters for AssignRole.
 type AssignRole401JSONResponseBody struct {
 	union json.RawMessage
@@ -1468,6 +1501,12 @@ type GetUserRoleAssignmentsParams struct {
 
 // GetUserRoleAssignmentsParamsRoleIds defines parameters for GetUserRoleAssignments.
 type GetUserRoleAssignmentsParamsRoleIds string
+
+// AssignOrganizationLevelRoleJSONRequestBody defines body for AssignOrganizationLevelRole for application/json ContentType.
+type AssignOrganizationLevelRoleJSONRequestBody = OrganizationLevelRoleApiRequest
+
+// RevokeOrganizationLevelRoleJSONRequestBody defines body for RevokeOrganizationLevelRole for application/json ContentType.
+type RevokeOrganizationLevelRoleJSONRequestBody = OrganizationLevelRoleApiRequest
 
 // AssignRoleJSONRequestBody defines body for AssignRole for application/json ContentType.
 type AssignRoleJSONRequestBody = RoleApiRequest
@@ -1646,6 +1685,130 @@ func (t QueryVariants) MarshalJSON() ([]byte, error) {
 }
 
 func (t *QueryVariants) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsProxyError returns the union data inside the AssignOrganizationLevelRole401JSONResponseBody as a ProxyError
+func (t AssignOrganizationLevelRole401JSONResponseBody) AsProxyError() (ProxyError, error) {
+	var body ProxyError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromProxyError overwrites any union data inside the AssignOrganizationLevelRole401JSONResponseBody as the provided ProxyError
+func (t *AssignOrganizationLevelRole401JSONResponseBody) FromProxyError(v ProxyError) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeProxyError performs a merge with any union data inside the AssignOrganizationLevelRole401JSONResponseBody, using the provided ProxyError
+func (t *AssignOrganizationLevelRole401JSONResponseBody) MergeProxyError(v ProxyError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsErrorsApplicationErrorsModel returns the union data inside the AssignOrganizationLevelRole401JSONResponseBody as a ErrorsApplicationErrorsModel
+func (t AssignOrganizationLevelRole401JSONResponseBody) AsErrorsApplicationErrorsModel() (ErrorsApplicationErrorsModel, error) {
+	var body ErrorsApplicationErrorsModel
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromErrorsApplicationErrorsModel overwrites any union data inside the AssignOrganizationLevelRole401JSONResponseBody as the provided ErrorsApplicationErrorsModel
+func (t *AssignOrganizationLevelRole401JSONResponseBody) FromErrorsApplicationErrorsModel(v ErrorsApplicationErrorsModel) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeErrorsApplicationErrorsModel performs a merge with any union data inside the AssignOrganizationLevelRole401JSONResponseBody, using the provided ErrorsApplicationErrorsModel
+func (t *AssignOrganizationLevelRole401JSONResponseBody) MergeErrorsApplicationErrorsModel(v ErrorsApplicationErrorsModel) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t AssignOrganizationLevelRole401JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *AssignOrganizationLevelRole401JSONResponseBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsProxyError returns the union data inside the RevokeOrganizationLevelRole401JSONResponseBody as a ProxyError
+func (t RevokeOrganizationLevelRole401JSONResponseBody) AsProxyError() (ProxyError, error) {
+	var body ProxyError
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromProxyError overwrites any union data inside the RevokeOrganizationLevelRole401JSONResponseBody as the provided ProxyError
+func (t *RevokeOrganizationLevelRole401JSONResponseBody) FromProxyError(v ProxyError) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeProxyError performs a merge with any union data inside the RevokeOrganizationLevelRole401JSONResponseBody, using the provided ProxyError
+func (t *RevokeOrganizationLevelRole401JSONResponseBody) MergeProxyError(v ProxyError) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsErrorsApplicationErrorsModel returns the union data inside the RevokeOrganizationLevelRole401JSONResponseBody as a ErrorsApplicationErrorsModel
+func (t RevokeOrganizationLevelRole401JSONResponseBody) AsErrorsApplicationErrorsModel() (ErrorsApplicationErrorsModel, error) {
+	var body ErrorsApplicationErrorsModel
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromErrorsApplicationErrorsModel overwrites any union data inside the RevokeOrganizationLevelRole401JSONResponseBody as the provided ErrorsApplicationErrorsModel
+func (t *RevokeOrganizationLevelRole401JSONResponseBody) FromErrorsApplicationErrorsModel(v ErrorsApplicationErrorsModel) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeErrorsApplicationErrorsModel performs a merge with any union data inside the RevokeOrganizationLevelRole401JSONResponseBody, using the provided ErrorsApplicationErrorsModel
+func (t *RevokeOrganizationLevelRole401JSONResponseBody) MergeErrorsApplicationErrorsModel(v ErrorsApplicationErrorsModel) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t RevokeOrganizationLevelRole401JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *RevokeOrganizationLevelRole401JSONResponseBody) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -1848,6 +2011,50 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 
+	// AssignOrganizationLevelRoleWithBody Assign organization-level role
+	//
+	// Assign an organization-level role to a user. These are roles that have organization-wide privileges, like organization admin.
+	//
+	// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/assign (the `AssignOrganizationLevelRole` operationId).
+	AssignOrganizationLevelRoleWithBody(ctx context.Context, orgId string, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AssignOrganizationLevelRole Assign organization-level role
+	//
+	// Assign an organization-level role to a user. These are roles that have organization-wide privileges, like organization admin.
+	//
+	// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/assign (the `AssignOrganizationLevelRole` operationId).
+	AssignOrganizationLevelRole(ctx context.Context, orgId string, userId string, body AssignOrganizationLevelRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RevokeOrganizationLevelRoleWithBody Remove organization-level role
+	//
+	// Remove an organization-level role from a user. These are roles that have organization-wide privileges, like organization admin.
+	//
+	// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/revoke (the `RevokeOrganizationLevelRole` operationId).
+	RevokeOrganizationLevelRoleWithBody(ctx context.Context, orgId string, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RevokeOrganizationLevelRole Remove organization-level role
+	//
+	// Remove an organization-level role from a user. These are roles that have organization-wide privileges, like organization admin.
+	//
+	// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/revoke (the `RevokeOrganizationLevelRole` operationId).
+	RevokeOrganizationLevelRole(ctx context.Context, orgId string, userId string, body RevokeOrganizationLevelRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// AssignRoleWithBody Grant user access
 	//
 	// This API can be used to grant Platform Roles to a user.
@@ -1974,6 +2181,90 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/users/{accountId}/role-assignments (the `GetUserRoleAssignments` operationId).
 	GetUserRoleAssignments(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, accountId AccountIdParam, params *GetUserRoleAssignmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+// AssignOrganizationLevelRoleWithBody Assign organization-level role
+//
+// Assign an organization-level role to a user. These are roles that have organization-wide privileges, like organization admin.
+//
+// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/assign (the `AssignOrganizationLevelRole` operationId).
+func (c *Client) AssignOrganizationLevelRoleWithBody(ctx context.Context, orgId string, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAssignOrganizationLevelRoleRequestWithBody(c.Server, orgId, userId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AssignOrganizationLevelRole Assign organization-level role
+//
+// Assign an organization-level role to a user. These are roles that have organization-wide privileges, like organization admin.
+//
+// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/assign (the `AssignOrganizationLevelRole` operationId).
+func (c *Client) AssignOrganizationLevelRole(ctx context.Context, orgId string, userId string, body AssignOrganizationLevelRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAssignOrganizationLevelRoleRequest(c.Server, orgId, userId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RevokeOrganizationLevelRoleWithBody Remove organization-level role
+//
+// Remove an organization-level role from a user. These are roles that have organization-wide privileges, like organization admin.
+//
+// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/revoke (the `RevokeOrganizationLevelRole` operationId).
+func (c *Client) RevokeOrganizationLevelRoleWithBody(ctx context.Context, orgId string, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRevokeOrganizationLevelRoleRequestWithBody(c.Server, orgId, userId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RevokeOrganizationLevelRole Remove organization-level role
+//
+// Remove an organization-level role from a user. These are roles that have organization-wide privileges, like organization admin.
+//
+// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/revoke (the `RevokeOrganizationLevelRole` operationId).
+func (c *Client) RevokeOrganizationLevelRole(ctx context.Context, orgId string, userId string, body RevokeOrganizationLevelRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRevokeOrganizationLevelRoleRequest(c.Server, orgId, userId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 // AssignRoleWithBody Grant user access
@@ -2221,6 +2512,114 @@ func (c *Client) GetUserRoleAssignments(ctx context.Context, orgId OrgIdParam, d
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewAssignOrganizationLevelRoleRequest calls the generic AssignOrganizationLevelRole builder with application/json body
+func NewAssignOrganizationLevelRoleRequest(server string, orgId string, userId string, body AssignOrganizationLevelRoleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAssignOrganizationLevelRoleRequestWithBody(server, orgId, userId, "application/json", bodyReader)
+}
+
+// NewAssignOrganizationLevelRoleRequestWithBody constructs an http.Request for the AssignOrganizationLevelRole method, with any body, and a specified content type
+func NewAssignOrganizationLevelRoleRequestWithBody(server string, orgId string, userId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/orgs/%s/users/%s/role-assignments/assign", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRevokeOrganizationLevelRoleRequest calls the generic RevokeOrganizationLevelRole builder with application/json body
+func NewRevokeOrganizationLevelRoleRequest(server string, orgId string, userId string, body RevokeOrganizationLevelRoleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRevokeOrganizationLevelRoleRequestWithBody(server, orgId, userId, "application/json", bodyReader)
+}
+
+// NewRevokeOrganizationLevelRoleRequestWithBody constructs an http.Request for the RevokeOrganizationLevelRole method, with any body, and a specified content type
+func NewRevokeOrganizationLevelRoleRequestWithBody(server string, orgId string, userId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/orgs/%s/users/%s/role-assignments/revoke", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
 }
 
 // NewAssignRoleRequest calls the generic AssignRole builder with application/json body
@@ -2734,6 +3133,50 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 
+	// AssignOrganizationLevelRoleWithBodyWithResponse Assign organization-level role
+	//
+	// Assign an organization-level role to a user. These are roles that have organization-wide privileges, like organization admin.
+	//
+	// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/assign (the `AssignOrganizationLevelRole` operationId).
+	AssignOrganizationLevelRoleWithBodyWithResponse(ctx context.Context, orgId string, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AssignOrganizationLevelRoleResponse, error)
+
+	// AssignOrganizationLevelRoleWithResponse Assign organization-level role
+	//
+	// Assign an organization-level role to a user. These are roles that have organization-wide privileges, like organization admin.
+	//
+	// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/assign (the `AssignOrganizationLevelRole` operationId).
+	AssignOrganizationLevelRoleWithResponse(ctx context.Context, orgId string, userId string, body AssignOrganizationLevelRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*AssignOrganizationLevelRoleResponse, error)
+
+	// RevokeOrganizationLevelRoleWithBodyWithResponse Remove organization-level role
+	//
+	// Remove an organization-level role from a user. These are roles that have organization-wide privileges, like organization admin.
+	//
+	// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/revoke (the `RevokeOrganizationLevelRole` operationId).
+	RevokeOrganizationLevelRoleWithBodyWithResponse(ctx context.Context, orgId string, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RevokeOrganizationLevelRoleResponse, error)
+
+	// RevokeOrganizationLevelRoleWithResponse Remove organization-level role
+	//
+	// Remove an organization-level role from a user. These are roles that have organization-wide privileges, like organization admin.
+	//
+	// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/revoke (the `RevokeOrganizationLevelRole` operationId).
+	RevokeOrganizationLevelRoleWithResponse(ctx context.Context, orgId string, userId string, body RevokeOrganizationLevelRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*RevokeOrganizationLevelRoleResponse, error)
+
 	// AssignRoleWithBodyWithResponse Grant user access
 	//
 	// This API can be used to grant Platform Roles to a user.
@@ -2864,6 +3307,158 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/users/{accountId}/role-assignments (the `GetUserRoleAssignments` operationId).
 	GetUserRoleAssignmentsWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, accountId AccountIdParam, params *GetUserRoleAssignmentsParams, reqEditors ...RequestEditorFn) (*GetUserRoleAssignmentsResponse, error)
+}
+
+type AssignOrganizationLevelRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorsApplicationErrorsModel
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *AssignOrganizationLevelRole401JSONResponseBody
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorsApplicationErrorsModel
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorsApplicationErrorsModel
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ProxyError
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ApiErrorResponse
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r AssignOrganizationLevelRoleResponse) GetJSON400() *ErrorsApplicationErrorsModel {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r AssignOrganizationLevelRoleResponse) GetJSON401() *AssignOrganizationLevelRole401JSONResponseBody {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r AssignOrganizationLevelRoleResponse) GetJSON403() *ErrorsApplicationErrorsModel {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r AssignOrganizationLevelRoleResponse) GetJSON404() *ErrorsApplicationErrorsModel {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r AssignOrganizationLevelRoleResponse) GetJSON429() *ProxyError {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r AssignOrganizationLevelRoleResponse) GetJSON500() *ApiErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r AssignOrganizationLevelRoleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r AssignOrganizationLevelRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AssignOrganizationLevelRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AssignOrganizationLevelRoleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RevokeOrganizationLevelRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorsApplicationErrorsModel
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *RevokeOrganizationLevelRole401JSONResponseBody
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ErrorsApplicationErrorsModel
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ErrorsApplicationErrorsModel
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ProxyError
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ApiErrorResponse
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r RevokeOrganizationLevelRoleResponse) GetJSON400() *ErrorsApplicationErrorsModel {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RevokeOrganizationLevelRoleResponse) GetJSON401() *RevokeOrganizationLevelRole401JSONResponseBody {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r RevokeOrganizationLevelRoleResponse) GetJSON403() *ErrorsApplicationErrorsModel {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r RevokeOrganizationLevelRoleResponse) GetJSON404() *ErrorsApplicationErrorsModel {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r RevokeOrganizationLevelRoleResponse) GetJSON429() *ProxyError {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r RevokeOrganizationLevelRoleResponse) GetJSON500() *ApiErrorResponse {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r RevokeOrganizationLevelRoleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RevokeOrganizationLevelRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RevokeOrganizationLevelRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RevokeOrganizationLevelRoleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
 }
 
 type AssignRoleResponse struct {
@@ -3342,6 +3937,74 @@ func (r GetUserRoleAssignmentsResponse) ContentType() string {
 	return ""
 }
 
+// AssignOrganizationLevelRoleWithBodyWithResponse Assign organization-level role
+//
+// Assign an organization-level role to a user. These are roles that have organization-wide privileges, like organization admin.
+//
+// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/assign (the `AssignOrganizationLevelRole` operationId).
+func (c *ClientWithResponses) AssignOrganizationLevelRoleWithBodyWithResponse(ctx context.Context, orgId string, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AssignOrganizationLevelRoleResponse, error) {
+	rsp, err := c.AssignOrganizationLevelRoleWithBody(ctx, orgId, userId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAssignOrganizationLevelRoleResponse(rsp)
+}
+
+// AssignOrganizationLevelRoleWithResponse Assign organization-level role
+//
+// Assign an organization-level role to a user. These are roles that have organization-wide privileges, like organization admin.
+//
+// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/assign (the `AssignOrganizationLevelRole` operationId).
+func (c *ClientWithResponses) AssignOrganizationLevelRoleWithResponse(ctx context.Context, orgId string, userId string, body AssignOrganizationLevelRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*AssignOrganizationLevelRoleResponse, error) {
+	rsp, err := c.AssignOrganizationLevelRole(ctx, orgId, userId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAssignOrganizationLevelRoleResponse(rsp)
+}
+
+// RevokeOrganizationLevelRoleWithBodyWithResponse Remove organization-level role
+//
+// Remove an organization-level role from a user. These are roles that have organization-wide privileges, like organization admin.
+//
+// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/revoke (the `RevokeOrganizationLevelRole` operationId).
+func (c *ClientWithResponses) RevokeOrganizationLevelRoleWithBodyWithResponse(ctx context.Context, orgId string, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RevokeOrganizationLevelRoleResponse, error) {
+	rsp, err := c.RevokeOrganizationLevelRoleWithBody(ctx, orgId, userId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRevokeOrganizationLevelRoleResponse(rsp)
+}
+
+// RevokeOrganizationLevelRoleWithResponse Remove organization-level role
+//
+// Remove an organization-level role from a user. These are roles that have organization-wide privileges, like organization admin.
+//
+// This operation follows eventual consistency. Changes may take up to 30 seconds to be reflected after the operation is performed.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/role-assignments/revoke (the `RevokeOrganizationLevelRole` operationId).
+func (c *ClientWithResponses) RevokeOrganizationLevelRoleWithResponse(ctx context.Context, orgId string, userId string, body RevokeOrganizationLevelRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*RevokeOrganizationLevelRoleResponse, error) {
+	rsp, err := c.RevokeOrganizationLevelRole(ctx, orgId, userId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRevokeOrganizationLevelRoleResponse(rsp)
+}
+
 // AssignRoleWithBodyWithResponse Grant user access
 //
 // This API can be used to grant Platform Roles to a user.
@@ -3543,6 +4206,134 @@ func (c *ClientWithResponses) GetUserRoleAssignmentsWithResponse(ctx context.Con
 		return nil, err
 	}
 	return ParseGetUserRoleAssignmentsResponse(rsp)
+}
+
+// ParseAssignOrganizationLevelRoleResponse parses an HTTP response from a AssignOrganizationLevelRoleWithResponse call
+func ParseAssignOrganizationLevelRoleResponse(rsp *http.Response) (*AssignOrganizationLevelRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AssignOrganizationLevelRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorsApplicationErrorsModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest AssignOrganizationLevelRole401JSONResponseBody
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorsApplicationErrorsModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorsApplicationErrorsModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ProxyError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ApiErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRevokeOrganizationLevelRoleResponse parses an HTTP response from a RevokeOrganizationLevelRoleWithResponse call
+func ParseRevokeOrganizationLevelRoleResponse(rsp *http.Response) (*RevokeOrganizationLevelRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RevokeOrganizationLevelRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 204:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorsApplicationErrorsModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest RevokeOrganizationLevelRole401JSONResponseBody
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorsApplicationErrorsModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorsApplicationErrorsModel
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ProxyError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ApiErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseAssignRoleResponse parses an HTTP response from a AssignRoleWithResponse call

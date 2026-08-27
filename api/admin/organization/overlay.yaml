@@ -29,3 +29,26 @@ actions:
     description: Add an operation ID for removing a user from a group.
     update:
       operationId: removeUserFromGroup
+  # The upstream organization-level role operations omit operationId and
+  # incorrectly constrain Atlassian account IDs to UUIDs. Account IDs are
+  # opaque strings and may use legacy or 712020-prefixed forms.
+  - target: "$['paths']['/v1/orgs/{orgId}/users/{userId}/role-assignments/assign']['post']"
+    description: Add an operation ID for assigning an organization-level role.
+    update:
+      operationId: assignOrganizationLevelRole
+  - target: "$['paths']['/v1/orgs/{orgId}/users/{userId}/role-assignments/revoke']['post']"
+    description: Add an operation ID for revoking an organization-level role.
+    update:
+      operationId: revokeOrganizationLevelRole
+  - target: "$['paths']['/v1/orgs/{orgId}/users/{userId}/role-assignments/assign']['post']['parameters'][1]['schema']['format']"
+    description: Treat the assign endpoint user ID as an opaque Atlassian account ID.
+    remove: true
+  - target: "$['paths']['/v1/orgs/{orgId}/users/{userId}/role-assignments/revoke']['post']['parameters'][1]['schema']['format']"
+    description: Treat the revoke endpoint user ID as an opaque Atlassian account ID.
+    remove: true
+  - target: "$['paths']['/v1/orgs/{orgId}/users/{userId}/role-assignments/assign']['post']['parameters'][0]['schema']['format']"
+    description: Keep the assign endpoint organization ID consistent with other Organization API operations.
+    remove: true
+  - target: "$['paths']['/v1/orgs/{orgId}/users/{userId}/role-assignments/revoke']['post']['parameters'][0]['schema']['format']"
+    description: Keep the revoke endpoint organization ID consistent with other Organization API operations.
+    remove: true

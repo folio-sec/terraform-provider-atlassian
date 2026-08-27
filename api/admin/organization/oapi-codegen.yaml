@@ -13,6 +13,8 @@ output-options:
     - revokeRole
     - addUserToGroup
     - removeUserFromGroup
+    - assignOrganizationLevelRole
+    - revokeOrganizationLevelRole
   nullable-type: true
   overlay:
     path: api/admin/organization/overlay.yaml
