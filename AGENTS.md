@@ -9,6 +9,11 @@ code. Update it when the same implementation or review mistake recurs.
   another language only when the artifact's intended audience or an external
   requirement makes it necessary.
 
+## Contribution workflow
+
+- When opening a pull request, follow and complete the repository's pull
+  request template.
+
 ## Architecture
 
 - Separate clients and Terraform services by Atlassian API surface when their
