@@ -271,26 +271,47 @@ func (s *Service) RevokeOrganizationRole(ctx context.Context, organizationID, ac
 // assigned directly to the user. Resource IDs are intentionally ignored
 // because organization-level assignments are not resource scoped.
 func (s *Service) HasDirectOrganizationRole(ctx context.Context, organizationID, directoryID, accountID, role string) (bool, error) {
+	return s.hasDirectRole(ctx, "get organization-level role assignments", organizationID, directoryID, accountID, "", role)
+}
+
+// HasDirectUserRole reports whether the role is assigned directly to the user,
+// excluding access inherited through a group or inferred by Atlassian.
+func (s *Service) HasDirectUserRole(ctx context.Context, organizationID, directoryID, accountID, resource, role string) (bool, error) {
+	return s.hasDirectRole(ctx, "get user role assignments", organizationID, directoryID, accountID, resource, role)
+}
+
+// hasDirectRole follows every page of a user's role assignments and reports
+// whether the role is granted directly, excluding access inherited through a
+// group or inferred by Atlassian. An empty resource matches assignments
+// regardless of their scope, which organization-level roles require.
+func (s *Service) hasDirectRole(ctx context.Context, operation, organizationID, directoryID, accountID, resource, role string) (bool, error) {
 	limit := pageLimit
 	roleIDs := []string{role}
 	params := generated.GetUserRoleAssignmentsParams{
 		Limit:   &limit,
 		RoleIds: &roleIDs,
 	}
+	if resource != "" {
+		resourceIDs := []string{resource}
+		params.ResourceIds = &resourceIDs
+	}
 	seenCursors := map[string]struct{}{}
 	for {
 		response, err := s.client.GetUserRoleAssignmentsWithResponse(ctx, organizationID, directoryID, accountID, &params)
 		if err != nil {
-			return false, fmt.Errorf("get organization-level role assignments: %w", err)
+			return false, fmt.Errorf("%s: %w", operation, err)
 		}
 		if response.StatusCode() != http.StatusOK {
-			return false, fmt.Errorf("get organization-level role assignments: %w", responseError(response.HTTPResponse, response.Body))
+			return false, fmt.Errorf("%s: %w", operation, responseError(response.HTTPResponse, response.Body))
 		}
 		if response.JSON200 == nil {
-			return false, fmt.Errorf("get organization-level role assignments: API returned an invalid success response")
+			return false, fmt.Errorf("%s: API returned an invalid success response", operation)
 		}
 		if response.JSON200.Data != nil {
 			for _, resourceAssignment := range *response.JSON200.Data {
+				if resource != "" && (resourceAssignment.ResourceId == nil || *resourceAssignment.ResourceId != resource) {
+					continue
+				}
 				if resourceAssignment.RoleAssignments == nil {
 					continue
 				}
@@ -312,60 +333,7 @@ func (s *Service) HasDirectOrganizationRole(ctx context.Context, organizationID,
 			return false, nil
 		}
 		if _, exists := seenCursors[next]; exists {
-			return false, fmt.Errorf("get organization-level role assignments: API returned repeated pagination cursor %q", next)
-		}
-		seenCursors[next] = struct{}{}
-		params = generated.GetUserRoleAssignmentsParams{Cursor: &next}
-	}
-}
-
-// HasDirectUserRole reports whether the role is assigned directly to the user,
-// excluding access inherited through a group or inferred by Atlassian.
-func (s *Service) HasDirectUserRole(ctx context.Context, organizationID, directoryID, accountID, resource, role string) (bool, error) {
-	limit := pageLimit
-	resourceIDs := []string{resource}
-	roleIDs := []string{role}
-	params := generated.GetUserRoleAssignmentsParams{
-		Limit:       &limit,
-		ResourceIds: &resourceIDs,
-		RoleIds:     &roleIDs,
-	}
-	seenCursors := map[string]struct{}{}
-	for {
-		response, err := s.client.GetUserRoleAssignmentsWithResponse(ctx, organizationID, directoryID, accountID, &params)
-		if err != nil {
-			return false, fmt.Errorf("get user role assignments: %w", err)
-		}
-		if response.StatusCode() != http.StatusOK {
-			return false, fmt.Errorf("get user role assignments: %w", responseError(response.HTTPResponse, response.Body))
-		}
-		if response.JSON200 == nil {
-			return false, fmt.Errorf("get user role assignments: API returned an invalid success response")
-		}
-		if response.JSON200.Data != nil {
-			for _, resourceAssignment := range *response.JSON200.Data {
-				if resourceAssignment.ResourceId == nil || *resourceAssignment.ResourceId != resource || resourceAssignment.RoleAssignments == nil {
-					continue
-				}
-				for _, assignment := range *resourceAssignment.RoleAssignments {
-					if assignment.Role == nil || string(*assignment.Role) != role || assignment.RoleAssignmentMethods == nil {
-						continue
-					}
-					for _, method := range *assignment.RoleAssignmentMethods {
-						if method == generated.Direct {
-							return true, nil
-						}
-					}
-				}
-			}
-		}
-
-		next := nextCursor(response.JSON200.Links)
-		if next == "" {
-			return false, nil
-		}
-		if _, exists := seenCursors[next]; exists {
-			return false, fmt.Errorf("get user role assignments: API returned repeated pagination cursor %q", next)
+			return false, fmt.Errorf("%s: API returned repeated pagination cursor %q", operation, next)
 		}
 		seenCursors[next] = struct{}{}
 		params = generated.GetUserRoleAssignmentsParams{Cursor: &next}
