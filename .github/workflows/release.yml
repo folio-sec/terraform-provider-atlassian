@@ -8,9 +8,6 @@ on:
 concurrency:
   group: release
 
-permissions:
-  contents: read
-
 jobs:
   tagpr:
     name: Prepare release
