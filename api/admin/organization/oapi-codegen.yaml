@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/v2.8.0/configuration-schema.json
+package: generated
+output: internal/client/admin/organization/generated/client.gen.go
+generate:
+  models: true
+  client: true
+output-options:
+  include-operation-ids:
+    - searchDirectoryUsers
+    - getUserRoleAssignments
+    - assignRole
+    - revokeRole
+  nullable-type: true
+  overlay:
+    path: api/admin/organization/overlay.yaml
+    strict: true

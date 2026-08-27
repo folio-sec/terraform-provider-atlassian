@@ -3,11 +3,14 @@ name: CI
 on:
   pull_request:
     paths:
-      - ".github/workflows/ci.yml"
+      - ".github/workflows/**"
       - "**.go"
       - go.mod
       - go.sum
+      - .golangci.yml
+      - aqua.yaml
       - Makefile
+      - "api/**"
       - "templates/**"
       - "examples/**"
 
@@ -19,19 +22,42 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: aquaproj/aqua-installer@96a9bc20066c5bf5e275b41019cfc165b25f4e2e # v4.0.5
+        with:
+          aqua_version: v2.62.3
+          aqua_opts: ""
+      - run: make lint
+
   build-and-test:
     name: Build and test
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: true
       - run: go mod download
+      - run: make generate/api-client
+      - name: Check generated API client is up to date
+        run: |
+          git diff --exit-code -- internal/client/admin/organization/generated || \
+            (echo "::error::Generated API client is out of date. Run 'make generate/api-client' and commit the changes." && exit 1)
       - run: make build
       - run: make test TESTARGS="-race -cover"
       - run: make fmt
@@ -45,16 +71,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: true
-      - run: make generate
+      - run: make generate/docs
       - name: Check generated docs are up to date
         run: |
           git add docs examples
           git diff --cached --exit-code -- docs examples || \
-            (echo "::error::Generated documentation is out of date. Run 'make generate' and commit the changes." && exit 1)
+            (echo "::error::Generated documentation is out of date. Run 'make generate/docs' and commit the changes." && exit 1)

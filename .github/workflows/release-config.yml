@@ -1,0 +1,35 @@
+name: Release configuration
+
+on:
+  pull_request:
+    paths:
+      - .github/release.yml
+      - .github/workflows/release-config.yml
+      - .github/workflows/release.yml
+      - .goreleaser.yml
+      - .tagpr
+      - aqua.yaml
+      - terraform-registry-manifest.json
+      - version
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: GoReleaser
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: aquaproj/aqua-installer@96a9bc20066c5bf5e275b41019cfc165b25f4e2e # v4.0.5
+        with:
+          aqua_version: v2.62.3
+          aqua_opts: ""
+      - run: make release/check

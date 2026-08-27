@@ -3,50 +3,45 @@ package client
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
+
+	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
 )
 
-// Client contains the shared configuration used by Atlassian resources and
-// data sources. Product-specific services can be added here as the provider
-// grows.
-type Client struct {
-	BaseURL    *url.URL
-	Email      string
-	APIToken   string
-	HTTPClient *http.Client
+// Config contains credentials and shared dependencies for supported Atlassian
+// API families. Add family-specific configuration when that client is added.
+type Config struct {
+	AdminAPIKey string
+	HTTPClient  *http.Client
 }
 
-// New validates the provider configuration and creates an Atlassian API client.
-func New(siteURL, email, apiToken string, httpClient *http.Client) (*Client, error) {
-	if strings.TrimSpace(siteURL) == "" {
-		return nil, fmt.Errorf("site_url must be configured")
+// Client composes the API-family-specific services used by the provider.
+type Client struct {
+	Admin        *admin.Client
+	Organization *organization.Service
+}
+
+// New validates the configured credentials and creates the available API
+// family clients and services.
+func New(config Config) (*Client, error) {
+	if config.HTTPClient == nil {
+		config.HTTPClient = http.DefaultClient
 	}
 
-	baseURL, err := url.Parse(strings.TrimRight(siteURL, "/"))
+	adminAPIKey := strings.TrimSpace(config.AdminAPIKey)
+	if adminAPIKey == "" {
+		return nil, fmt.Errorf("admin_api_key must be configured")
+	}
+
+	adminClient, err := admin.New(adminAPIKey, config.HTTPClient)
 	if err != nil {
-		return nil, fmt.Errorf("parse site_url: %w", err)
+		return nil, fmt.Errorf("configure Admin API client: %w", err)
 	}
-	if baseURL.Scheme != "https" || baseURL.Host == "" {
-		return nil, fmt.Errorf("site_url must be an absolute HTTPS URL")
-	}
-	if baseURL.RawQuery != "" || baseURL.Fragment != "" {
-		return nil, fmt.Errorf("site_url must not contain a query or fragment")
-	}
-	if strings.TrimSpace(email) == "" {
-		return nil, fmt.Errorf("email must be configured")
-	}
-	if strings.TrimSpace(apiToken) == "" {
-		return nil, fmt.Errorf("api_token must be configured")
-	}
-	if httpClient == nil {
-		httpClient = http.DefaultClient
+	organizationClient, err := organization.NewService(adminClient)
+	if err != nil {
+		return nil, fmt.Errorf("configure Organization API service: %w", err)
 	}
 
-	return &Client{
-		BaseURL:    baseURL,
-		Email:      email,
-		APIToken:   apiToken,
-		HTTPClient: httpClient,
-	}, nil
+	return &Client{Admin: adminClient, Organization: organizationClient}, nil
 }

@@ -9,22 +9,20 @@ func TestNew(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		siteURL  string
-		email    string
-		apiToken string
-		wantErr  bool
+		config  Config
+		wantErr bool
 	}{
-		"valid":            {siteURL: "https://example.atlassian.net/", email: "admin@example.com", apiToken: "token"},
-		"missing site URL": {email: "admin@example.com", apiToken: "token", wantErr: true},
-		"non HTTPS URL":    {siteURL: "http://example.atlassian.net", email: "admin@example.com", apiToken: "token", wantErr: true},
-		"missing email":    {siteURL: "https://example.atlassian.net", apiToken: "token", wantErr: true},
-		"missing token":    {siteURL: "https://example.atlassian.net", email: "admin@example.com", wantErr: true},
+		"Admin API key": {
+			config: Config{AdminAPIKey: "admin-key"},
+		},
+		"missing Admin API key": {wantErr: true},
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			got, err := New(tt.siteURL, tt.email, tt.apiToken, &http.Client{})
+			tt.config.HTTPClient = &http.Client{}
+			got, err := New(tt.config)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("New() returned no error")
@@ -34,8 +32,8 @@ func TestNew(t *testing.T) {
 			if err != nil {
 				t.Fatalf("New() error = %v", err)
 			}
-			if got.BaseURL.String() != "https://example.atlassian.net" {
-				t.Fatalf("BaseURL = %q", got.BaseURL.String())
+			if got.Admin == nil || got.Organization == nil {
+				t.Fatal("Admin API services are nil")
 			}
 		})
 	}

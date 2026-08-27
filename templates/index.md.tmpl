@@ -8,8 +8,8 @@ description: |-
 
 Use the Atlassian provider to manage Atlassian Cloud resources.
 
-Authentication can be supplied through the provider block or the
-`ATLASSIAN_SITE_URL`, `ATLASSIAN_EMAIL`, and `ATLASSIAN_API_TOKEN` environment
-variables.
+Organization resources authenticate with an Atlassian organization API key.
+Supply it as `admin_api_key` or, preferably, through the
+`ATLASSIAN_ADMIN_API_KEY` environment variable.
 
 {{ .SchemaMarkdown | trimspace }}
