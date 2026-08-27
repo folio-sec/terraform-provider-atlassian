@@ -1,0 +1,58 @@
+name: Update OpenAPI clients
+
+on:
+  schedule:
+    # Check for upstream specification changes once a week, every Monday at 01:17 UTC.
+    - cron: "17 1 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    name: Update ${{ matrix.api.name }} API
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        api:
+          - name: Organization
+            slug: organization
+            specification_url: https://dac-static.atlassian.com/cloud/admin/organization/swagger.v3.json
+            specification_path: api/admin/organization/upstream.json
+            generate_target: generate/api-client/organization
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Download and validate upstream specification
+        env:
+          SPECIFICATION_URL: ${{ matrix.api.specification_url }}
+          SPECIFICATION_PATH: ${{ matrix.api.specification_path }}
+        run: |
+          curl --fail --silent --show-error --location \
+            "$SPECIFICATION_URL" \
+            --output "$RUNNER_TEMP/atlassian-openapi.json"
+          jq --exit-status \
+            '(.openapi | startswith("3.")) and (.paths | type == "object")' \
+            "$RUNNER_TEMP/atlassian-openapi.json" >/dev/null
+          cp "$RUNNER_TEMP/atlassian-openapi.json" "$SPECIFICATION_PATH"
+      - name: Generate API client
+        env:
+          GENERATE_TARGET: ${{ matrix.api.generate_target }}
+        run: make "$GENERATE_TARGET"
+      - name: Create update pull request
+        uses: peter-evans/create-pull-request@5f69787676f0cd94f5880a2d7fdf9af523b50b8f # v8.1.1
+        with:
+          branch: automation/update-atlassian-${{ matrix.api.slug }}-openapi
+          delete-branch: true
+          commit-message: "chore: update Atlassian ${{ matrix.api.name }} OpenAPI client"
+          title: "chore: update Atlassian ${{ matrix.api.name }} OpenAPI client"
+          body: |
+            Updates the vendored Atlassian ${{ matrix.api.name }} OpenAPI specification
+            and regenerates the selected API client operations.

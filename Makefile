@@ -1,7 +1,7 @@
 BINARY_NAME := terraform-provider-atlassian
 VERSION ?= dev
 
-.PHONY: build fmt generate generate/api-client generate/docs lint release/check test testacc
+.PHONY: build fmt generate generate/api-client generate/api-client/organization generate/docs lint release/check test testacc
 
 build:
 	go build -ldflags "-X main.version=$(VERSION)" -o bin/$(BINARY_NAME) .
@@ -11,7 +11,9 @@ fmt:
 
 generate: generate/api-client generate/docs
 
-generate/api-client:
+generate/api-client: generate/api-client/organization
+
+generate/api-client/organization:
 	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -config api/admin/organization/oapi-codegen.yaml api/admin/organization/upstream.json
 
 generate/docs:
