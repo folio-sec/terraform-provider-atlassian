@@ -7,7 +7,13 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"regexp"
 	"strings"
+)
+
+var (
+	inlineCodePattern = regexp.MustCompile("`([^`\\n]+)`")
+	ariPattern        = regexp.MustCompile(`ari:cloud:[A-Za-z0-9._~:/%<>-]*`)
 )
 
 func main() {
@@ -71,7 +77,7 @@ func postprocessMarkdown(markdown string) string {
 	for i := 0; i < len(lines); i++ {
 		opening := strings.TrimSpace(lines[i])
 		if !strings.HasPrefix(opening, "```") {
-			output.WriteString(lines[i])
+			output.WriteString(escapeInlineARIs(lines[i]))
 			continue
 		}
 
@@ -111,6 +117,23 @@ func postprocessMarkdown(markdown string) string {
 	}
 
 	return output.String()
+}
+
+func escapeInlineARIs(markdown string) string {
+	markdown = inlineCodePattern.ReplaceAllStringFunc(markdown, func(codeSpan string) string {
+		if !strings.Contains(codeSpan, "ari:cloud:") {
+			return codeSpan
+		}
+
+		contents := strings.TrimSuffix(strings.TrimPrefix(codeSpan, "`"), "`")
+		return "<samp>" + escapeARIsForHTML(contents) + "</samp>"
+	})
+
+	return ariPattern.ReplaceAllStringFunc(markdown, func(ari string) string {
+		trimmed := strings.TrimRight(ari, ".")
+		trailing := ari[len(trimmed):]
+		return "<samp>" + escapeARIsForHTML(trimmed) + "</samp>" + trailing
+	})
 }
 
 // escapeARIsForHTML preserves the displayed and copied ARI while preventing

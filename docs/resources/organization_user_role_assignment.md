@@ -35,8 +35,8 @@ resource &#34;atlassian_organization_user_role_assignment&#34; &#34;jira&#34; {
 - `account_id` (String) Atlassian account ID.
 - `directory_id` (String) Directory ID used to read the assignment.
 - `organization_id` (String) Atlassian organization ID used in the Organization API path.
-- `resource` (String) Application resource ARI beginning with <samp>ari&#58;cloud&#58;</samp>, such as <samp>ari&#58;cloud&#58;jira&#58;&#58;site/&lt;site-id&gt;</samp>.
-- `role` (String) Atlassian application role. Organization-level `atlassian/org-admin` is not supported by this resource.
+- `resource` (String) Application resource ARI beginning with <samp>ari&#58;cloud&#58;</samp>, such as <samp>ari&#58;cloud&#58;jira::site/&lt;site-id&gt;</samp>.
+- `role` (String) Atlassian application role. Organization-level atlassian/org-admin is not supported by this resource.
 
 ### Read-Only
 

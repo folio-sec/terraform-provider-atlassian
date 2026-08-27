@@ -71,11 +71,6 @@ func (r *userRoleAssignmentResource) Schema(_ context.Context, _ resource.Schema
 			},
 		}
 	}
-	resourceAttribute := requiredReplace("Application resource ARI beginning with ari:cloud:, such as ari:cloud:jira::site/<site-id>.")
-	resourceAttribute.MarkdownDescription = fmt.Sprintf("Application resource ARI beginning with %s, such as %s.", markdownARI("ari:cloud:"), markdownARI("ari:cloud:jira::site/<site-id>"))
-	roleAttribute := requiredReplace("Atlassian application role. Organization-level atlassian/org-admin is not supported by this resource.")
-	roleAttribute.MarkdownDescription = "Atlassian application role. Organization-level `atlassian/org-admin` is not supported by this resource."
-
 	resp.Schema = schema.Schema{
 		Description: "Assigns an application resource and platform role directly to an organization user.",
 		Attributes: map[string]schema.Attribute{
@@ -83,8 +78,8 @@ func (r *userRoleAssignmentResource) Schema(_ context.Context, _ resource.Schema
 			"organization_id": requiredReplace("Atlassian organization ID used in the Organization API path."),
 			"directory_id":    requiredReplace("Directory ID used to read the assignment."),
 			"account_id":      requiredReplace("Atlassian account ID."),
-			"resource":        resourceAttribute,
-			"role":            roleAttribute,
+			"resource":        requiredReplace("Application resource ARI beginning with ari:cloud:, such as ari:cloud:jira::site/<site-id>."),
+			"role":            requiredReplace("Atlassian application role. Organization-level atlassian/org-admin is not supported by this resource."),
 		},
 	}
 }
