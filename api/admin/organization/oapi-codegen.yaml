@@ -8,6 +8,9 @@ output-options:
   include-operation-ids:
     - searchDirectoryUsers
     - searchDirectoryGroups
+    - getGroup
+    - createGroup
+    - deleteGroup
     - getUserRoleAssignments
     - assignRole
     - revokeRole

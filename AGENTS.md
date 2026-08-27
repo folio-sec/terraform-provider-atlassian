@@ -43,7 +43,7 @@ code. Update it when the same implementation or review mistake recurs.
 
 ## Organization API behavior
 
-- `atlassian_organization_user` must expose API filter names where they affect
+- `atlassian_organization_users` must expose API filter names where they affect
   which users match. Do not expose response-shaping or ordering options such as
   `expand` or `sort_by`.
 - The user role assignment resource uses the resource-scoped application-role

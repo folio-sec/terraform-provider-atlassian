@@ -2,9 +2,9 @@
 
 Terraform provider for managing Atlassian Cloud resources.
 
-Supported organization workflows find an existing user and manage either the
-user's group membership or a direct application role assignment. Invitations
-are intentionally outside the provider's scope.
+Supported organization workflows manage groups, find existing users and
+groups, and manage either a user's group membership or a direct role
+assignment. Invitations are intentionally outside the provider's scope.
 
 ## Requirements
 
@@ -33,13 +33,13 @@ provider "atlassian" {
   # Prefer setting ATLASSIAN_ADMIN_API_KEY in the environment.
 }
 
-data "atlassian_organization_user" "example" {
+data "atlassian_organization_users" "example" {
   organization_id = "your-organization-id"
   directory_id    = "your-directory-id"
   emails           = ["user@example.com"]
 }
 
-data "atlassian_organization_group" "jira_users" {
+data "atlassian_organization_groups" "jira_users" {
   organization_id = "your-organization-id"
   directory_id    = "your-directory-id"
   group_names     = ["jira-users"]
@@ -48,14 +48,14 @@ data "atlassian_organization_group" "jira_users" {
 resource "atlassian_organization_group_membership" "example" {
   organization_id = "your-organization-id"
   directory_id    = "your-directory-id"
-  group_id        = one(data.atlassian_organization_group.jira_users.groups).group_id
-  account_id      = one(data.atlassian_organization_user.example.users).account_id
+  group_id        = one(data.atlassian_organization_groups.jira_users.groups).group_id
+  account_id      = one(data.atlassian_organization_users.example.users).account_id
 }
 
 resource "atlassian_organization_user_role_assignment" "jira" {
   organization_id = "your-organization-id"
   directory_id    = "your-directory-id"
-  account_id      = one(data.atlassian_organization_user.example.users).account_id
+  account_id      = one(data.atlassian_organization_users.example.users).account_id
   resource        = "ari:cloud:jira::site/your-site-id"
   role            = "atlassian/user"
 }

@@ -12,7 +12,7 @@ Assigns an application resource and platform role directly to an organization us
 
 ## Example Usage
 
-<div><pre><code class="language-terraform">data &#34;atlassian_organization_user&#34; &#34;example&#34; {
+<div><pre><code class="language-terraform">data &#34;atlassian_organization_users&#34; &#34;example&#34; {
   organization_id = &#34;your-organization-id&#34;
   directory_id    = &#34;your-directory-id&#34;
   emails          = [&#34;user@example.com&#34;]
@@ -21,7 +21,7 @@ Assigns an application resource and platform role directly to an organization us
 resource &#34;atlassian_organization_user_role_assignment&#34; &#34;jira&#34; {
   organization_id = &#34;your-organization-id&#34;
   directory_id    = &#34;your-directory-id&#34;
-  account_id      = one(data.atlassian_organization_user.example.users).account_id
+  account_id      = one(data.atlassian_organization_users.example.users).account_id
   resource        = &#34;ari:<span>cloud</span>:jira::site/your-site-id&#34;
   role            = &#34;atlassian/user&#34;
 }

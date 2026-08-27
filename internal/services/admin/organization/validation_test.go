@@ -20,7 +20,7 @@ func TestUserDataSourceSchemaReturnsUsersAsSet(t *testing.T) {
 	t.Parallel()
 
 	var response datasource.SchemaResponse
-	NewUserDataSource().Schema(context.Background(), datasource.SchemaRequest{}, &response)
+	NewUsersDataSource().Schema(context.Background(), datasource.SchemaRequest{}, &response)
 	if response.Diagnostics.HasError() {
 		t.Fatalf("Schema() diagnostics = %v", response.Diagnostics)
 	}
@@ -43,7 +43,7 @@ func TestGroupDataSourceSchemaReturnsGroupsAsSet(t *testing.T) {
 	t.Parallel()
 
 	var response datasource.SchemaResponse
-	NewGroupDataSource().Schema(context.Background(), datasource.SchemaRequest{}, &response)
+	NewGroupsDataSource().Schema(context.Background(), datasource.SchemaRequest{}, &response)
 	if response.Diagnostics.HasError() {
 		t.Fatalf("Schema() diagnostics = %v", response.Diagnostics)
 	}
@@ -59,6 +59,46 @@ func TestGroupDataSourceSchemaReturnsGroupsAsSet(t *testing.T) {
 	}
 	if _, exists := response.Schema.Attributes["expand"]; exists {
 		t.Fatal("schema exposes response shaping control expand")
+	}
+}
+
+func TestGroupDetailsDataSourceSchema(t *testing.T) {
+	t.Parallel()
+
+	var metadata datasource.MetadataResponse
+	NewGroupDataSource().Metadata(context.Background(), datasource.MetadataRequest{ProviderTypeName: "atlassian"}, &metadata)
+	if metadata.TypeName != "atlassian_organization_group" {
+		t.Fatalf("type name = %q", metadata.TypeName)
+	}
+	var response datasource.SchemaResponse
+	NewGroupDataSource().Schema(context.Background(), datasource.SchemaRequest{}, &response)
+	if response.Diagnostics.HasError() {
+		t.Fatalf("Schema() diagnostics = %v", response.Diagnostics)
+	}
+	for _, name := range []string{"organization_id", "directory_id", "group_id"} {
+		if attribute := response.Schema.Attributes[name]; attribute == nil || !attribute.IsRequired() {
+			t.Errorf("%s is not required", name)
+		}
+	}
+	for _, name := range []string{"id", "name", "description", "external_synced", "managed_by", "management_access"} {
+		if attribute := response.Schema.Attributes[name]; attribute == nil || !attribute.IsComputed() {
+			t.Errorf("%s is not computed", name)
+		}
+	}
+}
+
+func TestCollectionDataSourcesUsePluralTypeNames(t *testing.T) {
+	t.Parallel()
+
+	for want, subject := range map[string]datasource.DataSource{
+		"atlassian_organization_groups": NewGroupsDataSource(),
+		"atlassian_organization_users":  NewUsersDataSource(),
+	} {
+		var response datasource.MetadataResponse
+		subject.Metadata(context.Background(), datasource.MetadataRequest{ProviderTypeName: "atlassian"}, &response)
+		if response.TypeName != want {
+			t.Errorf("type name = %q, want %q", response.TypeName, want)
+		}
 	}
 }
 

@@ -29,6 +29,16 @@ actions:
     description: Add an operation ID for removing a user from a group.
     update:
       operationId: removeUserFromGroup
+  # The upstream group lifecycle mutations omit operationId, so oapi-codegen
+  # does not generate methods for them without these corrections.
+  - target: "$['paths']['/v2/orgs/{orgId}/directories/{directoryId}/groups']['post']"
+    description: Add an operation ID for creating a group.
+    update:
+      operationId: createGroup
+  - target: "$['paths']['/v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}']['delete']"
+    description: Add an operation ID for deleting a group.
+    update:
+      operationId: deleteGroup
   # The upstream resource-scoped role operations also constrain the account ID
   # to a UUID, which rejects every account ID Atlassian issues.
   - target: "$['paths']['/v1/orgs/{orgId}/users/{userId}/roles/assign']['post']['parameters'][1]['schema']['format']"

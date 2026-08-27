@@ -3,12 +3,12 @@
 page_title: "atlassian_organization_group Data Source - atlassian"
 subcategory: "Cloud Admin"
 description: |-
-  Searches all pages of an Atlassian organization directory and returns every matching group.
+  Retrieves one Atlassian organization group by its group ID.
 ---
 
 # atlassian_organization_group (Data Source)
 
-Searches all pages of an Atlassian organization directory and returns every matching group.
+Retrieves one Atlassian organization group by its group ID.
 
 ## Example Usage
 
@@ -16,7 +16,7 @@ Searches all pages of an Atlassian organization directory and returns every matc
 data "atlassian_organization_group" "example" {
   organization_id = "your-organization-id"
   directory_id    = "your-directory-id"
-  group_names     = ["jira-users"]
+  group_id        = "your-group-id"
 }
 ```
 
@@ -25,39 +25,21 @@ data "atlassian_organization_group" "example" {
 
 ### Required
 
-- `directory_id` (String) Directory ID used in the Organization API path.
+- `directory_id` (String) Directory containing the group.
+- `group_id` (String) Unique Atlassian group ID.
 - `organization_id` (String) Atlassian organization ID used in the Organization API path.
-
-### Optional
-
-- `account_ids` (Set of String) Account IDs of group members to match. Accepts 1 to 10 values.
-- `directory_ids` (Set of String) Directory IDs to match. Accepts 1 to 10 values.
-- `group_ids` (Set of String) Group IDs to match. Accepts 1 to 10 values and is mutually exclusive with group_names.
-- `group_names` (Set of String) Full group names to match exactly, case-insensitively. Accepts 1 to 100 values and is mutually exclusive with search_term and group_ids.
-- `resource_ids` (Set of String) Resource IDs to match. Accepts 1 to 20 values.
-- `resource_owners` (Set of String) Resource type keys to match. Accepts 1 to 10 values.
-- `role_ids` (Set of String) Canonical Atlassian role IDs to match. Accepts 1 to 10 values.
-- `search_term` (String) Free-text group name search. Mutually exclusive with group_names.
 
 ### Read-Only
 
-- `groups` (Attributes Set) All groups matching the configured filters. The set is empty when no groups match. (see [below for nested schema](#nestedatt--groups))
-
-<a id="nestedatt--groups"></a>
-### Nested Schema for `groups`
-
-Read-Only:
-
 - `description` (String) Group description.
-- `directory_id` (String) Directory containing the group.
 - `external_synced` (Boolean) Whether the group is synchronized from an identity provider.
-- `group_id` (String) Unique group ID.
+- `id` (String) Data source ID, equal to the Atlassian group ID.
 - `managed_by` (String) How the group is managed.
-- `management_access` (Attributes) Operations available to the caller for this group. (see [below for nested schema](#nestedatt--groups--management_access))
+- `management_access` (Attributes) Operations available to the caller for this group. (see [below for nested schema](#nestedatt--management_access))
 - `name` (String) Group name.
 
-<a id="nestedatt--groups--management_access"></a>
-### Nested Schema for `groups.management_access`
+<a id="nestedatt--management_access"></a>
+### Nested Schema for `management_access`
 
 Read-Only:
 

@@ -13,14 +13,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var _ datasource.DataSource = &groupDataSource{}
-var _ datasource.DataSourceWithValidateConfig = &groupDataSource{}
+var _ datasource.DataSource = &groupsDataSource{}
+var _ datasource.DataSourceWithValidateConfig = &groupsDataSource{}
 
-type groupDataSource struct {
+type groupsDataSource struct {
 	client *organizationclient.Service
 }
 
-type groupDataSourceModel struct {
+type groupsDataSourceModel struct {
 	OrganizationID types.String `tfsdk:"organization_id"`
 	DirectoryID    types.String `tfsdk:"directory_id"`
 	AccountIDs     types.Set    `tfsdk:"account_ids"`
@@ -50,15 +50,15 @@ type managementAccessResultModel struct {
 	Readable   types.Bool `tfsdk:"readable"`
 }
 
-func NewGroupDataSource() datasource.DataSource {
-	return &groupDataSource{}
+func NewGroupsDataSource() datasource.DataSource {
+	return &groupsDataSource{}
 }
 
-func (d *groupDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_organization_group"
+func (d *groupsDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_organization_groups"
 }
 
-func (d *groupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *groupsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	filterSet := func(description string) schema.SetAttribute {
 		return schema.SetAttribute{Description: description, Optional: true, ElementType: types.StringType}
 	}
@@ -107,7 +107,7 @@ func (d *groupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 	}
 }
 
-func (d *groupDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *groupsDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -123,8 +123,8 @@ func (d *groupDataSource) Configure(_ context.Context, req datasource.ConfigureR
 	d.client = atlassianClient.Organization
 }
 
-func (d *groupDataSource) ValidateConfig(ctx context.Context, req datasource.ValidateConfigRequest, resp *datasource.ValidateConfigResponse) {
-	var config groupDataSourceModel
+func (d *groupsDataSource) ValidateConfig(ctx context.Context, req datasource.ValidateConfigRequest, resp *datasource.ValidateConfigResponse) {
+	var config groupsDataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -168,8 +168,8 @@ func (d *groupDataSource) ValidateConfig(ctx context.Context, req datasource.Val
 	}
 }
 
-func (d *groupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var config groupDataSourceModel
+func (d *groupsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var config groupsDataSourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return

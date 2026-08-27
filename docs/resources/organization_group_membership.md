@@ -13,7 +13,7 @@ Manages a user's membership in an Atlassian organization group.
 ## Example Usage
 
 ```terraform
-data "atlassian_organization_user" "example" {
+data "atlassian_organization_users" "example" {
   organization_id = "your-organization-id"
   directory_id    = "your-directory-id"
   emails          = ["user@example.com"]
@@ -23,7 +23,7 @@ resource "atlassian_organization_group_membership" "example" {
   organization_id = "your-organization-id"
   directory_id    = "your-directory-id"
   group_id        = "your-group-id"
-  account_id      = one(data.atlassian_organization_user.example.users).account_id
+  account_id      = one(data.atlassian_organization_users.example.users).account_id
 }
 ```
 
