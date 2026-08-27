@@ -63,6 +63,55 @@ func TestUserRoleAssignmentIdentitySchema(t *testing.T) {
 	}
 }
 
+func TestGroupMembershipIdentitySchema(t *testing.T) {
+	t.Parallel()
+
+	var response resource.IdentitySchemaResponse
+	NewGroupMembershipResource().(resource.ResourceWithIdentity).IdentitySchema(context.Background(), resource.IdentitySchemaRequest{}, &response)
+	if response.Diagnostics.HasError() {
+		t.Fatalf("Schema() diagnostics = %v", response.Diagnostics)
+	}
+	wantAttributes := []string{"organization_id", "directory_id", "group_id", "account_id"}
+	if len(response.IdentitySchema.Attributes) != len(wantAttributes) {
+		t.Fatalf("identity attribute count = %d, want %d", len(response.IdentitySchema.Attributes), len(wantAttributes))
+	}
+	for _, name := range wantAttributes {
+		attribute, exists := response.IdentitySchema.Attributes[name]
+		if !exists {
+			t.Errorf("identity schema is missing %q", name)
+			continue
+		}
+		if !attribute.IsRequiredForImport() {
+			t.Errorf("identity attribute %q must be required for import", name)
+		}
+	}
+}
+
+func TestParseGroupMembershipImportID(t *testing.T) {
+	t.Parallel()
+
+	identity, err := parseGroupMembershipImportID(" org , directory , group , 712020:account ")
+	if err != nil {
+		t.Fatalf("parseGroupMembershipImportID() error = %v", err)
+	}
+	if got := identity.GroupID.ValueString(); got != "group" {
+		t.Errorf("group_id = %q, want %q", got, "group")
+	}
+	if got := identity.AccountID.ValueString(); got != "712020:account" {
+		t.Errorf("account_id = %q, want %q", got, "712020:account")
+	}
+
+	invalid := []string{
+		"org,directory,group",
+		"org,directory,,account",
+	}
+	for _, id := range invalid {
+		if _, err := parseGroupMembershipImportID(id); err == nil {
+			t.Errorf("parseGroupMembershipImportID(%q) returned no error", id)
+		}
+	}
+}
+
 func TestParseAssignmentImportID(t *testing.T) {
 	t.Parallel()
 

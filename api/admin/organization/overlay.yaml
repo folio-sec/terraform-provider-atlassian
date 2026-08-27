@@ -19,3 +19,13 @@ actions:
         required: true
         schema:
           type: string
+  # The upstream group membership operations omit operationId, so
+  # oapi-codegen does not generate methods for them without these corrections.
+  - target: "$['paths']['/v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships']['post']"
+    description: Add an operation ID for adding a user to a group.
+    update:
+      operationId: addUserToGroup
+  - target: "$['paths']['/v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships/{accountId}']['delete']"
+    description: Add an operation ID for removing a user from a group.
+    update:
+      operationId: removeUserFromGroup

@@ -67,6 +67,92 @@ func TestSearchUsersFollowsAllPages(t *testing.T) {
 	}
 }
 
+func TestHasGroupMembershipFiltersByAccountAndGroup(t *testing.T) {
+	t.Parallel()
+
+	handler := func(r *http.Request) *http.Response {
+		var request map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+		}
+		if got := request["accountIds"]; !reflect.DeepEqual(got, []any{"712020:account"}) {
+			t.Errorf("accountIds = %#v", got)
+		}
+		if got := request["groupIds"]; !reflect.DeepEqual(got, []any{"group"}) {
+			t.Errorf("groupIds = %#v", got)
+		}
+		return jsonResponse(r, http.StatusOK, `{"data":[{"accountId":"712020:account"}],"links":{}}`)
+	}
+
+	service := newTestService(t, handler)
+	present, err := service.HasGroupMembership(context.Background(), "org", "directory", "group", "712020:account")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !present {
+		t.Fatal("HasGroupMembership() = false, want true")
+	}
+}
+
+func TestGroupMembershipMutationsUseV2EndpointsWithoutRetry(t *testing.T) {
+	t.Parallel()
+
+	var calls atomic.Int32
+	handler := func(r *http.Request) *http.Response {
+		calls.Add(1)
+		switch r.Method {
+		case http.MethodPost:
+			if r.URL.Path != "/admin/v2/orgs/org/directories/directory/groups/group/memberships" {
+				t.Errorf("add path = %q", r.URL.Path)
+			}
+			var request map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+				t.Error(err)
+			}
+			if request["accountId"] != "712020:account" {
+				t.Errorf("add request = %#v", request)
+			}
+		case http.MethodDelete:
+			if r.URL.Path != "/admin/v2/orgs/org/directories/directory/groups/group/memberships/712020:account" {
+				t.Errorf("remove path = %q", r.URL.Path)
+			}
+		default:
+			t.Errorf("method = %q", r.Method)
+		}
+		return jsonResponse(r, http.StatusNoContent, "")
+	}
+
+	service := newTestService(t, handler)
+	if err := service.AddGroupMembership(context.Background(), "org", "directory", "group", "712020:account"); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.RemoveGroupMembership(context.Background(), "org", "directory", "group", "712020:account"); err != nil {
+		t.Fatal(err)
+	}
+	if calls.Load() != 2 {
+		t.Fatalf("calls = %d, want 2", calls.Load())
+	}
+}
+
+func TestAddGroupMembershipDoesNotRetryMutation(t *testing.T) {
+	t.Parallel()
+
+	var calls atomic.Int32
+	handler := func(r *http.Request) *http.Response {
+		calls.Add(1)
+		return jsonResponse(r, http.StatusInternalServerError, `{"message":"temporary failure"}`)
+	}
+
+	service := newTestService(t, handler)
+	err := service.AddGroupMembership(context.Background(), "org", "directory", "group", "account")
+	if err == nil {
+		t.Fatal("AddGroupMembership() error = nil")
+	}
+	if calls.Load() != 1 {
+		t.Fatalf("calls = %d, want 1", calls.Load())
+	}
+}
+
 func TestHasDirectUserRoleIgnoresInheritedRole(t *testing.T) {
 	t.Parallel()
 

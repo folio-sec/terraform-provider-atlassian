@@ -42,7 +42,7 @@ func TestProviderRegistersOrganizationTypes(t *testing.T) {
 	if got := len(p.DataSources(context.Background())); got != 1 {
 		t.Fatalf("DataSources() length = %d, want 1", got)
 	}
-	if got := len(p.Resources(context.Background())); got != 1 {
-		t.Fatalf("Resources() length = %d, want 1", got)
+	if got := len(p.Resources(context.Background())); got != 2 {
+		t.Fatalf("Resources() length = %d, want 2", got)
 	}
 }

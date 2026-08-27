@@ -10,6 +10,8 @@ output-options:
     - getUserRoleAssignments
     - assignRole
     - revokeRole
+    - addUserToGroup
+    - removeUserFromGroup
   nullable-type: true
   overlay:
     path: api/admin/organization/overlay.yaml

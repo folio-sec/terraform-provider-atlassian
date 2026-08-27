@@ -18,6 +18,8 @@ type apiClient interface {
 	GetUserRoleAssignmentsWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.AccountIdParam, *generated.GetUserRoleAssignmentsParams, ...generated.RequestEditorFn) (*generated.GetUserRoleAssignmentsResponse, error)
 	AssignRoleWithResponse(context.Context, generated.OrgIdParam, uuid.UUID, generated.AssignRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.AssignRoleResponse, error)
 	RevokeRoleWithResponse(context.Context, generated.OrgIdParam, uuid.UUID, generated.RevokeRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.RevokeRoleResponse, error)
+	AddUserToGroupWithResponse(context.Context, string, string, string, generated.AddUserToGroupJSONRequestBody, ...generated.RequestEditorFn) (*generated.AddUserToGroupResponse, error)
+	RemoveUserFromGroupWithResponse(context.Context, string, string, string, string, ...generated.RequestEditorFn) (*generated.RemoveUserFromGroupResponse, error)
 }
 
 // Service implements Organization API behavior on top of the generated API
@@ -117,6 +119,49 @@ func (s *Service) SearchUsers(ctx context.Context, organizationID, directoryID s
 		seenCursors[next] = struct{}{}
 		request.Cursor = &next
 	}
+}
+
+// HasGroupMembership reports whether the user belongs to the group in the
+// specified directory.
+func (s *Service) HasGroupMembership(ctx context.Context, organizationID, directoryID, groupID, accountID string) (bool, error) {
+	users, err := s.SearchUsers(ctx, organizationID, directoryID, SearchUsersRequest{
+		AccountIDs: []string{accountID},
+		GroupIDs:   []string{groupID},
+	})
+	if err != nil {
+		return false, fmt.Errorf("check group membership: %w", err)
+	}
+	for _, user := range users {
+		if user.AccountID == accountID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// AddGroupMembership adds a user to a group in the specified directory.
+func (s *Service) AddGroupMembership(ctx context.Context, organizationID, directoryID, groupID, accountID string) error {
+	request := generated.AddUserToGroupJSONRequestBody{AccountId: accountID}
+	response, err := s.client.AddUserToGroupWithResponse(admin.WithoutRetry(ctx), organizationID, directoryID, groupID, request)
+	if err != nil {
+		return fmt.Errorf("add group membership: %w", err)
+	}
+	if response.StatusCode() != http.StatusNoContent {
+		return fmt.Errorf("add group membership: %w", responseError(response.HTTPResponse, response.Body))
+	}
+	return nil
+}
+
+// RemoveGroupMembership removes a user from a group in the specified directory.
+func (s *Service) RemoveGroupMembership(ctx context.Context, organizationID, directoryID, groupID, accountID string) error {
+	response, err := s.client.RemoveUserFromGroupWithResponse(admin.WithoutRetry(ctx), organizationID, directoryID, groupID, accountID)
+	if err != nil {
+		return fmt.Errorf("remove group membership: %w", err)
+	}
+	if response.StatusCode() != http.StatusNoContent {
+		return fmt.Errorf("remove group membership: %w", responseError(response.HTTPResponse, response.Body))
+	}
+	return nil
 }
 
 // AssignUserRole grants a platform role for a resource to a user.
