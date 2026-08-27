@@ -3,7 +3,3 @@ data "atlassian_organization_user" "example" {
   directory_id    = "your-directory-id"
   emails          = ["user@example.com"]
 }
-
-output "account_id" {
-  value = one(data.atlassian_organization_user.example.users).account_id
-}
