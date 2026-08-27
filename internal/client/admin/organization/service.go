@@ -8,7 +8,6 @@ import (
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization/generated"
-	"github.com/google/uuid"
 )
 
 const pageLimit = 100
@@ -17,8 +16,8 @@ type apiClient interface {
 	SearchDirectoryUsersWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.SearchDirectoryUsersJSONRequestBody, ...generated.RequestEditorFn) (*generated.SearchDirectoryUsersResponse, error)
 	SearchDirectoryGroupsWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.SearchDirectoryGroupsJSONRequestBody, ...generated.RequestEditorFn) (*generated.SearchDirectoryGroupsResponse, error)
 	GetUserRoleAssignmentsWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.AccountIdParam, *generated.GetUserRoleAssignmentsParams, ...generated.RequestEditorFn) (*generated.GetUserRoleAssignmentsResponse, error)
-	AssignRoleWithResponse(context.Context, generated.OrgIdParam, uuid.UUID, generated.AssignRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.AssignRoleResponse, error)
-	RevokeRoleWithResponse(context.Context, generated.OrgIdParam, uuid.UUID, generated.RevokeRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.RevokeRoleResponse, error)
+	AssignRoleWithResponse(context.Context, generated.OrgIdParam, string, generated.AssignRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.AssignRoleResponse, error)
+	RevokeRoleWithResponse(context.Context, generated.OrgIdParam, string, generated.RevokeRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.RevokeRoleResponse, error)
 	AssignOrganizationLevelRoleWithResponse(context.Context, string, string, generated.AssignOrganizationLevelRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.AssignOrganizationLevelRoleResponse, error)
 	RevokeOrganizationLevelRoleWithResponse(context.Context, string, string, generated.RevokeOrganizationLevelRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.RevokeOrganizationLevelRoleResponse, error)
 	AddUserToGroupWithResponse(context.Context, string, string, string, generated.AddUserToGroupJSONRequestBody, ...generated.RequestEditorFn) (*generated.AddUserToGroupResponse, error)
@@ -208,15 +207,11 @@ func (s *Service) RemoveGroupMembership(ctx context.Context, organizationID, dir
 
 // AssignUserRole grants a platform role for a resource to a user.
 func (s *Service) AssignUserRole(ctx context.Context, organizationID, accountID, resource, role string) error {
-	userID, err := uuid.Parse(accountID)
-	if err != nil {
-		return fmt.Errorf("assign user role: account ID must be a UUID: %w", err)
-	}
 	request := generated.RoleApiRequest{Role: generated.RoleApiRequestRole(role)}
 	if resource != "" {
 		request.Resource = &resource
 	}
-	response, err := s.client.AssignRoleWithResponse(admin.WithoutRetry(ctx), organizationID, userID, request)
+	response, err := s.client.AssignRoleWithResponse(admin.WithoutRetry(ctx), organizationID, accountID, request)
 	if err != nil {
 		return fmt.Errorf("assign user role: %w", err)
 	}
@@ -228,15 +223,11 @@ func (s *Service) AssignUserRole(ctx context.Context, organizationID, accountID,
 
 // RevokeUserRole revokes a platform role for a resource from a user.
 func (s *Service) RevokeUserRole(ctx context.Context, organizationID, accountID, resource, role string) error {
-	userID, err := uuid.Parse(accountID)
-	if err != nil {
-		return fmt.Errorf("revoke user role: account ID must be a UUID: %w", err)
-	}
 	request := generated.RoleApiRequest{Role: generated.RoleApiRequestRole(role)}
 	if resource != "" {
 		request.Resource = &resource
 	}
-	response, err := s.client.RevokeRoleWithResponse(admin.WithoutRetry(ctx), organizationID, userID, request)
+	response, err := s.client.RevokeRoleWithResponse(admin.WithoutRetry(ctx), organizationID, accountID, request)
 	if err != nil {
 		return fmt.Errorf("revoke user role: %w", err)
 	}

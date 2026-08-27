@@ -221,6 +221,41 @@ func TestHasDirectUserRoleIgnoresInheritedRole(t *testing.T) {
 	}
 }
 
+func TestUserRoleMutationsAcceptOpaqueAccountIDs(t *testing.T) {
+	t.Parallel()
+
+	// Atlassian issues legacy and 712020-prefixed account IDs, neither of which
+	// is a UUID.
+	accountIDs := map[string]string{
+		"legacy":  "5b361abdf2886739ae9da236",
+		"712020":  "712020:12345678-1234-1234-1234-123456789012",
+		"bare id": "12345678-1234-1234-1234-123456789012",
+	}
+	for name, accountID := range accountIDs {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var paths []string
+			service := newTestService(t, func(r *http.Request) *http.Response {
+				paths = append(paths, r.URL.Path)
+				return jsonResponse(r, http.StatusNoContent, "")
+			})
+			if err := service.AssignUserRole(context.Background(), "org", accountID, "ari:cloud:jira::site/site-id", "atlassian/user"); err != nil {
+				t.Fatal(err)
+			}
+			if err := service.RevokeUserRole(context.Background(), "org", accountID, "ari:cloud:jira::site/site-id", "atlassian/user"); err != nil {
+				t.Fatal(err)
+			}
+			want := []string{
+				"/admin/v1/orgs/org/users/" + accountID + "/roles/assign",
+				"/admin/v1/orgs/org/users/" + accountID + "/roles/revoke",
+			}
+			if !reflect.DeepEqual(paths, want) {
+				t.Errorf("paths = %#v, want %#v", paths, want)
+			}
+		})
+	}
+}
+
 func TestAssignUserRoleDoesNotRetryMutation(t *testing.T) {
 	t.Parallel()
 

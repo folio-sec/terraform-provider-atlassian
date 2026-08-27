@@ -16,7 +16,6 @@ import (
 
 	"github.com/oapi-codegen/nullable"
 	"github.com/oapi-codegen/runtime"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // Defines values for AccountStatus.
@@ -2062,7 +2061,7 @@ type ClientInterface interface {
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/assign (the `AssignRole` operationId).
-	AssignRoleWithBody(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	AssignRoleWithBody(ctx context.Context, orgId OrgIdParam, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// AssignRole Grant user access
 	//
@@ -2071,7 +2070,7 @@ type ClientInterface interface {
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/assign (the `AssignRole` operationId).
-	AssignRole(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, body AssignRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	AssignRole(ctx context.Context, orgId OrgIdParam, userId string, body AssignRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RevokeRoleWithBody Revoke user access
 	//
@@ -2080,7 +2079,7 @@ type ClientInterface interface {
 	// Takes any type of body and a specified content type.
 	//
 	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/revoke (the `RevokeRole` operationId).
-	RevokeRoleWithBody(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	RevokeRoleWithBody(ctx context.Context, orgId OrgIdParam, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RevokeRole Revoke user access
 	//
@@ -2089,7 +2088,7 @@ type ClientInterface interface {
 	// Takes a body of the `application/json` content type.
 	//
 	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/revoke (the `RevokeRole` operationId).
-	RevokeRole(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, body RevokeRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	RevokeRole(ctx context.Context, orgId OrgIdParam, userId string, body RevokeRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// SearchDirectoryGroupsWithBody Search for groups in an organization
 	//
@@ -2274,7 +2273,7 @@ func (c *Client) RevokeOrganizationLevelRole(ctx context.Context, orgId string, 
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/assign (the `AssignRole` operationId).
-func (c *Client) AssignRoleWithBody(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) AssignRoleWithBody(ctx context.Context, orgId OrgIdParam, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAssignRoleRequestWithBody(c.Server, orgId, userId, contentType, body)
 	if err != nil {
 		return nil, err
@@ -2293,7 +2292,7 @@ func (c *Client) AssignRoleWithBody(ctx context.Context, orgId OrgIdParam, userI
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/assign (the `AssignRole` operationId).
-func (c *Client) AssignRole(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, body AssignRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) AssignRole(ctx context.Context, orgId OrgIdParam, userId string, body AssignRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewAssignRoleRequest(c.Server, orgId, userId, body)
 	if err != nil {
 		return nil, err
@@ -2312,7 +2311,7 @@ func (c *Client) AssignRole(ctx context.Context, orgId OrgIdParam, userId openap
 // Takes any type of body and a specified content type.
 //
 // Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/revoke (the `RevokeRole` operationId).
-func (c *Client) RevokeRoleWithBody(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) RevokeRoleWithBody(ctx context.Context, orgId OrgIdParam, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRevokeRoleRequestWithBody(c.Server, orgId, userId, contentType, body)
 	if err != nil {
 		return nil, err
@@ -2331,7 +2330,7 @@ func (c *Client) RevokeRoleWithBody(ctx context.Context, orgId OrgIdParam, userI
 // Takes a body of the `application/json` content type.
 //
 // Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/revoke (the `RevokeRole` operationId).
-func (c *Client) RevokeRole(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, body RevokeRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) RevokeRole(ctx context.Context, orgId OrgIdParam, userId string, body RevokeRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRevokeRoleRequest(c.Server, orgId, userId, body)
 	if err != nil {
 		return nil, err
@@ -2623,7 +2622,7 @@ func NewRevokeOrganizationLevelRoleRequestWithBody(server string, orgId string, 
 }
 
 // NewAssignRoleRequest calls the generic AssignRole builder with application/json body
-func NewAssignRoleRequest(server string, orgId OrgIdParam, userId openapi_types.UUID, body AssignRoleJSONRequestBody) (*http.Request, error) {
+func NewAssignRoleRequest(server string, orgId OrgIdParam, userId string, body AssignRoleJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -2634,7 +2633,7 @@ func NewAssignRoleRequest(server string, orgId OrgIdParam, userId openapi_types.
 }
 
 // NewAssignRoleRequestWithBody constructs an http.Request for the AssignRole method, with any body, and a specified content type
-func NewAssignRoleRequestWithBody(server string, orgId OrgIdParam, userId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+func NewAssignRoleRequestWithBody(server string, orgId OrgIdParam, userId string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2646,7 +2645,7 @@ func NewAssignRoleRequestWithBody(server string, orgId OrgIdParam, userId openap
 
 	var pathParam1 string
 
-	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
 	if err != nil {
 		return nil, err
 	}
@@ -2677,7 +2676,7 @@ func NewAssignRoleRequestWithBody(server string, orgId OrgIdParam, userId openap
 }
 
 // NewRevokeRoleRequest calls the generic RevokeRole builder with application/json body
-func NewRevokeRoleRequest(server string, orgId OrgIdParam, userId openapi_types.UUID, body RevokeRoleJSONRequestBody) (*http.Request, error) {
+func NewRevokeRoleRequest(server string, orgId OrgIdParam, userId string, body RevokeRoleJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -2688,7 +2687,7 @@ func NewRevokeRoleRequest(server string, orgId OrgIdParam, userId openapi_types.
 }
 
 // NewRevokeRoleRequestWithBody constructs an http.Request for the RevokeRole method, with any body, and a specified content type
-func NewRevokeRoleRequestWithBody(server string, orgId OrgIdParam, userId openapi_types.UUID, contentType string, body io.Reader) (*http.Request, error) {
+func NewRevokeRoleRequestWithBody(server string, orgId OrgIdParam, userId string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2700,7 +2699,7 @@ func NewRevokeRoleRequestWithBody(server string, orgId OrgIdParam, userId openap
 
 	var pathParam1 string
 
-	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
 	if err != nil {
 		return nil, err
 	}
@@ -3184,7 +3183,7 @@ type ClientWithResponsesInterface interface {
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/assign (the `AssignRole` operationId).
-	AssignRoleWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AssignRoleResponse, error)
+	AssignRoleWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AssignRoleResponse, error)
 
 	// AssignRoleWithResponse Grant user access
 	//
@@ -3193,7 +3192,7 @@ type ClientWithResponsesInterface interface {
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/assign (the `AssignRole` operationId).
-	AssignRoleWithResponse(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, body AssignRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*AssignRoleResponse, error)
+	AssignRoleWithResponse(ctx context.Context, orgId OrgIdParam, userId string, body AssignRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*AssignRoleResponse, error)
 
 	// RevokeRoleWithBodyWithResponse Revoke user access
 	//
@@ -3202,7 +3201,7 @@ type ClientWithResponsesInterface interface {
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/revoke (the `RevokeRole` operationId).
-	RevokeRoleWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RevokeRoleResponse, error)
+	RevokeRoleWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RevokeRoleResponse, error)
 
 	// RevokeRoleWithResponse Revoke user access
 	//
@@ -3211,7 +3210,7 @@ type ClientWithResponsesInterface interface {
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/revoke (the `RevokeRole` operationId).
-	RevokeRoleWithResponse(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, body RevokeRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*RevokeRoleResponse, error)
+	RevokeRoleWithResponse(ctx context.Context, orgId OrgIdParam, userId string, body RevokeRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*RevokeRoleResponse, error)
 
 	// SearchDirectoryGroupsWithBodyWithResponse Search for groups in an organization
 	//
@@ -4012,7 +4011,7 @@ func (c *ClientWithResponses) RevokeOrganizationLevelRoleWithResponse(ctx contex
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/assign (the `AssignRole` operationId).
-func (c *ClientWithResponses) AssignRoleWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AssignRoleResponse, error) {
+func (c *ClientWithResponses) AssignRoleWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AssignRoleResponse, error) {
 	rsp, err := c.AssignRoleWithBody(ctx, orgId, userId, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -4027,7 +4026,7 @@ func (c *ClientWithResponses) AssignRoleWithBodyWithResponse(ctx context.Context
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/assign (the `AssignRole` operationId).
-func (c *ClientWithResponses) AssignRoleWithResponse(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, body AssignRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*AssignRoleResponse, error) {
+func (c *ClientWithResponses) AssignRoleWithResponse(ctx context.Context, orgId OrgIdParam, userId string, body AssignRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*AssignRoleResponse, error) {
 	rsp, err := c.AssignRole(ctx, orgId, userId, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -4042,7 +4041,7 @@ func (c *ClientWithResponses) AssignRoleWithResponse(ctx context.Context, orgId 
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/revoke (the `RevokeRole` operationId).
-func (c *ClientWithResponses) RevokeRoleWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RevokeRoleResponse, error) {
+func (c *ClientWithResponses) RevokeRoleWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, userId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RevokeRoleResponse, error) {
 	rsp, err := c.RevokeRoleWithBody(ctx, orgId, userId, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -4057,7 +4056,7 @@ func (c *ClientWithResponses) RevokeRoleWithBodyWithResponse(ctx context.Context
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
 // Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/revoke (the `RevokeRole` operationId).
-func (c *ClientWithResponses) RevokeRoleWithResponse(ctx context.Context, orgId OrgIdParam, userId openapi_types.UUID, body RevokeRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*RevokeRoleResponse, error) {
+func (c *ClientWithResponses) RevokeRoleWithResponse(ctx context.Context, orgId OrgIdParam, userId string, body RevokeRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*RevokeRoleResponse, error) {
 	rsp, err := c.RevokeRole(ctx, orgId, userId, body, reqEditors...)
 	if err != nil {
 		return nil, err
