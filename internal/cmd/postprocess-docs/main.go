@@ -137,8 +137,10 @@ func escapeInlineARIs(markdown string) string {
 }
 
 // escapeARIsForHTML preserves the displayed and copied ARI while preventing
-// Terraform Registry from treating :cloud: as an emoji shortcode.
+// Terraform Registry from treating :cloud: as an emoji shortcode. Character
+// references are decoded before the Registry replaces emoji shortcodes, so an
+// element boundary must split the shortcode into separate text nodes.
 func escapeARIsForHTML(value string) string {
 	escaped := html.EscapeString(value)
-	return strings.ReplaceAll(escaped, "ari:cloud:", "ari&#58;cloud&#58;")
+	return strings.ReplaceAll(escaped, "ari:cloud:", "ari:<span>cloud</span>:")
 }
