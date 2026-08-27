@@ -15,6 +15,7 @@ import (
 )
 
 //go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-name atlassian --provider-dir ../..
+//go:generate go run ../cmd/postprocess-docs -docs-dir ../../docs
 
 var _ provider.Provider = &AtlassianProvider{}
 
