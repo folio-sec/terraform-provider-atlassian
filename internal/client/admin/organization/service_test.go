@@ -3,6 +3,7 @@ package organization
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -236,6 +237,164 @@ func TestAssignUserRoleDoesNotRetryMutation(t *testing.T) {
 	}
 	if calls.Load() != 1 {
 		t.Fatalf("calls = %d, want 1", calls.Load())
+	}
+}
+
+func TestOrganizationRoleMutationsUseExactEndpointsAndBodies(t *testing.T) {
+	t.Parallel()
+
+	var calls atomic.Int32
+	handler := func(r *http.Request) *http.Response {
+		call := calls.Add(1)
+		if r.Method != http.MethodPost {
+			t.Errorf("method = %q, want POST", r.Method)
+		}
+		var request map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+		}
+		if !reflect.DeepEqual(request, map[string]any{"role": "atlassian/org-admin"}) {
+			t.Errorf("request body = %#v", request)
+		}
+		switch call {
+		case 1:
+			if r.URL.Path != "/admin/v1/orgs/org/users/5b361abdf2886739ae9da236/role-assignments/assign" {
+				t.Errorf("assign path = %q", r.URL.Path)
+			}
+		case 2:
+			if r.URL.Path != "/admin/v1/orgs/org/users/712020:12345678-1234-1234-1234-123456789012/role-assignments/revoke" {
+				t.Errorf("revoke path = %q", r.URL.Path)
+			}
+		default:
+			t.Errorf("unexpected call %d", call)
+		}
+		return jsonResponse(r, http.StatusNoContent, "")
+	}
+
+	service := newTestService(t, handler)
+	if err := service.AssignOrganizationRole(context.Background(), "org", "5b361abdf2886739ae9da236", "atlassian/org-admin"); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.RevokeOrganizationRole(context.Background(), "org", "712020:12345678-1234-1234-1234-123456789012", "atlassian/org-admin"); err != nil {
+		t.Fatal(err)
+	}
+	if calls.Load() != 2 {
+		t.Fatalf("calls = %d, want 2", calls.Load())
+	}
+}
+
+func TestOrganizationRoleMutationsReturnAPIErrorsWithoutRetry(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		status int
+		call   func(*Service) error
+	}{
+		"assign": {
+			status: http.StatusConflict,
+			call: func(service *Service) error {
+				return service.AssignOrganizationRole(context.Background(), "org", "account", "atlassian/org-admin")
+			},
+		},
+		"revoke": {
+			status: http.StatusBadRequest,
+			call: func(service *Service) error {
+				return service.RevokeOrganizationRole(context.Background(), "org", "account", "atlassian/org-admin")
+			},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var calls atomic.Int32
+			service := newTestService(t, func(r *http.Request) *http.Response {
+				calls.Add(1)
+				return jsonResponse(r, test.status, `{"message":"mutation failed"}`)
+			})
+			err := test.call(service)
+			if err == nil {
+				t.Fatal("mutation error = nil")
+			}
+			var httpErr *admin.HTTPError
+			if !errors.As(err, &httpErr) || httpErr.StatusCode != test.status {
+				t.Fatalf("error = %v, want HTTP status %d", err, test.status)
+			}
+			if calls.Load() != 1 {
+				t.Fatalf("calls = %d, want 1", calls.Load())
+			}
+		})
+	}
+}
+
+func TestHasDirectOrganizationRoleFollowsPagesAndIgnoresInheritedAssignments(t *testing.T) {
+	t.Parallel()
+
+	var calls atomic.Int32
+	handler := func(r *http.Request) *http.Response {
+		call := calls.Add(1)
+		if r.URL.Path != "/admin/v2/orgs/org/directories/directory/users/712020:account/role-assignments" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+		switch call {
+		case 1:
+			if got := r.URL.Query()["roleIds"]; !reflect.DeepEqual(got, []string{"atlassian/org-admin"}) {
+				t.Errorf("roleIds = %#v", got)
+			}
+			if got := r.URL.Query().Get("resourceIds"); got != "" {
+				t.Errorf("resourceIds = %q, want empty", got)
+			}
+			return jsonResponse(r, http.StatusOK, `{"data":[{"resourceId":"ignored","roleAssignments":[{"role":"atlassian/org-admin","roleAssignmentMethods":["group_direct","inferred"]}]}],"links":{"next":"next-page"}}`)
+		case 2:
+			if got := r.URL.Query().Get("cursor"); got != "next-page" {
+				t.Errorf("cursor = %q", got)
+			}
+			if got := r.URL.Query().Get("roleIds"); got != "" {
+				t.Errorf("second-page roleIds = %q, want empty", got)
+			}
+			return jsonResponse(r, http.StatusOK, `{"data":[{"roleAssignments":[{"role":"atlassian/org-admin","roleAssignmentMethods":["direct"]}]}],"links":{}}`)
+		default:
+			t.Errorf("unexpected call %d", call)
+			return jsonResponse(r, http.StatusInternalServerError, "")
+		}
+	}
+
+	service := newTestService(t, handler)
+	present, err := service.HasDirectOrganizationRole(context.Background(), "org", "directory", "712020:account", "atlassian/org-admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !present {
+		t.Fatal("HasDirectOrganizationRole() = false, want true")
+	}
+	if calls.Load() != 2 {
+		t.Fatalf("calls = %d, want 2", calls.Load())
+	}
+}
+
+func TestHasDirectOrganizationRoleIgnoresGroupAndInferredAssignments(t *testing.T) {
+	t.Parallel()
+
+	service := newTestService(t, func(r *http.Request) *http.Response {
+		return jsonResponse(r, http.StatusOK, `{"data":[{"roleAssignments":[{"role":"atlassian/org-admin","roleAssignmentMethods":["group_direct"]},{"role":"atlassian/org-admin","roleAssignmentMethods":["inferred"]}]}],"links":{}}`)
+	})
+	present, err := service.HasDirectOrganizationRole(context.Background(), "org", "directory", "account", "atlassian/org-admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if present {
+		t.Fatal("HasDirectOrganizationRole() = true for inherited assignments")
+	}
+}
+
+func TestHasDirectOrganizationRoleRejectsRepeatedCursor(t *testing.T) {
+	t.Parallel()
+
+	service := newTestService(t, func(r *http.Request) *http.Response {
+		return jsonResponse(r, http.StatusOK, `{"data":[],"links":{"next":"repeated"}}`)
+	})
+	_, err := service.HasDirectOrganizationRole(context.Background(), "org", "directory", "account", "atlassian/org-admin")
+	if err == nil || !strings.Contains(err.Error(), `repeated pagination cursor "repeated"`) {
+		t.Fatalf("error = %v, want repeated cursor error", err)
 	}
 }
 

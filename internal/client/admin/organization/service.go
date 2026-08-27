@@ -19,6 +19,8 @@ type apiClient interface {
 	GetUserRoleAssignmentsWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.AccountIdParam, *generated.GetUserRoleAssignmentsParams, ...generated.RequestEditorFn) (*generated.GetUserRoleAssignmentsResponse, error)
 	AssignRoleWithResponse(context.Context, generated.OrgIdParam, uuid.UUID, generated.AssignRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.AssignRoleResponse, error)
 	RevokeRoleWithResponse(context.Context, generated.OrgIdParam, uuid.UUID, generated.RevokeRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.RevokeRoleResponse, error)
+	AssignOrganizationLevelRoleWithResponse(context.Context, string, string, generated.AssignOrganizationLevelRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.AssignOrganizationLevelRoleResponse, error)
+	RevokeOrganizationLevelRoleWithResponse(context.Context, string, string, generated.RevokeOrganizationLevelRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.RevokeOrganizationLevelRoleResponse, error)
 	AddUserToGroupWithResponse(context.Context, string, string, string, generated.AddUserToGroupJSONRequestBody, ...generated.RequestEditorFn) (*generated.AddUserToGroupResponse, error)
 	RemoveUserFromGroupWithResponse(context.Context, string, string, string, string, ...generated.RequestEditorFn) (*generated.RemoveUserFromGroupResponse, error)
 }
@@ -242,6 +244,88 @@ func (s *Service) RevokeUserRole(ctx context.Context, organizationID, accountID,
 		return fmt.Errorf("revoke user role: %w", responseError(response.HTTPResponse, response.Body))
 	}
 	return nil
+}
+
+// AssignOrganizationRole grants an organization-level role directly to a user.
+func (s *Service) AssignOrganizationRole(ctx context.Context, organizationID, accountID, role string) error {
+	request := generated.OrganizationLevelRoleApiRequest{
+		Role: generated.OrganizationLevelRoleApiRequestRole(role),
+	}
+	response, err := s.client.AssignOrganizationLevelRoleWithResponse(admin.WithoutRetry(ctx), organizationID, accountID, request)
+	if err != nil {
+		return fmt.Errorf("assign organization-level role: %w", err)
+	}
+	if response.StatusCode() != http.StatusNoContent {
+		return fmt.Errorf("assign organization-level role: %w", responseError(response.HTTPResponse, response.Body))
+	}
+	return nil
+}
+
+// RevokeOrganizationRole revokes an organization-level role directly from a user.
+func (s *Service) RevokeOrganizationRole(ctx context.Context, organizationID, accountID, role string) error {
+	request := generated.OrganizationLevelRoleApiRequest{
+		Role: generated.OrganizationLevelRoleApiRequestRole(role),
+	}
+	response, err := s.client.RevokeOrganizationLevelRoleWithResponse(admin.WithoutRetry(ctx), organizationID, accountID, request)
+	if err != nil {
+		return fmt.Errorf("revoke organization-level role: %w", err)
+	}
+	if response.StatusCode() != http.StatusNoContent {
+		return fmt.Errorf("revoke organization-level role: %w", responseError(response.HTTPResponse, response.Body))
+	}
+	return nil
+}
+
+// HasDirectOrganizationRole reports whether an organization-level role is
+// assigned directly to the user. Resource IDs are intentionally ignored
+// because organization-level assignments are not resource scoped.
+func (s *Service) HasDirectOrganizationRole(ctx context.Context, organizationID, directoryID, accountID, role string) (bool, error) {
+	limit := pageLimit
+	roleIDs := []string{role}
+	params := generated.GetUserRoleAssignmentsParams{
+		Limit:   &limit,
+		RoleIds: &roleIDs,
+	}
+	seenCursors := map[string]struct{}{}
+	for {
+		response, err := s.client.GetUserRoleAssignmentsWithResponse(ctx, organizationID, directoryID, accountID, &params)
+		if err != nil {
+			return false, fmt.Errorf("get organization-level role assignments: %w", err)
+		}
+		if response.StatusCode() != http.StatusOK {
+			return false, fmt.Errorf("get organization-level role assignments: %w", responseError(response.HTTPResponse, response.Body))
+		}
+		if response.JSON200 == nil {
+			return false, fmt.Errorf("get organization-level role assignments: API returned an invalid success response")
+		}
+		if response.JSON200.Data != nil {
+			for _, resourceAssignment := range *response.JSON200.Data {
+				if resourceAssignment.RoleAssignments == nil {
+					continue
+				}
+				for _, assignment := range *resourceAssignment.RoleAssignments {
+					if assignment.Role == nil || string(*assignment.Role) != role || assignment.RoleAssignmentMethods == nil {
+						continue
+					}
+					for _, method := range *assignment.RoleAssignmentMethods {
+						if method == generated.Direct {
+							return true, nil
+						}
+					}
+				}
+			}
+		}
+
+		next := nextCursor(response.JSON200.Links)
+		if next == "" {
+			return false, nil
+		}
+		if _, exists := seenCursors[next]; exists {
+			return false, fmt.Errorf("get organization-level role assignments: API returned repeated pagination cursor %q", next)
+		}
+		seenCursors[next] = struct{}{}
+		params = generated.GetUserRoleAssignmentsParams{Cursor: &next}
+	}
 }
 
 // HasDirectUserRole reports whether the role is assigned directly to the user,
