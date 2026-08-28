@@ -188,16 +188,34 @@ func (e MultiDirectoryRoleAssignmentMethod) Valid() bool {
 
 // Defines values for MultiDirectoryUserManagementSource.
 const (
-	Invited MultiDirectoryUserManagementSource = "invited"
-	Synced  MultiDirectoryUserManagementSource = "synced"
+	MultiDirectoryUserManagementSourceInvited MultiDirectoryUserManagementSource = "invited"
+	MultiDirectoryUserManagementSourceSynced  MultiDirectoryUserManagementSource = "synced"
 )
 
 // Valid indicates whether the value is a known member of the MultiDirectoryUserManagementSource enum.
 func (e MultiDirectoryUserManagementSource) Valid() bool {
 	switch e {
-	case Invited:
+	case MultiDirectoryUserManagementSourceInvited:
 		return true
-	case Synced:
+	case MultiDirectoryUserManagementSourceSynced:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MultiDirectoryUserDetailsDataManagementSource.
+const (
+	MultiDirectoryUserDetailsDataManagementSourceInvited MultiDirectoryUserDetailsDataManagementSource = "invited"
+	MultiDirectoryUserDetailsDataManagementSourceSynced  MultiDirectoryUserDetailsDataManagementSource = "synced"
+)
+
+// Valid indicates whether the value is a known member of the MultiDirectoryUserDetailsDataManagementSource enum.
+func (e MultiDirectoryUserDetailsDataManagementSource) Valid() bool {
+	switch e {
+	case MultiDirectoryUserDetailsDataManagementSourceInvited:
+		return true
+	case MultiDirectoryUserDetailsDataManagementSourceSynced:
 		return true
 	default:
 		return false
@@ -841,6 +859,51 @@ type MultiDirectoryGroup struct {
 	Name *string `json:"name,omitempty"`
 }
 
+// MultiDirectoryGroupDetails defines model for MultiDirectoryGroupDetails.
+type MultiDirectoryGroupDetails struct {
+	// Data Group detail information.
+	Data *struct {
+		// Counts The number of objects associated with the group.
+		Counts *GroupCounts `json:"counts,omitempty"`
+
+		// Description The group description.
+		//
+		// Example: This group provides admin access to Jira.
+		Description *string `json:"description,omitempty"`
+
+		// DirectoryId The ID of the directory.
+		//
+		// Example: 12345678-1234-1234-1234-123456789012
+		DirectoryId *string `json:"directoryId,omitempty"`
+
+		// ExternalSynced Indication if group was created via IdP Sync.
+		//
+		// Example: true
+		ExternalSynced *bool `json:"externalSynced,omitempty"`
+
+		// Id Unique ID of the group.
+		//
+		// Example: 12345678-1234-1234-1234-123456789012
+		Id *string `json:"id,omitempty"`
+
+		// Links Links for a resource with a self cursor, for use in a cursor parameter.
+		Links *LinkSelfCursor `json:"links,omitempty"`
+
+		// ManagedBy Specifies how the group is managed: external, admins, team-members, or open.
+		//
+		// Example: external
+		ManagedBy *string `json:"managedBy,omitempty"`
+
+		// ManagementAccess Management access for the group. This is used to determine if the group can be deleted, modified, or read.
+		ManagementAccess *ManagementAccess `json:"managementAccess,omitempty"`
+
+		// Name The group name.
+		//
+		// Example: jira-administrators
+		Name *string `json:"name,omitempty"`
+	} `json:"data,omitempty"`
+}
+
 // MultiDirectoryGroupSearchPage defines model for MultiDirectoryGroupSearchPage.
 type MultiDirectoryGroupSearchPage struct {
 	// Data A page of groups matching the search criteria.
@@ -1114,6 +1177,156 @@ type MultiDirectoryUser struct {
 //
 // Example: invited
 type MultiDirectoryUserManagementSource string
+
+// MultiDirectoryUserDetails defines model for MultiDirectoryUserDetails.
+type MultiDirectoryUserDetails struct {
+	Data *MultiDirectoryUserDetailsData `json:"data,omitempty"`
+}
+
+// MultiDirectoryUserDetailsData defines model for MultiDirectoryUserDetailsData.
+type MultiDirectoryUserDetailsData struct {
+	// AccountId Unique ID of the user's account.
+	//
+	// Example: 12345678-1234-1234-1234-123456789012
+	AccountId *string `json:"accountId,omitempty"`
+
+	// AccountStatus The lifecycle status of the account.
+	//   - `active` - The account is active and can be used.
+	//   - `inactive` - The account is inactive and doesn't have access to any resources.
+	//   - `closed` - The account is closed and can't be used.
+	//
+	// Example: active
+	AccountStatus *AccountStatus `json:"accountStatus,omitempty"`
+
+	// AccountType The type of account.
+	//
+	// Example: atlassian
+	AccountType *AccountType `json:"accountType,omitempty"`
+
+	// AddedToOrg The ISO-8601 date and time the user was first added to any directory the admin is permitted to view in the organization
+	//
+	// Example: 2024-01-01T00:00:00.000Z
+	AddedToOrg *string `json:"addedToOrg,omitempty"`
+
+	// Avatar The URL of the user's public avatar.
+	//
+	// Example: https://avatar.example.com/avatar.png
+	Avatar *string `json:"avatar,omitempty"`
+
+	// ClaimStatus The claim status for the user account.
+	//   - `managed` - Returns only managed accounts. For more on managed accounts: https://support.atlassian.com/user-management/docs/what-are-managed-accounts/.
+	//   - `unmanaged` - Returns only unmanaged accounts.
+	//
+	// Example: unmanaged
+	ClaimStatus *ClaimStatus `json:"claimStatus,omitempty"`
+
+	// Counts The number of objects associated with the user.
+	Counts *UserCounts `json:"counts,omitempty"`
+
+	// DeactivatedOn The ISO-8601 date and time the user was deactivated.
+	//
+	// Example: 2024-01-02T00:00:00.000Z
+	DeactivatedOn *string `json:"deactivatedOn,omitempty"`
+
+	// Department Department the user belongs to.
+	//
+	// Example: Human Resources
+	Department *string `json:"department,omitempty"`
+
+	// Email The email address of the user.
+	//
+	// Example: email@example.com
+	Email *string `json:"email,omitempty"`
+
+	// EmailVerified The email verification status of the user. If true, the user verified their email after  creating their account.
+	//
+	// Example: true
+	EmailVerified *bool `json:"emailVerified,omitempty"`
+
+	// JobTitle Job title of the user.
+	//
+	// Example: Senior Business Analyst
+	JobTitle *string `json:"jobTitle,omitempty"`
+
+	// Location Location of the user.
+	//
+	// Example: New York
+	Location *string `json:"location,omitempty"`
+
+	// ManagementSource How a managed account was added to a directory.
+	//
+	// - **invited** – invited by an admin
+	// - **synced** – provisioned from an identity provider
+	//
+	// If `null`, then the management source couldn't be determined.
+	//
+	//
+	// Example: invited
+	ManagementSource nullable.Nullable[MultiDirectoryUserDetailsDataManagementSource] `json:"managementSource,omitempty"`
+
+	// MembershipStatus The membership status is the status of the user account in the organization.
+	//   - `active` - the account has an active membership for one or more directories within the organization.
+	//   - `suspended` - the account is suspended in all directories within the organization, to which the requestor has permission to access.
+	//   - `no_membership` - the account is in none of the organization’s directories.
+	MembershipStatus *MembershipStatus `json:"membershipStatus,omitempty"`
+
+	// MfaEnabled Whether or not a managed account has two-step verification enabled on their account.
+	// If true, they have two-step verification enabled.
+	//
+	// By default, all accounts are returned, regardless of two-step verification status.
+	//
+	//
+	// Example: true
+	MfaEnabled *bool `json:"mfaEnabled,omitempty"`
+
+	// Name The full name of the user.
+	//
+	// Example: John Doe
+	Name *string `json:"name,omitempty"`
+
+	// Nickname The nickname of the user.
+	//
+	// Example: Jonny
+	Nickname *string `json:"nickname,omitempty"`
+
+	// Organization Organization the user belongs to.
+	//
+	// Example: Talent
+	Organization *string `json:"organization,omitempty"`
+
+	// Picture The URL of the user's profile picture.
+	//
+	// Example: https://picture.example.com/picture.png
+	Picture *string `json:"picture,omitempty"`
+
+	// PlatformRoles The admin role IDs of the user. The role IDs are used to determine the permissions of the user.
+	PlatformRoles *[]PlatformRole `json:"platformRoles,omitempty"`
+
+	// Status The status for the user account. This status is a composite of `accountStatus` and `membershipStatus`.
+	//   - `active` - `accountStatus` is `active` and `membershipStatus` is `active`.
+	//   - `suspended` - `accountStatus` is `active` and `membershipStatus` is `suspended`.
+	//   - `not_invited` - `accountStatus` is `active` and `membershipStatus` is `no_membership`.
+	//   - `deactivated` - `accountStatus` is `inactive`.
+	//   - `for_deletion` - Indicates whether or not a managed account is scheduled for deletion.
+	//
+	// Example: active
+	Status *Status `json:"status,omitempty"`
+
+	// TimeZone Time zone the user is in.
+	//
+	// Example: America/New_York
+	TimeZone *string `json:"timeZone,omitempty"`
+}
+
+// MultiDirectoryUserDetailsDataManagementSource How a managed account was added to a directory.
+//
+// - **invited** – invited by an admin
+// - **synced** – provisioned from an identity provider
+//
+// If `null`, then the management source couldn't be determined.
+//
+// Example: invited
+type MultiDirectoryUserDetailsDataManagementSource string
 
 // MultiDirectoryUserGroup A group the user is a member of within the requested directory.
 type MultiDirectoryUserGroup struct {
@@ -1425,6 +1638,9 @@ type DirectoryIdParam = string
 // DirectoryIdsParam defines model for directoryIdsParam.
 type DirectoryIdsParam = []string
 
+// GroupIdParam defines model for groupIdParam.
+type GroupIdParam = string
+
 // LimitParam defines model for limitParam.
 type LimitParam = int
 
@@ -1439,6 +1655,9 @@ type ResourceOwnersParam = []string
 
 // RoleIdsParam defines model for roleIdsParam.
 type RoleIdsParam = []string
+
+// UserIdParam defines model for userIdParam.
+type UserIdParam = string
 
 // AssignOrganizationLevelRole401JSONResponseBody defines parameters for AssignOrganizationLevelRole.
 type AssignOrganizationLevelRole401JSONResponseBody struct {
@@ -1458,6 +1677,15 @@ type AssignRole401JSONResponseBody struct {
 // RevokeRole401JSONResponseBody defines parameters for RevokeRole.
 type RevokeRole401JSONResponseBody struct {
 	union json.RawMessage
+}
+
+// CreateGroupJSONBody defines parameters for CreateGroup.
+type CreateGroupJSONBody struct {
+	// Description Describe what the group is or what it might be used for.
+	Description *string `json:"description,omitempty"`
+
+	// Name Name the group.
+	Name string `json:"name"`
 }
 
 // AddUserToGroupJSONBody defines parameters for AddUserToGroup.
@@ -1512,6 +1740,9 @@ type AssignRoleJSONRequestBody = RoleApiRequest
 
 // RevokeRoleJSONRequestBody defines body for RevokeRole for application/json ContentType.
 type RevokeRoleJSONRequestBody = RoleApiRequest
+
+// CreateGroupJSONRequestBody defines body for CreateGroup for application/json ContentType.
+type CreateGroupJSONRequestBody CreateGroupJSONBody
 
 // SearchDirectoryGroupsJSONRequestBody defines body for SearchDirectoryGroups for application/json ContentType.
 type SearchDirectoryGroupsJSONRequestBody = MultiDirectoryGroupSearchRequest
@@ -2090,6 +2321,24 @@ type ClientInterface interface {
 	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/revoke (the `RevokeRole` operationId).
 	RevokeRole(ctx context.Context, orgId OrgIdParam, userId string, body RevokeRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// CreateGroupWithBody Create group
+	//
+	// Create a group in a directory to manage app access and permissions for multiple users together.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups (the `CreateGroup` operationId).
+	CreateGroupWithBody(ctx context.Context, orgId string, directoryId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateGroup Create group
+	//
+	// Create a group in a directory to manage app access and permissions for multiple users together.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups (the `CreateGroup` operationId).
+	CreateGroup(ctx context.Context, orgId string, directoryId string, body CreateGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// SearchDirectoryGroupsWithBody Search for groups in an organization
 	//
 	// Return a page of groups in an organization that match the supplied parameters.
@@ -2111,6 +2360,20 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/search (the `SearchDirectoryGroups` operationId).
 	SearchDirectoryGroups(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, body SearchDirectoryGroupsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteGroup Delete group
+	//
+	// Delete a group from a directory if you don’t need this group anymore. This removes any app access and permissions granted by this group from all members. A member can still access an app if they’re in another group that grants access to the same app.
+	//
+	// Corresponds with DELETE /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId} (the `DeleteGroup` operationId).
+	DeleteGroup(ctx context.Context, orgId string, directoryId string, groupId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetGroup Get group details
+	//
+	// Returns the details of a group.
+	//
+	// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId} (the `GetGroup` operationId).
+	GetGroup(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, groupId GroupIdParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// AddUserToGroupWithBody Add user to group
 	//
@@ -2180,6 +2443,13 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/users/{accountId}/role-assignments (the `GetUserRoleAssignments` operationId).
 	GetUserRoleAssignments(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, accountId AccountIdParam, params *GetUserRoleAssignmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetDirectoryUserDetails Get details of a user in a directory
+	//
+	// Returns detailed information about a specific user in a directory within an organization.
+	//
+	// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/users/{userId} (the `GetDirectoryUserDetails` operationId).
+	GetDirectoryUserDetails(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, userId UserIdParam, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 // AssignOrganizationLevelRoleWithBody Assign organization-level role
@@ -2342,6 +2612,44 @@ func (c *Client) RevokeRole(ctx context.Context, orgId OrgIdParam, userId string
 	return c.Client.Do(req)
 }
 
+// CreateGroupWithBody Create group
+//
+// Create a group in a directory to manage app access and permissions for multiple users together.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups (the `CreateGroup` operationId).
+func (c *Client) CreateGroupWithBody(ctx context.Context, orgId string, directoryId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateGroupRequestWithBody(c.Server, orgId, directoryId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateGroup Create group
+//
+// Create a group in a directory to manage app access and permissions for multiple users together.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups (the `CreateGroup` operationId).
+func (c *Client) CreateGroup(ctx context.Context, orgId string, directoryId string, body CreateGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateGroupRequest(c.Server, orgId, directoryId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // SearchDirectoryGroupsWithBody Search for groups in an organization
 //
 // Return a page of groups in an organization that match the supplied parameters.
@@ -2374,6 +2682,40 @@ func (c *Client) SearchDirectoryGroupsWithBody(ctx context.Context, orgId OrgIdP
 // Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/search (the `SearchDirectoryGroups` operationId).
 func (c *Client) SearchDirectoryGroups(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, body SearchDirectoryGroupsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSearchDirectoryGroupsRequest(c.Server, orgId, directoryId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteGroup Delete group
+//
+// Delete a group from a directory if you don’t need this group anymore. This removes any app access and permissions granted by this group from all members. A member can still access an app if they’re in another group that grants access to the same app.
+//
+// Corresponds with DELETE /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId} (the `DeleteGroup` operationId).
+func (c *Client) DeleteGroup(ctx context.Context, orgId string, directoryId string, groupId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteGroupRequest(c.Server, orgId, directoryId, groupId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetGroup Get group details
+//
+// Returns the details of a group.
+//
+// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId} (the `GetGroup` operationId).
+func (c *Client) GetGroup(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, groupId GroupIdParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetGroupRequest(c.Server, orgId, directoryId, groupId)
 	if err != nil {
 		return nil, err
 	}
@@ -2503,6 +2845,23 @@ func (c *Client) SearchDirectoryUsers(ctx context.Context, orgId OrgIdParam, dir
 // Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/users/{accountId}/role-assignments (the `GetUserRoleAssignments` operationId).
 func (c *Client) GetUserRoleAssignments(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, accountId AccountIdParam, params *GetUserRoleAssignmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetUserRoleAssignmentsRequest(c.Server, orgId, directoryId, accountId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetDirectoryUserDetails Get details of a user in a directory
+//
+// Returns detailed information about a specific user in a directory within an organization.
+//
+// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/users/{userId} (the `GetDirectoryUserDetails` operationId).
+func (c *Client) GetDirectoryUserDetails(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, userId UserIdParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetDirectoryUserDetailsRequest(c.Server, orgId, directoryId, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -2729,6 +3088,60 @@ func NewRevokeRoleRequestWithBody(server string, orgId OrgIdParam, userId string
 	return req, nil
 }
 
+// NewCreateGroupRequest calls the generic CreateGroup builder with application/json body
+func NewCreateGroupRequest(server string, orgId string, directoryId string, body CreateGroupJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateGroupRequestWithBody(server, orgId, directoryId, "application/json", bodyReader)
+}
+
+// NewCreateGroupRequestWithBody constructs an http.Request for the CreateGroup method, with any body, and a specified content type
+func NewCreateGroupRequestWithBody(server string, orgId string, directoryId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "directoryId", directoryId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v2/orgs/%s/directories/%s/groups", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewSearchDirectoryGroupsRequest calls the generic SearchDirectoryGroups builder with application/json body
 func NewSearchDirectoryGroupsRequest(server string, orgId OrgIdParam, directoryId DirectoryIdParam, body SearchDirectoryGroupsJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -2779,6 +3192,102 @@ func NewSearchDirectoryGroupsRequestWithBody(server string, orgId OrgIdParam, di
 	}
 
 	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteGroupRequest constructs an http.Request for the DeleteGroup method
+func NewDeleteGroupRequest(server string, orgId string, directoryId string, groupId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "directoryId", directoryId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithOptions("simple", false, "groupId", groupId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v2/orgs/%s/directories/%s/groups/%s", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetGroupRequest constructs an http.Request for the GetGroup method
+func NewGetGroupRequest(server string, orgId OrgIdParam, directoryId DirectoryIdParam, groupId GroupIdParam) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "directoryId", directoryId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithOptions("simple", false, "groupId", groupId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v2/orgs/%s/directories/%s/groups/%s", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }
@@ -3088,6 +3597,54 @@ func NewGetUserRoleAssignmentsRequest(server string, orgId OrgIdParam, directory
 	return req, nil
 }
 
+// NewGetDirectoryUserDetailsRequest constructs an http.Request for the GetDirectoryUserDetails method
+func NewGetDirectoryUserDetailsRequest(server string, orgId OrgIdParam, directoryId DirectoryIdParam, userId UserIdParam) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "directoryId", directoryId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithOptions("simple", false, "userId", userId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v2/orgs/%s/directories/%s/users/%s", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -3212,6 +3769,24 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /v1/orgs/{orgId}/users/{userId}/roles/revoke (the `RevokeRole` operationId).
 	RevokeRoleWithResponse(ctx context.Context, orgId OrgIdParam, userId string, body RevokeRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*RevokeRoleResponse, error)
 
+	// CreateGroupWithBodyWithResponse Create group
+	//
+	// Create a group in a directory to manage app access and permissions for multiple users together.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups (the `CreateGroup` operationId).
+	CreateGroupWithBodyWithResponse(ctx context.Context, orgId string, directoryId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateGroupResponse, error)
+
+	// CreateGroupWithResponse Create group
+	//
+	// Create a group in a directory to manage app access and permissions for multiple users together.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups (the `CreateGroup` operationId).
+	CreateGroupWithResponse(ctx context.Context, orgId string, directoryId string, body CreateGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateGroupResponse, error)
+
 	// SearchDirectoryGroupsWithBodyWithResponse Search for groups in an organization
 	//
 	// Return a page of groups in an organization that match the supplied parameters.
@@ -3233,6 +3808,24 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/search (the `SearchDirectoryGroups` operationId).
 	SearchDirectoryGroupsWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, body SearchDirectoryGroupsJSONRequestBody, reqEditors ...RequestEditorFn) (*SearchDirectoryGroupsResponse, error)
+
+	// DeleteGroupWithResponse Delete group
+	//
+	// Delete a group from a directory if you don’t need this group anymore. This removes any app access and permissions granted by this group from all members. A member can still access an app if they’re in another group that grants access to the same app.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId} (the `DeleteGroup` operationId).
+	DeleteGroupWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, reqEditors ...RequestEditorFn) (*DeleteGroupResponse, error)
+
+	// GetGroupWithResponse Get group details
+	//
+	// Returns the details of a group.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId} (the `GetGroup` operationId).
+	GetGroupWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, groupId GroupIdParam, reqEditors ...RequestEditorFn) (*GetGroupResponse, error)
 
 	// AddUserToGroupWithBodyWithResponse Add user to group
 	//
@@ -3306,6 +3899,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/users/{accountId}/role-assignments (the `GetUserRoleAssignments` operationId).
 	GetUserRoleAssignmentsWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, accountId AccountIdParam, params *GetUserRoleAssignmentsParams, reqEditors ...RequestEditorFn) (*GetUserRoleAssignmentsResponse, error)
+
+	// GetDirectoryUserDetailsWithResponse Get details of a user in a directory
+	//
+	// Returns detailed information about a specific user in a directory within an organization.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/users/{userId} (the `GetDirectoryUserDetails` operationId).
+	GetDirectoryUserDetailsWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, userId UserIdParam, reqEditors ...RequestEditorFn) (*GetDirectoryUserDetailsResponse, error)
 }
 
 type AssignOrganizationLevelRoleResponse struct {
@@ -3626,6 +4228,40 @@ func (r RevokeRoleResponse) ContentType() string {
 	return ""
 }
 
+type CreateGroupResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateGroupResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateGroupResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateGroupResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateGroupResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type SearchDirectoryGroupsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -3703,6 +4339,109 @@ func (r SearchDirectoryGroupsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r SearchDirectoryGroupsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteGroupResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteGroupResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteGroupResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteGroupResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteGroupResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetGroupResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MultiDirectoryGroupDetails
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Errors
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *Errors
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *Errors
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *Errors
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetGroupResponse) GetJSON200() *MultiDirectoryGroupDetails {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetGroupResponse) GetJSON401() *Errors {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetGroupResponse) GetJSON404() *Errors {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r GetGroupResponse) GetJSON429() *Errors {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetGroupResponse) GetJSON500() *Errors {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetGroupResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetGroupResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetGroupResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetGroupResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -3936,6 +4675,89 @@ func (r GetUserRoleAssignmentsResponse) ContentType() string {
 	return ""
 }
 
+type GetDirectoryUserDetailsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MultiDirectoryUserDetails
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *Errors
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Errors
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Errors
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *Errors
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *Errors
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *Errors
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetDirectoryUserDetailsResponse) GetJSON200() *MultiDirectoryUserDetails {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetDirectoryUserDetailsResponse) GetJSON400() *Errors {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetDirectoryUserDetailsResponse) GetJSON401() *Errors {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetDirectoryUserDetailsResponse) GetJSON403() *Errors {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetDirectoryUserDetailsResponse) GetJSON404() *Errors {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r GetDirectoryUserDetailsResponse) GetJSON429() *Errors {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetDirectoryUserDetailsResponse) GetJSON500() *Errors {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetDirectoryUserDetailsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetDirectoryUserDetailsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetDirectoryUserDetailsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetDirectoryUserDetailsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // AssignOrganizationLevelRoleWithBodyWithResponse Assign organization-level role
 //
 // Assign an organization-level role to a user. These are roles that have organization-wide privileges, like organization admin.
@@ -4064,6 +4886,36 @@ func (c *ClientWithResponses) RevokeRoleWithResponse(ctx context.Context, orgId 
 	return ParseRevokeRoleResponse(rsp)
 }
 
+// CreateGroupWithBodyWithResponse Create group
+//
+// Create a group in a directory to manage app access and permissions for multiple users together.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups (the `CreateGroup` operationId).
+func (c *ClientWithResponses) CreateGroupWithBodyWithResponse(ctx context.Context, orgId string, directoryId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateGroupResponse, error) {
+	rsp, err := c.CreateGroupWithBody(ctx, orgId, directoryId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateGroupResponse(rsp)
+}
+
+// CreateGroupWithResponse Create group
+//
+// Create a group in a directory to manage app access and permissions for multiple users together.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups (the `CreateGroup` operationId).
+func (c *ClientWithResponses) CreateGroupWithResponse(ctx context.Context, orgId string, directoryId string, body CreateGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateGroupResponse, error) {
+	rsp, err := c.CreateGroup(ctx, orgId, directoryId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateGroupResponse(rsp)
+}
+
 // SearchDirectoryGroupsWithBodyWithResponse Search for groups in an organization
 //
 // Return a page of groups in an organization that match the supplied parameters.
@@ -4096,6 +4948,36 @@ func (c *ClientWithResponses) SearchDirectoryGroupsWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParseSearchDirectoryGroupsResponse(rsp)
+}
+
+// DeleteGroupWithResponse Delete group
+//
+// Delete a group from a directory if you don’t need this group anymore. This removes any app access and permissions granted by this group from all members. A member can still access an app if they’re in another group that grants access to the same app.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId} (the `DeleteGroup` operationId).
+func (c *ClientWithResponses) DeleteGroupWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, reqEditors ...RequestEditorFn) (*DeleteGroupResponse, error) {
+	rsp, err := c.DeleteGroup(ctx, orgId, directoryId, groupId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteGroupResponse(rsp)
+}
+
+// GetGroupWithResponse Get group details
+//
+// Returns the details of a group.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId} (the `GetGroup` operationId).
+func (c *ClientWithResponses) GetGroupWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, groupId GroupIdParam, reqEditors ...RequestEditorFn) (*GetGroupResponse, error) {
+	rsp, err := c.GetGroup(ctx, orgId, directoryId, groupId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetGroupResponse(rsp)
 }
 
 // AddUserToGroupWithBodyWithResponse Add user to group
@@ -4205,6 +5087,21 @@ func (c *ClientWithResponses) GetUserRoleAssignmentsWithResponse(ctx context.Con
 		return nil, err
 	}
 	return ParseGetUserRoleAssignmentsResponse(rsp)
+}
+
+// GetDirectoryUserDetailsWithResponse Get details of a user in a directory
+//
+// Returns detailed information about a specific user in a directory within an organization.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/users/{userId} (the `GetDirectoryUserDetails` operationId).
+func (c *ClientWithResponses) GetDirectoryUserDetailsWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, userId UserIdParam, reqEditors ...RequestEditorFn) (*GetDirectoryUserDetailsResponse, error) {
+	rsp, err := c.GetDirectoryUserDetails(ctx, orgId, directoryId, userId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetDirectoryUserDetailsResponse(rsp)
 }
 
 // ParseAssignOrganizationLevelRoleResponse parses an HTTP response from a AssignOrganizationLevelRoleWithResponse call
@@ -4477,6 +5374,22 @@ func ParseRevokeRoleResponse(rsp *http.Response) (*RevokeRoleResponse, error) {
 	return response, nil
 }
 
+// ParseCreateGroupResponse parses an HTTP response from a CreateGroupWithResponse call
+func ParseCreateGroupResponse(rsp *http.Response) (*CreateGroupResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateGroupResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
 // ParseSearchDirectoryGroupsResponse parses an HTTP response from a SearchDirectoryGroupsWithResponse call
 func ParseSearchDirectoryGroupsResponse(rsp *http.Response) (*SearchDirectoryGroupsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -4518,6 +5431,76 @@ func ParseSearchDirectoryGroupsResponse(rsp *http.Response) (*SearchDirectoryGro
 			return nil, err
 		}
 		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteGroupResponse parses an HTTP response from a DeleteGroupWithResponse call
+func ParseDeleteGroupResponse(rsp *http.Response) (*DeleteGroupResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteGroupResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseGetGroupResponse parses an HTTP response from a GetGroupWithResponse call
+func ParseGetGroupResponse(rsp *http.Response) (*GetGroupResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetGroupResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MultiDirectoryGroupDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest Errors
@@ -4679,6 +5662,74 @@ func ParseGetUserRoleAssignmentsResponse(rsp *http.Response) (*GetUserRoleAssign
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetDirectoryUserDetailsResponse parses an HTTP response from a GetDirectoryUserDetailsWithResponse call
+func ParseGetDirectoryUserDetailsResponse(rsp *http.Response) (*GetDirectoryUserDetailsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetDirectoryUserDetailsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MultiDirectoryUserDetails
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest Errors

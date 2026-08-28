@@ -62,12 +62,12 @@ type userResultModel struct {
 	TimeZone         types.String `tfsdk:"time_zone"`
 }
 
-func NewUserDataSource() datasource.DataSource {
+func NewUsersDataSource() datasource.DataSource {
 	return &userDataSource{}
 }
 
 func (d *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_organization_user"
+	resp.TypeName = req.ProviderTypeName + "_organization_users"
 }
 
 func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -149,13 +149,7 @@ func (d *userDataSource) ValidateConfig(ctx context.Context, req datasource.Vali
 		return
 	}
 
-	validateRequiredString := func(name string, value types.String) {
-		if !value.IsNull() && !value.IsUnknown() && strings.TrimSpace(value.ValueString()) == "" {
-			resp.Diagnostics.AddError("Invalid organization user configuration", fmt.Sprintf("%s must not be empty.", name))
-		}
-	}
-	validateRequiredString("organization_id", config.OrganizationID)
-	validateRequiredString("directory_id", config.DirectoryID)
+	resp.Diagnostics.Append(validateOrganizationUserIdentifiers(config.OrganizationID, config.DirectoryID, types.StringNull())...)
 
 	if !config.SearchTerm.IsNull() && !config.SearchTerm.IsUnknown() {
 		if strings.TrimSpace(config.SearchTerm.ValueString()) == "" {

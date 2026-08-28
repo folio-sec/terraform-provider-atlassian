@@ -14,7 +14,11 @@ const pageLimit = 100
 
 type apiClient interface {
 	SearchDirectoryUsersWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.SearchDirectoryUsersJSONRequestBody, ...generated.RequestEditorFn) (*generated.SearchDirectoryUsersResponse, error)
+	GetDirectoryUserDetailsWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.UserIdParam, ...generated.RequestEditorFn) (*generated.GetDirectoryUserDetailsResponse, error)
 	SearchDirectoryGroupsWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.SearchDirectoryGroupsJSONRequestBody, ...generated.RequestEditorFn) (*generated.SearchDirectoryGroupsResponse, error)
+	CreateGroupWithResponse(context.Context, string, string, generated.CreateGroupJSONRequestBody, ...generated.RequestEditorFn) (*generated.CreateGroupResponse, error)
+	GetGroupWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.GroupIdParam, ...generated.RequestEditorFn) (*generated.GetGroupResponse, error)
+	DeleteGroupWithResponse(context.Context, string, string, string, ...generated.RequestEditorFn) (*generated.DeleteGroupResponse, error)
 	GetUserRoleAssignmentsWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.AccountIdParam, *generated.GetUserRoleAssignmentsParams, ...generated.RequestEditorFn) (*generated.GetUserRoleAssignmentsResponse, error)
 	AssignRoleWithResponse(context.Context, generated.OrgIdParam, string, generated.AssignRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.AssignRoleResponse, error)
 	RevokeRoleWithResponse(context.Context, generated.OrgIdParam, string, generated.RevokeRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.RevokeRoleResponse, error)
@@ -66,6 +70,7 @@ type User struct {
 	AccountStatus    *string
 	MembershipStatus *string
 	AddedToOrg       *string
+	DeactivatedOn    *string
 	Name             *string
 	Nickname         *string
 	Email            *string
@@ -80,6 +85,7 @@ type User struct {
 	Organization     *string
 	Location         *string
 	TimeZone         *string
+	PlatformRoles    *[]string
 }
 
 type SearchGroupsRequest struct {
@@ -109,6 +115,54 @@ type ManagementAccess struct {
 	Readable   *bool
 }
 
+// CreateGroup creates a group. The endpoint deliberately has no response body,
+// so callers must resolve the resulting ID separately.
+func (s *Service) CreateGroup(ctx context.Context, organizationID, directoryID, name string, description *string) error {
+	request := generated.CreateGroupJSONRequestBody{Name: name, Description: description}
+	response, err := s.client.CreateGroupWithResponse(admin.WithoutRetry(ctx), organizationID, directoryID, request)
+	if err != nil {
+		return fmt.Errorf("create group: %w", err)
+	}
+	if response.StatusCode() != http.StatusCreated {
+		return fmt.Errorf("create group: %w", responseError(response.HTTPResponse, response.Body))
+	}
+	return nil
+}
+
+// GetGroup returns group details by immutable Atlassian group ID.
+func (s *Service) GetGroup(ctx context.Context, organizationID, directoryID, groupID string) (Group, error) {
+	response, err := s.client.GetGroupWithResponse(ctx, organizationID, directoryID, groupID)
+	if err != nil {
+		return Group{}, fmt.Errorf("get group: %w", err)
+	}
+	if response.StatusCode() != http.StatusOK {
+		return Group{}, fmt.Errorf("get group: %w", responseError(response.HTTPResponse, response.Body))
+	}
+	if response.JSON200 == nil || response.JSON200.Data == nil {
+		return Group{}, fmt.Errorf("get group: API returned an invalid success response")
+	}
+	group := response.JSON200.Data
+	if group.Id == nil || strings.TrimSpace(*group.Id) == "" {
+		return Group{}, fmt.Errorf("get group: API returned a group without id")
+	}
+	if group.Name == nil || strings.TrimSpace(*group.Name) == "" {
+		return Group{}, fmt.Errorf("get group: API returned a group without name")
+	}
+	return groupFromFields(*group.Id, group.Name, group.Description, group.DirectoryId, group.ExternalSynced, group.ManagedBy, group.ManagementAccess), nil
+}
+
+// DeleteGroup deletes a group by immutable Atlassian group ID.
+func (s *Service) DeleteGroup(ctx context.Context, organizationID, directoryID, groupID string) error {
+	response, err := s.client.DeleteGroupWithResponse(admin.WithoutRetry(ctx), organizationID, directoryID, groupID)
+	if err != nil {
+		return fmt.Errorf("delete group: %w", err)
+	}
+	if response.StatusCode() != http.StatusNoContent {
+		return fmt.Errorf("delete group: %w", responseError(response.HTTPResponse, response.Body))
+	}
+	return nil
+}
+
 // SearchUsers follows all cursors and returns every user matching the supplied
 // filters. Pagination controls are intentionally internal to the provider.
 func (s *Service) SearchUsers(ctx context.Context, organizationID, directoryID string, filters SearchUsersRequest) ([]User, error) {
@@ -122,6 +176,21 @@ func (s *Service) SearchUsers(ctx context.Context, organizationID, directoryID s
 	return collectSearchPages(ctx, "search users", request, fetch, func(request *generated.MultiDirectoryUserSearchRequest, cursor string) {
 		request.Cursor = &cursor
 	}, userFromGenerated)
+}
+
+// GetUser returns details for one user by immutable Atlassian account ID.
+func (s *Service) GetUser(ctx context.Context, organizationID, directoryID, accountID string) (User, error) {
+	response, err := s.client.GetDirectoryUserDetailsWithResponse(ctx, organizationID, directoryID, accountID)
+	if err != nil {
+		return User{}, fmt.Errorf("get user: %w", err)
+	}
+	if response.StatusCode() != http.StatusOK {
+		return User{}, fmt.Errorf("get user: %w", responseError(response.HTTPResponse, response.Body))
+	}
+	if response.JSON200 == nil || response.JSON200.Data == nil {
+		return User{}, fmt.Errorf("get user: API returned an invalid success response")
+	}
+	return userFromDetails(*response.JSON200.Data)
 }
 
 func (s *Service) searchUserPage(ctx context.Context, organizationID, directoryID string, request generated.MultiDirectoryUserSearchRequest) (searchPage[generated.MultiDirectoryUser], error) {
@@ -448,27 +517,74 @@ func userFromGenerated(user generated.MultiDirectoryUser) (User, error) {
 	}, nil
 }
 
+func userFromDetails(user generated.MultiDirectoryUserDetailsData) (User, error) {
+	if user.AccountId == nil || strings.TrimSpace(*user.AccountId) == "" {
+		return User{}, fmt.Errorf("API returned a user without accountId")
+	}
+	managementSource := (*string)(nil)
+	if source, err := user.ManagementSource.Get(); err == nil {
+		value := string(source)
+		managementSource = &value
+	}
+	var platformRoles *[]string
+	if user.PlatformRoles != nil {
+		roles := make([]string, len(*user.PlatformRoles))
+		for i, role := range *user.PlatformRoles {
+			roles[i] = string(role)
+		}
+		platformRoles = &roles
+	}
+	return User{
+		AccountID:        *user.AccountId,
+		AccountType:      enumPointer(user.AccountType),
+		Status:           enumPointer(user.Status),
+		AccountStatus:    enumPointer(user.AccountStatus),
+		MembershipStatus: enumPointer(user.MembershipStatus),
+		AddedToOrg:       user.AddedToOrg,
+		DeactivatedOn:    user.DeactivatedOn,
+		Name:             user.Name,
+		Nickname:         user.Nickname,
+		Email:            user.Email,
+		EmailVerified:    user.EmailVerified,
+		ClaimStatus:      enumPointer(user.ClaimStatus),
+		Picture:          user.Picture,
+		Avatar:           user.Avatar,
+		ManagementSource: managementSource,
+		MFAEnabled:       user.MfaEnabled,
+		JobTitle:         user.JobTitle,
+		Department:       user.Department,
+		Organization:     user.Organization,
+		Location:         user.Location,
+		TimeZone:         user.TimeZone,
+		PlatformRoles:    platformRoles,
+	}, nil
+}
+
 func groupFromGenerated(group generated.MultiDirectoryGroup) (Group, error) {
 	if group.Id == nil || strings.TrimSpace(*group.Id) == "" {
 		return Group{}, fmt.Errorf("API returned a group without id")
 	}
+	return groupFromFields(*group.Id, group.Name, group.Description, group.DirectoryId, group.ExternalSynced, group.ManagedBy, group.ManagementAccess), nil
+}
+
+func groupFromFields(id string, name, description, directoryID *string, externalSynced *bool, managedBy *string, access *generated.ManagementAccess) Group {
 	var managementAccess *ManagementAccess
-	if group.ManagementAccess != nil {
+	if access != nil {
 		managementAccess = &ManagementAccess{
-			Deletable:  group.ManagementAccess.Deletable,
-			Modifiable: group.ManagementAccess.Modifiable,
-			Readable:   group.ManagementAccess.Readable,
+			Deletable:  access.Deletable,
+			Modifiable: access.Modifiable,
+			Readable:   access.Readable,
 		}
 	}
 	return Group{
-		ID:               *group.Id,
-		Name:             group.Name,
-		Description:      group.Description,
-		DirectoryID:      group.DirectoryId,
-		ExternalSynced:   group.ExternalSynced,
-		ManagedBy:        group.ManagedBy,
+		ID:               id,
+		Name:             name,
+		Description:      description,
+		DirectoryID:      directoryID,
+		ExternalSynced:   externalSynced,
+		ManagedBy:        managedBy,
 		ManagementAccess: managementAccess,
-	}, nil
+	}
 }
 
 func enumPointer[T ~string](value *T) *string {

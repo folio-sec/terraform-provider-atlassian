@@ -77,6 +77,7 @@ func (p *AtlassianProvider) Configure(ctx context.Context, req provider.Configur
 
 func (p *AtlassianProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		organizationservice.NewGroupResource,
 		organizationservice.NewGroupMembershipResource,
 		organizationservice.NewUserOrganizationRoleAssignmentResource,
 		organizationservice.NewUserRoleAssignmentResource,
@@ -86,7 +87,9 @@ func (p *AtlassianProvider) Resources(_ context.Context) []func() resource.Resou
 func (p *AtlassianProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		organizationservice.NewGroupDataSource,
+		organizationservice.NewGroupsDataSource,
 		organizationservice.NewUserDataSource,
+		organizationservice.NewUsersDataSource,
 	}
 }
 

@@ -7,7 +7,11 @@ generate:
 output-options:
   include-operation-ids:
     - searchDirectoryUsers
+    - getDirectoryUserDetails
     - searchDirectoryGroups
+    - getGroup
+    - createGroup
+    - deleteGroup
     - getUserRoleAssignments
     - assignRole
     - revokeRole

@@ -68,6 +68,53 @@ func TestSearchUsersFollowsAllPages(t *testing.T) {
 	}
 }
 
+func TestGetUserUsesGeneratedV2Endpoint(t *testing.T) {
+	t.Parallel()
+
+	service := newTestService(t, func(r *http.Request) *http.Response {
+		if r.Method != http.MethodGet || r.URL.Path != "/admin/v2/orgs/org/directories/directory/users/712020:account" {
+			t.Errorf("request = %s %s", r.Method, r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer admin-key" {
+			t.Errorf("authorization = %q", r.Header.Get("Authorization"))
+		}
+		return jsonResponse(r, http.StatusOK, `{"data":{"accountId":"712020:account","name":"Example User","email":"user@example.com","status":"active","managementSource":"invited","platformRoles":["atlassian/org-admin"],"deactivatedOn":null}}`)
+	})
+
+	user, err := service.GetUser(context.Background(), "org", "directory", "712020:account")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if user.AccountID != "712020:account" || user.Email == nil || *user.Email != "user@example.com" {
+		t.Fatalf("user = %#v", user)
+	}
+	if user.PlatformRoles == nil || !reflect.DeepEqual(*user.PlatformRoles, []string{"atlassian/org-admin"}) {
+		t.Fatalf("platform roles = %#v", user.PlatformRoles)
+	}
+	if user.DeactivatedOn != nil {
+		t.Fatalf("deactivated on = %#v, want nil", user.DeactivatedOn)
+	}
+}
+
+func TestGetUserRejectsInvalidSuccessResponse(t *testing.T) {
+	t.Parallel()
+
+	for name, body := range map[string]string{
+		"missing data":       `{}`,
+		"missing account ID": `{"data":{"name":"Example User"}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			service := newTestService(t, func(r *http.Request) *http.Response {
+				return jsonResponse(r, http.StatusOK, body)
+			})
+			if _, err := service.GetUser(context.Background(), "org", "directory", "account"); err == nil {
+				t.Fatal("GetUser() error = nil")
+			}
+		})
+	}
+}
+
 func TestSearchGroupsFollowsAllPages(t *testing.T) {
 	t.Parallel()
 
@@ -112,6 +159,97 @@ func TestSearchGroupsFollowsAllPages(t *testing.T) {
 	}
 	if calls.Load() != 2 {
 		t.Fatalf("calls = %d", calls.Load())
+	}
+}
+
+func TestGroupLifecycleUsesGeneratedV2Endpoints(t *testing.T) {
+	t.Parallel()
+
+	var calls atomic.Int32
+	service := newTestService(t, func(r *http.Request) *http.Response {
+		if r.Header.Get("Authorization") != "Bearer admin-key" {
+			t.Errorf("authorization = %q", r.Header.Get("Authorization"))
+		}
+		switch calls.Add(1) {
+		case 1:
+			if r.Method != http.MethodPost || r.URL.Path != "/admin/v2/orgs/org/directories/directory/groups" {
+				t.Errorf("create request = %s %s", r.Method, r.URL.Path)
+			}
+			var body map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(body, map[string]any{"name": "engineering", "description": "Managed by Terraform"}) {
+				t.Errorf("create body = %#v", body)
+			}
+			return jsonResponse(r, http.StatusCreated, "")
+		case 2:
+			if r.Method != http.MethodGet || r.URL.Path != "/admin/v2/orgs/org/directories/directory/groups/group" {
+				t.Errorf("get request = %s %s", r.Method, r.URL.Path)
+			}
+			return jsonResponse(r, http.StatusOK, `{"data":{"id":"group","name":"engineering","description":"Managed by Terraform","directoryId":"directory","externalSynced":false,"managedBy":"admins","managementAccess":{"deletable":true,"modifiable":false,"readable":true}}}`)
+		case 3:
+			if r.Method != http.MethodDelete || r.URL.Path != "/admin/v2/orgs/org/directories/directory/groups/group" {
+				t.Errorf("delete request = %s %s", r.Method, r.URL.Path)
+			}
+			return jsonResponse(r, http.StatusNoContent, "")
+		default:
+			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+			return nil
+		}
+	})
+	description := "Managed by Terraform"
+	if err := service.CreateGroup(context.Background(), "org", "directory", "engineering", &description); err != nil {
+		t.Fatal(err)
+	}
+	group, err := service.GetGroup(context.Background(), "org", "directory", "group")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if group.ID != "group" || group.ManagementAccess == nil || group.ManagementAccess.Deletable == nil || !*group.ManagementAccess.Deletable {
+		t.Fatalf("group = %#v", group)
+	}
+	if err := service.DeleteGroup(context.Background(), "org", "directory", "group"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGetGroupRejectsMissingName(t *testing.T) {
+	t.Parallel()
+
+	service := newTestService(t, func(r *http.Request) *http.Response {
+		return jsonResponse(r, http.StatusOK, `{"data":{"id":"group","directoryId":"directory"}}`)
+	})
+	_, err := service.GetGroup(context.Background(), "org", "directory", "group")
+	if err == nil || !strings.Contains(err.Error(), "group without name") {
+		t.Fatalf("GetGroup() error = %v, want missing name error", err)
+	}
+}
+
+func TestGroupMutationsDoNotRetry(t *testing.T) {
+	t.Parallel()
+
+	for _, operation := range []string{"create", "delete"} {
+		t.Run(operation, func(t *testing.T) {
+			t.Parallel()
+			var calls atomic.Int32
+			service := newTestService(t, func(r *http.Request) *http.Response {
+				calls.Add(1)
+				return jsonResponse(r, http.StatusInternalServerError, `{"message":"temporary failure"}`)
+			})
+			var err error
+			if operation == "create" {
+				err = service.CreateGroup(context.Background(), "org", "directory", "engineering", nil)
+			} else {
+				err = service.DeleteGroup(context.Background(), "org", "directory", "group")
+			}
+			if err == nil {
+				t.Fatal("mutation error = nil")
+			}
+			if calls.Load() != 1 {
+				t.Fatalf("calls = %d, want 1", calls.Load())
+			}
+		})
 	}
 }
 
