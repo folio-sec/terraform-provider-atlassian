@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -59,6 +61,21 @@ func TestGroupResourceMetadataSchemaAndIdentity(t *testing.T) {
 		if !ok || len(attribute.PlanModifiers) == 0 {
 			t.Errorf("%s does not require replacement", name)
 		}
+	}
+	description := schemaResponse.Schema.Attributes["description"].(resourceschema.StringAttribute)
+	if !description.Optional || description.Computed {
+		t.Errorf("description must be optional and non-computed, got Optional=%t Computed=%t", description.Optional, description.Computed)
+	}
+	var modifierResponse planmodifier.StringResponse
+	description.PlanModifiers[0].PlanModifyString(context.Background(), planmodifier.StringRequest{
+		State:       tfsdk.State{Raw: tftypes.NewValue(tftypes.String, "Managed by Terraform")},
+		Plan:        tfsdk.Plan{Raw: tftypes.NewValue(tftypes.String, "planned resource")},
+		StateValue:  types.StringValue("Managed by Terraform"),
+		PlanValue:   types.StringNull(),
+		ConfigValue: types.StringNull(),
+	}, &modifierResponse)
+	if !modifierResponse.RequiresReplace {
+		t.Error("removing description does not require replacement")
 	}
 	for _, name := range []string{"id", "group_id", "external_synced", "managed_by", "management_access"} {
 		if attribute := schemaResponse.Schema.Attributes[name]; attribute == nil || !attribute.IsComputed() {
@@ -120,7 +137,7 @@ func TestGroupResourceCreateResolvesExactName(t *testing.T) {
 			return []organizationclient.Group{testGroup()}, nil
 		},
 	}
-	subject := &groupResource{client: client}
+	subject := newTestGroupResource(client)
 	request, response := newGroupCreateData(t, subject, testGroupModel())
 	subject.Create(context.Background(), request, response)
 	if response.Diagnostics.HasError() {
@@ -133,6 +150,40 @@ func TestGroupResourceCreateResolvesExactName(t *testing.T) {
 	response.Diagnostics.Append(response.State.Get(context.Background(), &state)...)
 	if state.ID.ValueString() != "group-1" || state.GroupID.ValueString() != "group-1" || state.ManagedBy.ValueString() != "admins" {
 		t.Fatalf("state = %#v", state)
+	}
+}
+
+func TestGroupResourceCreatePollsUntilExactNameIsVisible(t *testing.T) {
+	t.Parallel()
+
+	searches := 0
+	client := &fakeGroupClient{
+		create: func(context.Context, string, string, string, *string) error { return nil },
+		search: func(context.Context, string, string, organizationclient.SearchGroupsRequest) ([]organizationclient.Group, error) {
+			searches++
+			// The first search is the preflight existence check. The next two
+			// model a transient read error and eventual consistency after
+			// Atlassian accepts the create.
+			if searches == 1 {
+				return nil, nil
+			}
+			if searches == 2 {
+				return nil, &admin.HTTPError{StatusCode: http.StatusInternalServerError}
+			}
+			if searches == 3 {
+				return nil, nil
+			}
+			return []organizationclient.Group{testGroup()}, nil
+		},
+	}
+	subject := newTestGroupResource(client)
+	request, response := newGroupCreateData(t, subject, testGroupModel())
+	subject.Create(context.Background(), request, response)
+	if response.Diagnostics.HasError() {
+		t.Fatalf("Create() diagnostics = %v", response.Diagnostics)
+	}
+	if searches != 4 {
+		t.Fatalf("searches = %d, want 4", searches)
 	}
 }
 
@@ -156,7 +207,7 @@ func TestGroupResourceCreateRequiresExactlyOnePostCreateMatch(t *testing.T) {
 					return matches, nil
 				},
 			}
-			subject := &groupResource{client: client}
+			subject := newTestGroupResource(client)
 			request, response := newGroupCreateData(t, subject, testGroupModel())
 			subject.Create(context.Background(), request, response)
 			if !response.Diagnostics.HasError() {
@@ -189,7 +240,7 @@ func TestGroupResourceCreateVerifiesAmbiguousOutcome(t *testing.T) {
 					return []organizationclient.Group{testGroup()}, nil
 				},
 			}
-			subject := &groupResource{client: client}
+			subject := newTestGroupResource(client)
 			request, response := newGroupCreateData(t, subject, testGroupModel())
 			subject.Create(context.Background(), request, response)
 			if response.Diagnostics.HasError() {
@@ -215,7 +266,7 @@ func TestGroupResourceReadRefreshesAndRemoves404(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			subject := &groupResource{client: &fakeGroupClient{get: get}}
+			subject := newTestGroupResource(&fakeGroupClient{get: get})
 			request, response := newGroupReadData(t, subject, testGroupModel())
 			subject.Read(context.Background(), request, response)
 			if response.Diagnostics.HasError() {
@@ -236,6 +287,26 @@ func TestGroupResourceReadRefreshesAndRemoves404(t *testing.T) {
 	}
 }
 
+func TestGroupResourceReadPreservesUnconfiguredDescription(t *testing.T) {
+	t.Parallel()
+
+	model := testGroupModel()
+	model.Description = types.StringNull()
+	subject := newTestGroupResource(&fakeGroupClient{get: func(context.Context, string, string, string) (organizationclient.Group, error) {
+		return testGroup(), nil
+	}})
+	request, response := newGroupReadData(t, subject, model)
+	subject.Read(context.Background(), request, response)
+	if response.Diagnostics.HasError() {
+		t.Fatal(response.Diagnostics)
+	}
+	var state groupResourceModel
+	response.Diagnostics.Append(response.State.Get(context.Background(), &state)...)
+	if !state.Description.IsNull() {
+		t.Errorf("description = %q, want null for unconfigured description", state.Description.ValueString())
+	}
+}
+
 func TestGroupResourceDeleteBehavior(t *testing.T) {
 	t.Parallel()
 
@@ -243,10 +314,10 @@ func TestGroupResourceDeleteBehavior(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			deletes := 0
-			subject := &groupResource{client: &fakeGroupClient{delete: func(context.Context, string, string, string) error {
+			subject := newTestGroupResource(&fakeGroupClient{delete: func(context.Context, string, string, string) error {
 				deletes++
 				return deleteErr
-			}}}
+			}})
 			request, response := newGroupDeleteData(t, subject, testGroupModel())
 			subject.Delete(context.Background(), request, response)
 			if response.Diagnostics.HasError() || deletes != 1 {
@@ -259,10 +330,10 @@ func TestGroupResourceDeleteBehavior(t *testing.T) {
 	model.ManagementAccess, _ = types.ObjectValueFrom(context.Background(), managementAccessAttributeTypes(), managementAccessResultModel{
 		Deletable: types.BoolValue(false), Modifiable: types.BoolValue(false), Readable: types.BoolValue(true),
 	})
-	subject := &groupResource{client: &fakeGroupClient{delete: func(context.Context, string, string, string) error {
+	subject := newTestGroupResource(&fakeGroupClient{delete: func(context.Context, string, string, string) error {
 		t.Fatal("DeleteGroup must not be called for a known non-deletable group")
 		return nil
-	}}}
+	}})
 	request, response := newGroupDeleteData(t, subject, model)
 	subject.Delete(context.Background(), request, response)
 	if !response.Diagnostics.HasError() || !strings.Contains(response.Diagnostics.Errors()[0].Detail(), "management_access.deletable") {
@@ -273,9 +344,9 @@ func TestGroupResourceDeleteBehavior(t *testing.T) {
 func TestGroupResourceDeletePermissionDiagnostic(t *testing.T) {
 	t.Parallel()
 
-	subject := &groupResource{client: &fakeGroupClient{delete: func(context.Context, string, string, string) error {
+	subject := newTestGroupResource(&fakeGroupClient{delete: func(context.Context, string, string, string) error {
 		return &admin.HTTPError{StatusCode: http.StatusForbidden, Body: `{"message":"group cannot be deleted"}`}
-	}}}
+	}})
 	request, response := newGroupDeleteData(t, subject, testGroupModel())
 	subject.Delete(context.Background(), request, response)
 	if !response.Diagnostics.HasError() || !strings.Contains(response.Diagnostics.Errors()[0].Detail(), "management_access.deletable") {
@@ -415,4 +486,13 @@ func groupSchemas(t *testing.T, subject *groupResource) (resourceschema.Schema, 
 		t.Fatalf("schema diagnostics = %v, identity diagnostics = %v", schemaResponse.Diagnostics, identityResponse.Diagnostics)
 	}
 	return schemaResponse.Schema, identityResponse.IdentitySchema
+}
+
+func newTestGroupResource(client organizationGroupClient) *groupResource {
+	return &groupResource{
+		client:                 client,
+		resolutionTimeout:      100 * time.Millisecond,
+		resolutionInitialDelay: time.Millisecond,
+		resolutionMaximumDelay: 2 * time.Millisecond,
+	}
 }

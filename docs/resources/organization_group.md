@@ -3,12 +3,12 @@
 page_title: "atlassian_organization_group Resource - atlassian"
 subcategory: "Cloud Admin"
 description: |-
-  Manages an Atlassian organization group. Atlassian does not provide an update operation, so changing the name or description replaces the group. Importing a group makes Terraform responsible for deleting it; use the organization group data source when only lookup is needed. Built-in and product access groups may be managed by Atlassian and non-deletable.
+  Manages an Atlassian organization group. Atlassian does not provide an update operation, so changing the name or description replaces the group. Group creation is eventually consistent; the provider waits up to 35 seconds to resolve the created group ID. Importing a group makes Terraform responsible for deleting it; use the organization group data source when only lookup is needed. Built-in and product access groups may be managed by Atlassian and non-deletable.
 ---
 
 # atlassian_organization_group (Resource)
 
-Manages an Atlassian organization group. Atlassian does not provide an update operation, so changing the name or description replaces the group. Importing a group makes Terraform responsible for deleting it; use the organization group data source when only lookup is needed. Built-in and product access groups may be managed by Atlassian and non-deletable.
+Manages an Atlassian organization group. Atlassian does not provide an update operation, so changing the name or description replaces the group. Group creation is eventually consistent; the provider waits up to 35 seconds to resolve the created group ID. Importing a group makes Terraform responsible for deleting it; use the organization group data source when only lookup is needed. Built-in and product access groups may be managed by Atlassian and non-deletable.
 
 ## Example Usage
 

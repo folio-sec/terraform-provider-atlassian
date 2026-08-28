@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
@@ -24,6 +25,12 @@ var _ resource.ResourceWithIdentity = &groupResource{}
 var _ resource.ResourceWithImportState = &groupResource{}
 var _ resource.ResourceWithValidateConfig = &groupResource{}
 
+const (
+	defaultGroupResolutionTimeout = 35 * time.Second
+	defaultGroupResolutionInitial = 500 * time.Millisecond
+	defaultGroupResolutionMaximum = 3 * time.Second
+)
+
 type organizationGroupClient interface {
 	CreateGroup(context.Context, string, string, string, *string) error
 	GetGroup(context.Context, string, string, string) (organizationclient.Group, error)
@@ -32,7 +39,10 @@ type organizationGroupClient interface {
 }
 
 type groupResource struct {
-	client organizationGroupClient
+	client                 organizationGroupClient
+	resolutionTimeout      time.Duration
+	resolutionInitialDelay time.Duration
+	resolutionMaximumDelay time.Duration
 }
 
 type groupResourceModel struct {
@@ -54,7 +64,11 @@ type groupResourceIdentityModel struct {
 }
 
 func NewGroupResource() resource.Resource {
-	return &groupResource{}
+	return &groupResource{
+		resolutionTimeout:      defaultGroupResolutionTimeout,
+		resolutionInitialDelay: defaultGroupResolutionInitial,
+		resolutionMaximumDelay: defaultGroupResolutionMaximum,
+	}
 }
 
 func (r *groupResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -67,7 +81,7 @@ func (r *groupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 		return schema.BoolAttribute{Description: description, Computed: true}
 	}
 	resp.Schema = schema.Schema{
-		Description: "Manages an Atlassian organization group. Atlassian does not provide an update operation, so changing the name or description replaces the group. Importing a group makes Terraform responsible for deleting it; use the organization group data source when only lookup is needed. Built-in and product access groups may be managed by Atlassian and non-deletable.",
+		Description: "Manages an Atlassian organization group. Atlassian does not provide an update operation, so changing the name or description replaces the group. Group creation is eventually consistent; the provider waits up to 35 seconds to resolve the created group ID. Importing a group makes Terraform responsible for deleting it; use the organization group data source when only lookup is needed. Built-in and product access groups may be managed by Atlassian and non-deletable.",
 		Attributes: map[string]schema.Attribute{
 			"id":       schema.StringAttribute{Description: "Terraform resource ID, equal to the Atlassian group ID.", Computed: true},
 			"group_id": schema.StringAttribute{Description: "Unique Atlassian group ID.", Computed: true},
@@ -89,7 +103,6 @@ func (r *groupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"description": schema.StringAttribute{
 				Description:   "Group description. Changing it replaces the group because the API has no update operation.",
 				Optional:      true,
-				Computed:      true,
 				PlanModifiers: requiresReplace,
 			},
 			"external_synced": computedBool("Whether the group is synchronized from an identity provider."),
@@ -188,19 +201,19 @@ func (r *groupResource) Create(ctx context.Context, req resource.CreateRequest, 
 			resp.Diagnostics.AddError("Unable to create organization group", createErr.Error())
 			return
 		}
-		group, resolveErr := r.resolveExactGroup(ctx, plan.OrganizationID.ValueString(), plan.DirectoryID.ValueString(), plan.Name.ValueString())
+		group, resolveErr := r.waitForExactGroup(ctx, plan.OrganizationID.ValueString(), plan.DirectoryID.ValueString(), plan.Name.ValueString())
 		if resolveErr == nil {
 			setGroupState(ctx, &plan, group, &resp.Diagnostics)
 			resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 			resp.Diagnostics.Append(resp.Identity.Set(ctx, groupIdentity(plan))...)
 			return
 		}
-		resp.Diagnostics.AddError("Unable to verify organization group creation", fmt.Sprintf("The create response was ambiguous and exact-name verification failed: %s. Original create error: %s", resolveErr, createErr))
+		resp.Diagnostics.AddError("Unable to verify organization group creation", fmt.Sprintf("The create response was ambiguous and exact-name verification failed: %s. Original create error: %s. The group may exist and require import.", resolveErr, createErr))
 		return
 	}
-	group, resolveErr := r.resolveExactGroup(ctx, plan.OrganizationID.ValueString(), plan.DirectoryID.ValueString(), plan.Name.ValueString())
+	group, resolveErr := r.waitForExactGroup(ctx, plan.OrganizationID.ValueString(), plan.DirectoryID.ValueString(), plan.Name.ValueString())
 	if resolveErr != nil {
-		resp.Diagnostics.AddError("Unable to resolve created organization group", resolveErr.Error())
+		resp.Diagnostics.AddError("Unable to resolve created organization group", fmt.Sprintf("%s. Atlassian accepted the create request, so the group may exist and require import.", resolveErr))
 		return
 	}
 	setGroupState(ctx, &plan, group, &resp.Diagnostics)
@@ -209,6 +222,7 @@ func (r *groupResource) Create(ctx context.Context, req resource.CreateRequest, 
 }
 
 var errNoExactGroup = errors.New("no exact-name group match")
+var errMultipleExactGroups = errors.New("multiple exact-name group matches")
 
 func (r *groupResource) resolveExactGroup(ctx context.Context, organizationID, directoryID, name string) (organizationclient.Group, error) {
 	groups, err := r.client.SearchGroups(ctx, organizationID, directoryID, organizationclient.SearchGroupsRequest{GroupNames: []string{name}})
@@ -231,7 +245,51 @@ func (r *groupResource) resolveExactGroup(ctx context.Context, organizationID, d
 	case 1:
 		return matches[0], nil
 	default:
-		return organizationclient.Group{}, fmt.Errorf("exact-name search for %q in directory %q returned %d groups; refusing to select one", name, directoryID, len(matches))
+		return organizationclient.Group{}, fmt.Errorf("%w: search for %q in directory %q returned %d groups; refusing to select one", errMultipleExactGroups, name, directoryID, len(matches))
+	}
+}
+
+func (r *groupResource) waitForExactGroup(ctx context.Context, organizationID, directoryID, name string) (organizationclient.Group, error) {
+	timeout := r.resolutionTimeout
+	if timeout <= 0 {
+		timeout = defaultGroupResolutionTimeout
+	}
+	interval := r.resolutionInitialDelay
+	if interval <= 0 {
+		interval = defaultGroupResolutionInitial
+	}
+	maximumInterval := r.resolutionMaximumDelay
+	if maximumInterval <= 0 {
+		maximumInterval = defaultGroupResolutionMaximum
+	}
+
+	pollCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	var lastErr error
+	for {
+		group, err := r.resolveExactGroup(pollCtx, organizationID, directoryID, name)
+		if err == nil {
+			return group, nil
+		}
+		lastErr = err
+		if errors.Is(err, errMultipleExactGroups) || (!errors.Is(err, errNoExactGroup) && !readOutcomeMayBeTransient(err)) {
+			return organizationclient.Group{}, err
+		}
+
+		timer := time.NewTimer(interval)
+		select {
+		case <-pollCtx.Done():
+			timer.Stop()
+			return organizationclient.Group{}, fmt.Errorf("timed out after %s resolving exact group name: %w", timeout, lastErr)
+		case <-timer.C:
+		}
+
+		if interval < maximumInterval {
+			interval *= 2
+			if interval > maximumInterval {
+				interval = maximumInterval
+			}
+		}
 	}
 }
 
@@ -352,10 +410,18 @@ func parseGroupImportID(id string) (groupResourceIdentityModel, error) {
 }
 
 func setGroupState(ctx context.Context, state *groupResourceModel, group organizationclient.Group, diagnostics *diag.Diagnostics) {
+	// description is optional-only so removing it from configuration produces
+	// a replacement plan. Keep it null when unconfigured; an unknown value is
+	// used during import and by the lookup data source to request the API value.
+	readDescription := !state.Description.IsNull()
 	state.ID = types.StringValue(group.ID)
 	state.GroupID = types.StringValue(group.ID)
 	state.Name = nullableStringValue(group.Name)
-	state.Description = nullableStringValue(group.Description)
+	if readDescription {
+		state.Description = nullableStringValue(group.Description)
+	} else {
+		state.Description = types.StringNull()
+	}
 	state.ExternalSynced = nullableBoolValue(group.ExternalSynced)
 	state.ManagedBy = nullableStringValue(group.ManagedBy)
 	state.ManagementAccess = types.ObjectNull(managementAccessAttributeTypes())

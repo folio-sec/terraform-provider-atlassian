@@ -109,6 +109,7 @@ func (d *groupDataSource) Read(ctx context.Context, req datasource.ReadRequest, 
 		OrganizationID: config.OrganizationID,
 		DirectoryID:    config.DirectoryID,
 		GroupID:        config.GroupID,
+		Description:    types.StringUnknown(),
 	}
 	setGroupState(ctx, &resourceState, group, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {

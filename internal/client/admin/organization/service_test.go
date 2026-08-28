@@ -167,6 +167,18 @@ func TestGroupLifecycleUsesGeneratedV2Endpoints(t *testing.T) {
 	}
 }
 
+func TestGetGroupRejectsMissingName(t *testing.T) {
+	t.Parallel()
+
+	service := newTestService(t, func(r *http.Request) *http.Response {
+		return jsonResponse(r, http.StatusOK, `{"data":{"id":"group","directoryId":"directory"}}`)
+	})
+	_, err := service.GetGroup(context.Background(), "org", "directory", "group")
+	if err == nil || !strings.Contains(err.Error(), "group without name") {
+		t.Fatalf("GetGroup() error = %v, want missing name error", err)
+	}
+}
+
 func TestGroupMutationsDoNotRetry(t *testing.T) {
 	t.Parallel()
 

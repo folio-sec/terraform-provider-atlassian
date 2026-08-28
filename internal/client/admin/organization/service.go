@@ -142,6 +142,9 @@ func (s *Service) GetGroup(ctx context.Context, organizationID, directoryID, gro
 	if group.Id == nil || strings.TrimSpace(*group.Id) == "" {
 		return Group{}, fmt.Errorf("get group: API returned a group without id")
 	}
+	if group.Name == nil || strings.TrimSpace(*group.Name) == "" {
+		return Group{}, fmt.Errorf("get group: API returned a group without name")
+	}
 	return groupFromFields(*group.Id, group.Name, group.Description, group.DirectoryId, group.ExternalSynced, group.ManagedBy, group.ManagementAccess), nil
 }
 
