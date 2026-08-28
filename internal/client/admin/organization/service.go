@@ -14,6 +14,7 @@ const pageLimit = 100
 
 type apiClient interface {
 	SearchDirectoryUsersWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.SearchDirectoryUsersJSONRequestBody, ...generated.RequestEditorFn) (*generated.SearchDirectoryUsersResponse, error)
+	GetDirectoryUserDetailsWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.UserIdParam, ...generated.RequestEditorFn) (*generated.GetDirectoryUserDetailsResponse, error)
 	SearchDirectoryGroupsWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.SearchDirectoryGroupsJSONRequestBody, ...generated.RequestEditorFn) (*generated.SearchDirectoryGroupsResponse, error)
 	CreateGroupWithResponse(context.Context, string, string, generated.CreateGroupJSONRequestBody, ...generated.RequestEditorFn) (*generated.CreateGroupResponse, error)
 	GetGroupWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.GroupIdParam, ...generated.RequestEditorFn) (*generated.GetGroupResponse, error)
@@ -69,6 +70,7 @@ type User struct {
 	AccountStatus    *string
 	MembershipStatus *string
 	AddedToOrg       *string
+	DeactivatedOn    *string
 	Name             *string
 	Nickname         *string
 	Email            *string
@@ -83,6 +85,7 @@ type User struct {
 	Organization     *string
 	Location         *string
 	TimeZone         *string
+	PlatformRoles    *[]string
 }
 
 type SearchGroupsRequest struct {
@@ -173,6 +176,21 @@ func (s *Service) SearchUsers(ctx context.Context, organizationID, directoryID s
 	return collectSearchPages(ctx, "search users", request, fetch, func(request *generated.MultiDirectoryUserSearchRequest, cursor string) {
 		request.Cursor = &cursor
 	}, userFromGenerated)
+}
+
+// GetUser returns details for one user by immutable Atlassian account ID.
+func (s *Service) GetUser(ctx context.Context, organizationID, directoryID, accountID string) (User, error) {
+	response, err := s.client.GetDirectoryUserDetailsWithResponse(ctx, organizationID, directoryID, accountID)
+	if err != nil {
+		return User{}, fmt.Errorf("get user: %w", err)
+	}
+	if response.StatusCode() != http.StatusOK {
+		return User{}, fmt.Errorf("get user: %w", responseError(response.HTTPResponse, response.Body))
+	}
+	if response.JSON200 == nil || response.JSON200.Data == nil {
+		return User{}, fmt.Errorf("get user: API returned an invalid success response")
+	}
+	return userFromDetails(*response.JSON200.Data)
 }
 
 func (s *Service) searchUserPage(ctx context.Context, organizationID, directoryID string, request generated.MultiDirectoryUserSearchRequest) (searchPage[generated.MultiDirectoryUser], error) {
@@ -496,6 +514,49 @@ func userFromGenerated(user generated.MultiDirectoryUser) (User, error) {
 		Organization:     user.Organization,
 		Location:         user.Location,
 		TimeZone:         user.TimeZone,
+	}, nil
+}
+
+func userFromDetails(user generated.MultiDirectoryUserDetailsData) (User, error) {
+	if user.AccountId == nil || strings.TrimSpace(*user.AccountId) == "" {
+		return User{}, fmt.Errorf("API returned a user without accountId")
+	}
+	managementSource := (*string)(nil)
+	if source, err := user.ManagementSource.Get(); err == nil {
+		value := string(source)
+		managementSource = &value
+	}
+	var platformRoles *[]string
+	if user.PlatformRoles != nil {
+		roles := make([]string, len(*user.PlatformRoles))
+		for i, role := range *user.PlatformRoles {
+			roles[i] = string(role)
+		}
+		platformRoles = &roles
+	}
+	return User{
+		AccountID:        *user.AccountId,
+		AccountType:      enumPointer(user.AccountType),
+		Status:           enumPointer(user.Status),
+		AccountStatus:    enumPointer(user.AccountStatus),
+		MembershipStatus: enumPointer(user.MembershipStatus),
+		AddedToOrg:       user.AddedToOrg,
+		DeactivatedOn:    user.DeactivatedOn,
+		Name:             user.Name,
+		Nickname:         user.Nickname,
+		Email:            user.Email,
+		EmailVerified:    user.EmailVerified,
+		ClaimStatus:      enumPointer(user.ClaimStatus),
+		Picture:          user.Picture,
+		Avatar:           user.Avatar,
+		ManagementSource: managementSource,
+		MFAEnabled:       user.MfaEnabled,
+		JobTitle:         user.JobTitle,
+		Department:       user.Department,
+		Organization:     user.Organization,
+		Location:         user.Location,
+		TimeZone:         user.TimeZone,
+		PlatformRoles:    platformRoles,
 	}, nil
 }
 

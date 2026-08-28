@@ -68,6 +68,53 @@ func TestSearchUsersFollowsAllPages(t *testing.T) {
 	}
 }
 
+func TestGetUserUsesGeneratedV2Endpoint(t *testing.T) {
+	t.Parallel()
+
+	service := newTestService(t, func(r *http.Request) *http.Response {
+		if r.Method != http.MethodGet || r.URL.Path != "/admin/v2/orgs/org/directories/directory/users/712020:account" {
+			t.Errorf("request = %s %s", r.Method, r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer admin-key" {
+			t.Errorf("authorization = %q", r.Header.Get("Authorization"))
+		}
+		return jsonResponse(r, http.StatusOK, `{"data":{"accountId":"712020:account","name":"Example User","email":"user@example.com","status":"active","managementSource":"invited","platformRoles":["atlassian/org-admin"],"deactivatedOn":null}}`)
+	})
+
+	user, err := service.GetUser(context.Background(), "org", "directory", "712020:account")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if user.AccountID != "712020:account" || user.Email == nil || *user.Email != "user@example.com" {
+		t.Fatalf("user = %#v", user)
+	}
+	if user.PlatformRoles == nil || !reflect.DeepEqual(*user.PlatformRoles, []string{"atlassian/org-admin"}) {
+		t.Fatalf("platform roles = %#v", user.PlatformRoles)
+	}
+	if user.DeactivatedOn != nil {
+		t.Fatalf("deactivated on = %#v, want nil", user.DeactivatedOn)
+	}
+}
+
+func TestGetUserRejectsInvalidSuccessResponse(t *testing.T) {
+	t.Parallel()
+
+	for name, body := range map[string]string{
+		"missing data":       `{}`,
+		"missing account ID": `{"data":{"name":"Example User"}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			service := newTestService(t, func(r *http.Request) *http.Response {
+				return jsonResponse(r, http.StatusOK, body)
+			})
+			if _, err := service.GetUser(context.Background(), "org", "directory", "account"); err == nil {
+				t.Fatal("GetUser() error = nil")
+			}
+		})
+	}
+}
+
 func TestSearchGroupsFollowsAllPages(t *testing.T) {
 	t.Parallel()
 

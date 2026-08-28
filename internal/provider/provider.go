@@ -88,6 +88,7 @@ func (p *AtlassianProvider) DataSources(_ context.Context) []func() datasource.D
 	return []func() datasource.DataSource{
 		organizationservice.NewGroupDataSource,
 		organizationservice.NewGroupsDataSource,
+		organizationservice.NewUserDataSource,
 		organizationservice.NewUsersDataSource,
 	}
 }

@@ -87,6 +87,51 @@ func TestGroupDetailsDataSourceSchema(t *testing.T) {
 	}
 }
 
+func TestUserDetailsDataSourceSchema(t *testing.T) {
+	t.Parallel()
+
+	var metadata datasource.MetadataResponse
+	NewUserDataSource().Metadata(context.Background(), datasource.MetadataRequest{ProviderTypeName: "atlassian"}, &metadata)
+	if metadata.TypeName != "atlassian_organization_user" {
+		t.Fatalf("type name = %q", metadata.TypeName)
+	}
+	var response datasource.SchemaResponse
+	NewUserDataSource().Schema(context.Background(), datasource.SchemaRequest{}, &response)
+	if response.Diagnostics.HasError() {
+		t.Fatalf("Schema() diagnostics = %v", response.Diagnostics)
+	}
+	for _, name := range []string{"organization_id", "directory_id", "account_id"} {
+		if attribute := response.Schema.Attributes[name]; attribute == nil || !attribute.IsRequired() {
+			t.Errorf("%s is not required", name)
+		}
+	}
+	for _, name := range []string{"id", "name", "email", "deactivated_on", "platform_roles"} {
+		if attribute := response.Schema.Attributes[name]; attribute == nil || !attribute.IsComputed() {
+			t.Errorf("%s is not computed", name)
+		}
+	}
+}
+
+func TestValidateOrganizationUserIdentifiers(t *testing.T) {
+	t.Parallel()
+
+	if diagnostics := validateOrganizationUserIdentifiers(types.StringValue("org"), types.StringValue("directory"), types.StringValue("712020:account")); diagnostics.HasError() {
+		t.Fatalf("valid identifiers returned diagnostics: %v", diagnostics)
+	}
+	for _, values := range [][3]types.String{
+		{types.StringValue(" "), types.StringValue("directory"), types.StringValue("account")},
+		{types.StringValue("org"), types.StringValue(""), types.StringValue("account")},
+		{types.StringValue("org"), types.StringValue("directory"), types.StringValue("\t")},
+	} {
+		if diagnostics := validateOrganizationUserIdentifiers(values[0], values[1], values[2]); !diagnostics.HasError() {
+			t.Fatalf("invalid identifiers %#v returned no diagnostics", values)
+		}
+	}
+	if diagnostics := validateOrganizationUserIdentifiers(types.StringUnknown(), types.StringUnknown(), types.StringUnknown()); diagnostics.HasError() {
+		t.Fatalf("unknown identifiers returned diagnostics: %v", diagnostics)
+	}
+}
+
 func TestCollectionDataSourcesUsePluralTypeNames(t *testing.T) {
 	t.Parallel()
 
