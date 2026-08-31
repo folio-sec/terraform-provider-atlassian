@@ -915,8 +915,40 @@ func TestQueryWorkspacesBuildsQueryOperands(t *testing.T) {
 			if _, err := service.QueryWorkspaces(context.Background(), "org", test.filters); err != nil {
 				t.Fatal(err)
 			}
-			if !reflect.DeepEqual(body["query"], test.want) {
-				t.Errorf("query = %#v, want %#v", body["query"], test.want)
+			got, present := body["query"]
+			// With no operands the property must be absent rather than
+			// explicitly null, so the endpoint sees the same body as a request
+			// that never carried a query.
+			if want := test.want != nil; present != want {
+				t.Fatalf("query present = %t, want %t (body = %#v)", present, want, body)
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Errorf("query = %#v, want %#v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestQueryWorkspacesRefusesNoOpFieldOperand(t *testing.T) {
+	t.Parallel()
+
+	// Configuration validation cannot see values that only resolve after
+	// planning, so the service refuses an operand the endpoint would ignore
+	// rather than silently returning every workspace.
+	for name, field := range map[string]WorkspaceField{
+		"no values":    {Name: "attributes.type"},
+		"empty values": {Name: "attributes.type", Values: []string{}},
+		"blank name":   {Name: "  ", Values: []string{"confluence"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			service := newTestService(t, func(r *http.Request) *http.Response {
+				t.Error("no request must be sent for a no-op field operand")
+				return jsonResponse(r, http.StatusOK, `{"data":[],"links":{}}`)
+			})
+			_, err := service.QueryWorkspaces(context.Background(), "org", QueryWorkspacesRequest{Fields: []WorkspaceField{field}})
+			if err == nil || !strings.Contains(err.Error(), "at least one value") {
+				t.Fatalf("QueryWorkspaces() error = %v, want a no-op operand error", err)
 			}
 		})
 	}

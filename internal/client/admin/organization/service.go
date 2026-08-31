@@ -569,6 +569,13 @@ func (q QueryWorkspacesRequest) queryVariants() ([]generated.QueryVariants, erro
 		}
 	}
 	for _, field := range q.Fields {
+		// The endpoint treats a field operand with no name or no values as a
+		// no-op, which widens the result set instead of narrowing it. Refusing
+		// it here also covers callers whose values only resolve after planning,
+		// which configuration validation cannot see.
+		if strings.TrimSpace(field.Name) == "" || len(field.Values) == 0 {
+			return nil, fmt.Errorf("field operand %q must have a name and at least one value", field.Name)
+		}
 		name := field.Name
 		values := append([]string(nil), field.Values...)
 		if err := add(func(v *generated.QueryVariants) error {

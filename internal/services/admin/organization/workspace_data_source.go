@@ -139,32 +139,52 @@ func (d *workspacesDataSource) ValidateConfig(ctx context.Context, req datasourc
 	}
 	resp.Diagnostics.Append(validateNonEmpty(summary, namedValue{"query.search", config.Query.Search})...)
 
-	fields, diagnostics := workspaceQueryFields(ctx, config.Query)
+	models, diagnostics := workspaceQueryFieldModels(ctx, config.Query)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	for index, field := range fields {
-		// An empty values list makes the field operand a no-op server side,
-		// which silently widens the result set instead of narrowing it.
-		if len(field.Values) == 0 {
-			resp.Diagnostics.AddError(summary, fmt.Sprintf("query.fields[%d].values must not be empty.", index))
-		}
-		if strings.TrimSpace(field.Name) == "" {
-			resp.Diagnostics.AddError(summary, fmt.Sprintf("query.fields[%d].name must not be empty.", index))
-		}
-	}
+	resp.Diagnostics.Append(validateWorkspaceQueryFields(summary, models)...)
 }
 
-// workspaceQueryFields converts the configured field operands, treating a null
-// or unknown list as no operands at all.
-func workspaceQueryFields(ctx context.Context, query *workspaceQueryModel) ([]organizationclient.WorkspaceField, diag.Diagnostics) {
+// validateWorkspaceQueryFields rejects field operands the endpoint would treat
+// as a no-op. Values that are still unknown are left alone: they are checked
+// again in the service layer once they resolve, and failing them here would
+// reject a configuration that derives its filter from another object.
+func validateWorkspaceQueryFields(summary string, models []workspaceQueryFieldModel) diag.Diagnostics {
+	var diagnostics diag.Diagnostics
+	for index, model := range models {
+		if knownString(model.Name) && strings.TrimSpace(model.Name.ValueString()) == "" {
+			diagnostics.AddError(summary, fmt.Sprintf("query.fields[%d].name must not be empty.", index))
+		}
+		// A values list with no entries makes the operand a no-op server side,
+		// which silently widens the result set instead of narrowing it.
+		if !model.Values.IsNull() && !model.Values.IsUnknown() && len(model.Values.Elements()) == 0 {
+			diagnostics.AddError(summary, fmt.Sprintf("query.fields[%d].values must not be empty.", index))
+		}
+	}
+	return diagnostics
+}
+
+// workspaceQueryFieldModels reads the configured field operands, treating a
+// null or unknown list as no operands at all.
+func workspaceQueryFieldModels(ctx context.Context, query *workspaceQueryModel) ([]workspaceQueryFieldModel, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 	if query == nil || query.Fields.IsNull() || query.Fields.IsUnknown() {
 		return nil, diagnostics
 	}
 	var models []workspaceQueryFieldModel
 	diagnostics.Append(query.Fields.ElementsAs(ctx, &models, false)...)
+	if diagnostics.HasError() {
+		return nil, diagnostics
+	}
+	return models, diagnostics
+}
+
+// workspaceQueryFields converts the configured field operands for the service
+// layer.
+func workspaceQueryFields(ctx context.Context, query *workspaceQueryModel) ([]organizationclient.WorkspaceField, diag.Diagnostics) {
+	models, diagnostics := workspaceQueryFieldModels(ctx, query)
 	if diagnostics.HasError() {
 		return nil, diagnostics
 	}

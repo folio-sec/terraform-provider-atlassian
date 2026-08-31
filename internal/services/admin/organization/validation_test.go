@@ -590,3 +590,57 @@ func TestSharedValueValidators(t *testing.T) {
 		}
 	})
 }
+
+func TestValidateWorkspaceQueryFields(t *testing.T) {
+	t.Parallel()
+
+	stringSetValue := func(values ...string) types.Set {
+		elements := make([]attr.Value, len(values))
+		for i, value := range values {
+			elements[i] = types.StringValue(value)
+		}
+		set, diagnostics := types.SetValue(types.StringType, elements)
+		if diagnostics.HasError() {
+			t.Fatalf("SetValue() diagnostics = %v", diagnostics)
+		}
+		return set
+	}
+
+	tests := map[string]struct {
+		model     workspaceQueryFieldModel
+		wantError bool
+	}{
+		"populated": {
+			model: workspaceQueryFieldModel{Name: types.StringValue("attributes.type"), Values: stringSetValue("confluence")},
+		},
+		"blank name": {
+			model:     workspaceQueryFieldModel{Name: types.StringValue("  "), Values: stringSetValue("confluence")},
+			wantError: true,
+		},
+		"empty values": {
+			model:     workspaceQueryFieldModel{Name: types.StringValue("attributes.type"), Values: stringSetValue()},
+			wantError: true,
+		},
+		// A filter derived from another object is unknown while validating, and
+		// rejecting it here would refuse a configuration that is fine once the
+		// value resolves. The service layer checks it again after planning.
+		"unknown values": {
+			model: workspaceQueryFieldModel{Name: types.StringValue("attributes.type"), Values: types.SetUnknown(types.StringType)},
+		},
+		"unknown name": {
+			model: workspaceQueryFieldModel{Name: types.StringUnknown(), Values: stringSetValue("confluence")},
+		},
+		"null values": {
+			model: workspaceQueryFieldModel{Name: types.StringValue("attributes.type"), Values: types.SetNull(types.StringType)},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			diagnostics := validateWorkspaceQueryFields("summary", []workspaceQueryFieldModel{test.model})
+			if diagnostics.HasError() != test.wantError {
+				t.Fatalf("diagnostics = %v, wantError = %t", diagnostics, test.wantError)
+			}
+		})
+	}
+}
