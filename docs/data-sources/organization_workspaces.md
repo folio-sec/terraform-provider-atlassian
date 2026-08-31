@@ -53,7 +53,6 @@ Optional:
 
 - `features` (Set of String) Feature keys the workspace must contain.
 - `fields` (Attributes List) Field filters. Each entry matches workspaces whose named field holds one of the listed values. (see [below for nested schema](#nestedatt--query--fields))
-- `policies` (Set of String) Policy IDs the workspace must contain.
 - `search` (String) Free-text search matching part of a workspace name or URL.
 
 <a id="nestedatt--query--fields"></a>

@@ -34,7 +34,6 @@ type workspaceQueryModel struct {
 	Search   types.String `tfsdk:"search"`
 	Fields   types.List   `tfsdk:"fields"`
 	Features types.Set    `tfsdk:"features"`
-	Policies types.Set    `tfsdk:"policies"`
 }
 
 type workspaceQueryFieldModel struct {
@@ -76,11 +75,6 @@ func (d *workspacesDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 					},
 					"features": schema.SetAttribute{
 						Description: "Feature keys the workspace must contain.",
-						Optional:    true,
-						ElementType: types.StringType,
-					},
-					"policies": schema.SetAttribute{
-						Description: "Policy IDs the workspace must contain.",
 						Optional:    true,
 						ElementType: types.StringType,
 					},
@@ -237,17 +231,8 @@ func workspaceQueryRequest(ctx context.Context, query *workspaceQueryModel) (org
 		Search: query.Search.ValueString(),
 		Fields: fields,
 	}
-	for _, item := range []struct {
-		set    types.Set
-		target *[]string
-	}{
-		{query.Features, &request.Features},
-		{query.Policies, &request.Policies},
-	} {
-		if item.set.IsNull() || item.set.IsUnknown() {
-			continue
-		}
-		diagnostics.Append(item.set.ElementsAs(ctx, item.target, false)...)
+	if !query.Features.IsNull() && !query.Features.IsUnknown() {
+		diagnostics.Append(query.Features.ElementsAs(ctx, &request.Features, false)...)
 	}
 	return request, diagnostics
 }

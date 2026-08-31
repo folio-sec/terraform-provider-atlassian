@@ -889,22 +889,16 @@ func TestQueryWorkspacesBuildsQueryOperands(t *testing.T) {
 			filters: QueryWorkspacesRequest{Features: []string{"feature-a"}},
 			want:    map[string]any{"features": []any{"feature-a"}},
 		},
-		"policy filter": {
-			filters: QueryWorkspacesRequest{Policies: []string{"policy-a"}},
-			want:    map[string]any{"policies": []any{"policy-a"}},
-		},
 		"several operands are combined with and": {
 			filters: QueryWorkspacesRequest{
 				Search:   "folio-sec",
 				Fields:   []WorkspaceField{{Name: "attributes.type", Values: []string{"confluence", "jira-software"}}},
 				Features: []string{"feature-a"},
-				Policies: []string{"policy-a"},
 			},
 			want: map[string]any{"and": []any{
 				map[string]any{"searchWorkspaces": "folio-sec"},
 				map[string]any{"field": map[string]any{"name": "attributes.type", "values": []any{"confluence", "jira-software"}}},
 				map[string]any{"features": []any{"feature-a"}},
-				map[string]any{"policies": []any{"policy-a"}},
 			}},
 		},
 	}

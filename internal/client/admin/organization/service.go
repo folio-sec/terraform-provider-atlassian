@@ -532,11 +532,18 @@ type WorkspaceField struct {
 // QueryWorkspacesRequest holds the query operands the workspace endpoint
 // accepts. Every operand narrows which workspaces match; the endpoint's sorting
 // and paging controls stay internal to the provider.
+//
+// The specification also defines a policies operand, which this endpoint
+// rejects with ADMIN-400-24, invalid request body. That is not a matter of
+// passing an unknown ID: the rejection holds for an empty list, and for a
+// policy ID read back from the organization's own policy list. The operand is
+// therefore not offered. A features operand carrying a value reaches feature
+// validation instead and answers a different code, so its shape is accepted and
+// only the value is the caller's to get right.
 type QueryWorkspacesRequest struct {
 	Search   string
 	Fields   []WorkspaceField
 	Features []string
-	Policies []string
 }
 
 // queryVariants converts the request into the operands the endpoint's query
@@ -577,14 +584,6 @@ func (q QueryWorkspacesRequest) queryVariants() ([]generated.QueryVariants, erro
 		features := append([]string(nil), q.Features...)
 		if err := add(func(v *generated.QueryVariants) error {
 			return v.FromFeatureFilter(generated.FeatureFilter{Features: &features})
-		}); err != nil {
-			return nil, err
-		}
-	}
-	if len(q.Policies) > 0 {
-		policies := append([]string(nil), q.Policies...)
-		if err := add(func(v *generated.QueryVariants) error {
-			return v.FromPolicyFilter(generated.PolicyFilter{Policies: &policies})
 		}); err != nil {
 			return nil, err
 		}

@@ -514,10 +514,16 @@ func TestWorkspacesDataSourceSchemaReturnsWorkspacesAsSet(t *testing.T) {
 	if !query.IsOptional() {
 		t.Error("query must be optional")
 	}
-	for _, name := range []string{"search", "fields", "features", "policies"} {
+	for _, name := range []string{"search", "fields", "features"} {
 		if _, exists := query.Attributes[name]; !exists {
 			t.Errorf("query operand %q is missing", name)
 		}
+	}
+	// The endpoint rejects a policies operand as an invalid request body even
+	// when it carries a policy ID read back from the organization's own policy
+	// list, so exposing it would ship an attribute that always fails.
+	if _, exists := query.Attributes["policies"]; exists {
+		t.Error("query exposes the policies operand, which the endpoint rejects")
 	}
 	if _, exists := response.Schema.Attributes["search"]; exists {
 		t.Error("search must live under query, not at the top level")
