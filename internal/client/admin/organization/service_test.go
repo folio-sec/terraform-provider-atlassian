@@ -784,7 +784,7 @@ func TestQueryWorkspacesFollowsPagesWithCursorOnlyBodies(t *testing.T) {
 		return jsonResponse(r, http.StatusOK, `{"data":[{"id":"ari:cloud:jira-software::site/site-id","attributes":{"typeKey":"jira-software"}}],"links":{"next":null}}`)
 	})
 
-	workspaces, err := service.QueryWorkspaces(context.Background(), "org", "folio-sec")
+	workspaces, err := service.QueryWorkspaces(context.Background(), "org", QueryWorkspacesRequest{Search: "folio-sec"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -818,7 +818,7 @@ func TestQueryWorkspacesRejectsWorkspaceWithoutID(t *testing.T) {
 	service := newTestService(t, func(r *http.Request) *http.Response {
 		return jsonResponse(r, http.StatusOK, `{"data":[{"attributes":{"typeKey":"confluence"}}],"links":{}}`)
 	})
-	_, err := service.QueryWorkspaces(context.Background(), "org", "")
+	_, err := service.QueryWorkspaces(context.Background(), "org", QueryWorkspacesRequest{})
 	if err == nil || !strings.Contains(err.Error(), "without id") {
 		t.Fatalf("QueryWorkspaces() error = %v, want missing id error", err)
 	}
@@ -859,6 +859,70 @@ func TestGroupRoleMutationsRejectErrorStatuses(t *testing.T) {
 			var httpErr *admin.HTTPError
 			if !errors.As(err, &httpErr) || httpErr.StatusCode != status {
 				t.Fatalf("AssignGroupRole() error = %v, want HTTPError with status %d", err, status)
+			}
+		})
+	}
+}
+
+func TestQueryWorkspacesBuildsQueryOperands(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		filters QueryWorkspacesRequest
+		want    any
+	}{
+		"no operands sends no query": {
+			filters: QueryWorkspacesRequest{},
+			want:    nil,
+		},
+		// A lone operand is a valid query on its own, so it is not wrapped in a
+		// one-element conjunction.
+		"single operand is sent bare": {
+			filters: QueryWorkspacesRequest{Search: "folio-sec"},
+			want:    map[string]any{"searchWorkspaces": "folio-sec"},
+		},
+		"field operand": {
+			filters: QueryWorkspacesRequest{Fields: []WorkspaceField{{Name: "attributes.type", Values: []string{"confluence"}}}},
+			want:    map[string]any{"field": map[string]any{"name": "attributes.type", "values": []any{"confluence"}}},
+		},
+		"feature filter": {
+			filters: QueryWorkspacesRequest{Features: []string{"feature-a"}},
+			want:    map[string]any{"features": []any{"feature-a"}},
+		},
+		"policy filter": {
+			filters: QueryWorkspacesRequest{Policies: []string{"policy-a"}},
+			want:    map[string]any{"policies": []any{"policy-a"}},
+		},
+		"several operands are combined with and": {
+			filters: QueryWorkspacesRequest{
+				Search:   "folio-sec",
+				Fields:   []WorkspaceField{{Name: "attributes.type", Values: []string{"confluence", "jira-software"}}},
+				Features: []string{"feature-a"},
+				Policies: []string{"policy-a"},
+			},
+			want: map[string]any{"and": []any{
+				map[string]any{"searchWorkspaces": "folio-sec"},
+				map[string]any{"field": map[string]any{"name": "attributes.type", "values": []any{"confluence", "jira-software"}}},
+				map[string]any{"features": []any{"feature-a"}},
+				map[string]any{"policies": []any{"policy-a"}},
+			}},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var body map[string]any
+			service := newTestService(t, func(r *http.Request) *http.Response {
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Fatal(err)
+				}
+				return jsonResponse(r, http.StatusOK, `{"data":[],"links":{}}`)
+			})
+			if _, err := service.QueryWorkspaces(context.Background(), "org", test.filters); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(body["query"], test.want) {
+				t.Errorf("query = %#v, want %#v", body["query"], test.want)
 			}
 		})
 	}

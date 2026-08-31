@@ -522,19 +522,104 @@ type Workspace struct {
 	Status  *string
 }
 
+// WorkspaceField matches workspaces whose named field holds one of the values,
+// such as name "attributes.type" with values ["confluence"].
+type WorkspaceField struct {
+	Name   string
+	Values []string
+}
+
+// QueryWorkspacesRequest holds the query operands the workspace endpoint
+// accepts. Every operand narrows which workspaces match; the endpoint's sorting
+// and paging controls stay internal to the provider.
+type QueryWorkspacesRequest struct {
+	Search   string
+	Fields   []WorkspaceField
+	Features []string
+	Policies []string
+}
+
+// queryVariants converts the request into the operands the endpoint's query
+// union accepts, in a stable order so a given configuration always produces the
+// same request body.
+func (q QueryWorkspacesRequest) queryVariants() ([]generated.QueryVariants, error) {
+	var variants []generated.QueryVariants
+	add := func(build func(*generated.QueryVariants) error) error {
+		var variant generated.QueryVariants
+		if err := build(&variant); err != nil {
+			return err
+		}
+		variants = append(variants, variant)
+		return nil
+	}
+
+	if q.Search != "" {
+		search := q.Search
+		if err := add(func(v *generated.QueryVariants) error {
+			return v.FromSearchWorkspacesOperand(generated.SearchWorkspacesOperand{SearchWorkspaces: &search})
+		}); err != nil {
+			return nil, err
+		}
+	}
+	for _, field := range q.Fields {
+		name := field.Name
+		values := append([]string(nil), field.Values...)
+		if err := add(func(v *generated.QueryVariants) error {
+			return v.FromFieldOperand(generated.FieldOperand{Field: &struct {
+				Name   *string   `json:"name,omitempty"`
+				Values *[]string `json:"values,omitempty"`
+			}{Name: &name, Values: &values}})
+		}); err != nil {
+			return nil, err
+		}
+	}
+	if len(q.Features) > 0 {
+		features := append([]string(nil), q.Features...)
+		if err := add(func(v *generated.QueryVariants) error {
+			return v.FromFeatureFilter(generated.FeatureFilter{Features: &features})
+		}); err != nil {
+			return nil, err
+		}
+	}
+	if len(q.Policies) > 0 {
+		policies := append([]string(nil), q.Policies...)
+		if err := add(func(v *generated.QueryVariants) error {
+			return v.FromPolicyFilter(generated.PolicyFilter{Policies: &policies})
+		}); err != nil {
+			return nil, err
+		}
+	}
+	return variants, nil
+}
+
 // QueryWorkspaces follows all cursors and returns every workspace in the
-// organization, optionally narrowed by a name or URL substring.
+// organization that matches the query.
 //
 // The response advertises links.next as a URL but returns a cursor, and the
 // request rejects a cursor sent alongside any other property, so follow-up
 // pages send a cursor-only body instead of amending the original request.
-func (s *Service) QueryWorkspaces(ctx context.Context, organizationID, search string) ([]Workspace, error) {
+func (s *Service) QueryWorkspaces(ctx context.Context, organizationID string, filters QueryWorkspacesRequest) ([]Workspace, error) {
 	const operation = "query workspaces"
 	limit := pageLimit
 	request := generated.QueryWorkspacesV2JSONRequestBody{Limit: &limit}
-	if search != "" {
+
+	variants, err := filters.queryVariants()
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", operation, err)
+	}
+	switch len(variants) {
+	case 0:
+	case 1:
+		// A single operand is a valid query on its own, so it is sent bare
+		// rather than wrapped in a one-element conjunction.
+		request.Query = nullable.NewNullableWithValue(variants[0])
+	default:
+		nested := make([]nullable.Nullable[generated.QueryVariants], len(variants))
+		for i, variant := range variants {
+			nested[i] = nullable.NewNullableWithValue(variant)
+		}
 		var query generated.QueryVariants
-		if err := query.FromSearchWorkspacesOperand(generated.SearchWorkspacesOperand{SearchWorkspaces: &search}); err != nil {
+		if err := query.FromAndOperator(generated.AndOperator{And: &nested}); err != nil {
 			return nil, fmt.Errorf("%s: %w", operation, err)
 		}
 		request.Query = nullable.NewNullableWithValue(query)

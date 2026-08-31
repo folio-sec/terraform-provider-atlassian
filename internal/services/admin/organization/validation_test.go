@@ -505,14 +505,31 @@ func TestWorkspacesDataSourceSchemaReturnsWorkspacesAsSet(t *testing.T) {
 	if !response.Schema.Attributes["organization_id"].IsRequired() {
 		t.Error("organization_id must be required")
 	}
-	if !response.Schema.Attributes["search"].IsOptional() {
-		t.Error("search must be optional")
+	// The endpoint takes its filters under a single query property, and the
+	// provider mirrors that shape rather than flattening one operand out of it.
+	query, ok := response.Schema.Attributes["query"].(datasourceschema.SingleNestedAttribute)
+	if !ok {
+		t.Fatalf("query attribute type = %T, want schema.SingleNestedAttribute", response.Schema.Attributes["query"])
+	}
+	if !query.IsOptional() {
+		t.Error("query must be optional")
+	}
+	for _, name := range []string{"search", "fields", "features", "policies"} {
+		if _, exists := query.Attributes[name]; !exists {
+			t.Errorf("query operand %q is missing", name)
+		}
+	}
+	if _, exists := response.Schema.Attributes["search"]; exists {
+		t.Error("search must live under query, not at the top level")
 	}
 	// sort and limit shape the response rather than which workspaces match, so
 	// they stay internal to the provider.
 	for _, name := range []string{"sort", "limit", "cursor"} {
 		if _, exists := response.Schema.Attributes[name]; exists {
 			t.Errorf("schema exposes response-shaping attribute %q", name)
+		}
+		if _, exists := query.Attributes[name]; exists {
+			t.Errorf("query exposes response-shaping attribute %q", name)
 		}
 	}
 }

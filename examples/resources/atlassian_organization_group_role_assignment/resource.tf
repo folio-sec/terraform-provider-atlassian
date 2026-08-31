@@ -1,12 +1,20 @@
-data "atlassian_organization_workspaces" "example" {
+data "atlassian_organization_workspaces" "confluence" {
   organization_id = "your-organization-id"
-  search          = "your-site-name"
+
+  query = {
+    search = "your-site-name"
+
+    fields = [{
+      name   = "attributes.type"
+      values = ["confluence"]
+    }]
+  }
 }
 
 resource "atlassian_organization_group_role_assignment" "confluence" {
   organization_id = "your-organization-id"
   directory_id    = "your-directory-id"
   group_id        = "your-group-id"
-  resource        = one([for workspace in data.atlassian_organization_workspaces.example.workspaces : workspace.id if workspace.type_key == "confluence"])
+  resource        = one(data.atlassian_organization_workspaces.confluence.workspaces).id
   role            = "atlassian/user"
 }

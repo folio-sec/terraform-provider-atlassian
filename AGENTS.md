@@ -33,6 +33,17 @@ code. Update it when the same implementation or review mistake recurs.
 
 ## Terraform modeling
 
+- Stay faithful to the API by default. Data sources and resources should mirror
+  the shape and vocabulary of the operation they wrap: name service methods
+  after the operation ID, keep request attributes nested the way the request
+  body nests them, and name attributes after the API fields they map to rather
+  than inventing friendlier synonyms. Prefer exposing an operand group as it is
+  defined over flattening one member of it out, so the remaining members can be
+  added later without reshaping the schema.
+- Depart from the API only for a stated reason, and record that reason in a
+  comment next to the code that departs. Legitimate reasons include Terraform
+  requirements the API cannot express, response-shaping controls that must stay
+  internal, and specification text contradicted by an observed response.
 - When an API operation returns a collection, expose it consistently as a list
   or set for every cardinality, including zero or one result. Use a set when
   ordering has no semantic meaning, and follow API pagination internally unless

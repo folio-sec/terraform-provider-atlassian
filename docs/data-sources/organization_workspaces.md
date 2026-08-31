@@ -15,11 +15,19 @@ Queries all pages of an Atlassian organization and returns every matching worksp
 ```terraform
 data "atlassian_organization_workspaces" "example" {
   organization_id = "your-organization-id"
-  search          = "your-site-name"
+
+  query = {
+    search = "your-site-name"
+
+    fields = [{
+      name   = "attributes.type"
+      values = ["confluence"]
+    }]
+  }
 }
 
 output "confluence_resource_ari" {
-  value = one([for workspace in data.atlassian_organization_workspaces.example.workspaces : workspace.id if workspace.type_key == "confluence"])
+  value = one(data.atlassian_organization_workspaces.example.workspaces).id
 }
 ```
 
@@ -32,11 +40,31 @@ output "confluence_resource_ari" {
 
 ### Optional
 
-- `search` (String) Free-text search matching part of a workspace name or URL.
+- `query` (Attributes) Filters narrowing which workspaces match. Configuring more than one filter returns only workspaces matching all of them. (see [below for nested schema](#nestedatt--query))
 
 ### Read-Only
 
 - `workspaces` (Attributes Set) All workspaces matching the configured filters. The set is empty when no workspaces match. (see [below for nested schema](#nestedatt--workspaces))
+
+<a id="nestedatt--query"></a>
+### Nested Schema for `query`
+
+Optional:
+
+- `features` (Set of String) Feature keys the workspace must contain.
+- `fields` (Attributes List) Field filters. Each entry matches workspaces whose named field holds one of the listed values. (see [below for nested schema](#nestedatt--query--fields))
+- `policies` (Set of String) Policy IDs the workspace must contain.
+- `search` (String) Free-text search matching part of a workspace name or URL.
+
+<a id="nestedatt--query--fields"></a>
+### Nested Schema for `query.fields`
+
+Required:
+
+- `name` (String) Field name to match, such as attributes.type.
+- `values` (Set of String) Values the field may hold. A workspace matches when the field holds any of them.
+
+
 
 <a id="nestedatt--workspaces"></a>
 ### Nested Schema for `workspaces`
