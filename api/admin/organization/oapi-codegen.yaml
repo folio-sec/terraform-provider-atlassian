@@ -13,6 +13,10 @@ output-options:
     - createGroup
     - deleteGroup
     - getUserRoleAssignments
+    - getGroupRoleAssignments
+    - assignGroupRole
+    - revokeGroupRole
+    - queryWorkspacesV2
     - assignRole
     - revokeRole
     - addUserToGroup

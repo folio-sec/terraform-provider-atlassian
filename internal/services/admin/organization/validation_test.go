@@ -479,3 +479,91 @@ func TestMutationOutcomeMayBeAmbiguous(t *testing.T) {
 		}
 	}
 }
+
+func TestWorkspacesDataSourceSchemaReturnsWorkspacesAsSet(t *testing.T) {
+	t.Parallel()
+
+	var response datasource.SchemaResponse
+	NewWorkspacesDataSource().Schema(context.Background(), datasource.SchemaRequest{}, &response)
+	if response.Diagnostics.HasError() {
+		t.Fatalf("Schema() diagnostics = %v", response.Diagnostics)
+	}
+	workspaces, ok := response.Schema.Attributes["workspaces"].(datasourceschema.SetNestedAttribute)
+	if !ok {
+		t.Fatalf("workspaces attribute type = %T, want schema.SetNestedAttribute", response.Schema.Attributes["workspaces"])
+	}
+	if !workspaces.Computed {
+		t.Fatal("workspaces attribute must be computed")
+	}
+	// The workspace ID is the resource ARI that role assignments refer to, so
+	// it must be exposed rather than only accepted as a filter.
+	for _, name := range []string{"id", "type_key", "name", "type", "status"} {
+		if _, exists := workspaces.NestedObject.Attributes[name]; !exists {
+			t.Errorf("workspace attribute %q is missing", name)
+		}
+	}
+	if !response.Schema.Attributes["organization_id"].IsRequired() {
+		t.Error("organization_id must be required")
+	}
+	if !response.Schema.Attributes["search"].IsOptional() {
+		t.Error("search must be optional")
+	}
+	// sort and limit shape the response rather than which workspaces match, so
+	// they stay internal to the provider.
+	for _, name := range []string{"sort", "limit", "cursor"} {
+		if _, exists := response.Schema.Attributes[name]; exists {
+			t.Errorf("schema exposes response-shaping attribute %q", name)
+		}
+	}
+}
+
+func TestSharedValueValidators(t *testing.T) {
+	t.Parallel()
+
+	t.Run("non-empty", func(t *testing.T) {
+		t.Parallel()
+		tests := map[string]struct {
+			value     types.String
+			wantError bool
+		}{
+			"set":        {value: types.StringValue("value")},
+			"blank":      {value: types.StringValue("   "), wantError: true},
+			"empty":      {value: types.StringValue(""), wantError: true},
+			"null":       {value: types.StringNull()},
+			"unknown":    {value: types.StringUnknown()},
+			"whitespace": {value: types.StringValue("\t\n"), wantError: true},
+		}
+		for name, test := range tests {
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+				diagnostics := validateNonEmpty("summary", namedValue{"attribute", test.value})
+				if diagnostics.HasError() != test.wantError {
+					t.Fatalf("diagnostics = %v, wantError = %t", diagnostics, test.wantError)
+				}
+			})
+		}
+	})
+
+	t.Run("resource ari", func(t *testing.T) {
+		t.Parallel()
+		tests := map[string]struct {
+			value     types.String
+			wantError bool
+		}{
+			"site ari":      {value: types.StringValue("ari:cloud:confluence::site/site-id")},
+			"workspace ari": {value: types.StringValue("ari:cloud:studio::workspace/workspace-id")},
+			"bare id":       {value: types.StringValue("site-id"), wantError: true},
+			"other scheme":  {value: types.StringValue("ari:server:jira::site/site-id"), wantError: true},
+			"null":          {value: types.StringNull()},
+		}
+		for name, test := range tests {
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+				diagnostics := validateResourceARI("summary", test.value)
+				if diagnostics.HasError() != test.wantError {
+					t.Fatalf("diagnostics = %v, wantError = %t", diagnostics, test.wantError)
+				}
+			})
+		}
+	})
+}

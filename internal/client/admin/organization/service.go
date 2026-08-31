@@ -8,6 +8,7 @@ import (
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization/generated"
+	"github.com/oapi-codegen/nullable"
 )
 
 const pageLimit = 100
@@ -26,6 +27,10 @@ type apiClient interface {
 	RevokeOrganizationLevelRoleWithResponse(context.Context, string, string, generated.RevokeOrganizationLevelRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.RevokeOrganizationLevelRoleResponse, error)
 	AddUserToGroupWithResponse(context.Context, string, string, string, generated.AddUserToGroupJSONRequestBody, ...generated.RequestEditorFn) (*generated.AddUserToGroupResponse, error)
 	RemoveUserFromGroupWithResponse(context.Context, string, string, string, string, ...generated.RequestEditorFn) (*generated.RemoveUserFromGroupResponse, error)
+	GetGroupRoleAssignmentsWithResponse(context.Context, generated.OrgIdParam, generated.DirectoryIdParam, generated.GroupIdParam, *generated.GetGroupRoleAssignmentsParams, ...generated.RequestEditorFn) (*generated.GetGroupRoleAssignmentsResponse, error)
+	AssignGroupRoleWithResponse(context.Context, string, string, string, generated.AssignGroupRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.AssignGroupRoleResponse, error)
+	RevokeGroupRoleWithResponse(context.Context, string, string, string, generated.RevokeGroupRoleJSONRequestBody, ...generated.RequestEditorFn) (*generated.RevokeGroupRoleResponse, error)
+	QueryWorkspacesV2WithResponse(context.Context, generated.OrgIdParam, generated.QueryWorkspacesV2JSONRequestBody, ...generated.RequestEditorFn) (*generated.QueryWorkspacesV2Response, error)
 }
 
 // Service implements Organization API behavior on top of the generated API
@@ -306,6 +311,104 @@ func (s *Service) RevokeUserRole(ctx context.Context, organizationID, accountID,
 	return nil
 }
 
+// isGroupRoleMutationSuccess reports whether a group role mutation succeeded.
+//
+// The other mutations in this service assert the single documented status code,
+// which is safe because their responses have been observed. The group role
+// endpoints are the only ones no one here has exercised against the live API,
+// and the specification documents them inconsistently with the rest of the
+// surface: 200 for assign where every other mutation answers 204. That same
+// specification already misdescribes this endpoint family elsewhere — the
+// workspace pagination link is documented as a URL but returns a cursor — so
+// these two accept any 2xx. Reporting a granted role as a failure would abort
+// Create before it records state, leaving the grant in place with nothing in
+// Terraform state to revoke it.
+func isGroupRoleMutationSuccess(statusCode int) bool {
+	return statusCode >= 200 && statusCode < 300
+}
+
+// AssignGroupRole grants a role for a resource to every member of a group.
+func (s *Service) AssignGroupRole(ctx context.Context, organizationID, directoryID, groupID, resource, role string) error {
+	request := generated.AssignGroupRoleJSONRequestBody{ResourceId: resource, RoleId: role}
+	response, err := s.client.AssignGroupRoleWithResponse(admin.WithoutRetry(ctx), organizationID, directoryID, groupID, request)
+	if err != nil {
+		return fmt.Errorf("assign group role: %w", err)
+	}
+	if !isGroupRoleMutationSuccess(response.StatusCode()) {
+		return fmt.Errorf("assign group role: %w", responseError(response.HTTPResponse, response.Body))
+	}
+	return nil
+}
+
+// RevokeGroupRole revokes a role for a resource from a group, removing the
+// resulting access from every member that has no other group granting it.
+func (s *Service) RevokeGroupRole(ctx context.Context, organizationID, directoryID, groupID, resource, role string) error {
+	request := generated.RevokeGroupRoleJSONRequestBody{ResourceId: resource, RoleId: role}
+	response, err := s.client.RevokeGroupRoleWithResponse(admin.WithoutRetry(ctx), organizationID, directoryID, groupID, request)
+	if err != nil {
+		return fmt.Errorf("revoke group role: %w", err)
+	}
+	if !isGroupRoleMutationSuccess(response.StatusCode()) {
+		return fmt.Errorf("revoke group role: %w", responseError(response.HTTPResponse, response.Body))
+	}
+	return nil
+}
+
+// HasGroupRole follows every page of a group's role assignments and reports
+// whether the role is assigned to the group for the resource.
+//
+// Unlike the user endpoint there is no assignment method to filter on, because
+// this endpoint is already scoped to a single group. Only roles listed in
+// "roles" count as an assignment: "defaultRole" reports the role the resource
+// grants by default and is independent of what the group holds, so counting it
+// would make every group look pre-assigned.
+func (s *Service) HasGroupRole(ctx context.Context, organizationID, directoryID, groupID, resource, role string) (bool, error) {
+	const operation = "get group role assignments"
+	limit := pageLimit
+	resourceIDs := []string{resource}
+	roleIDs := []string{role}
+	params := generated.GetGroupRoleAssignmentsParams{
+		Limit:       &limit,
+		ResourceIds: &resourceIDs,
+		RoleIds:     &roleIDs,
+	}
+	seenCursors := map[string]struct{}{}
+	for {
+		response, err := s.client.GetGroupRoleAssignmentsWithResponse(ctx, organizationID, directoryID, groupID, &params)
+		if err != nil {
+			return false, fmt.Errorf("%s: %w", operation, err)
+		}
+		if response.StatusCode() != http.StatusOK {
+			return false, fmt.Errorf("%s: %w", operation, responseError(response.HTTPResponse, response.Body))
+		}
+		if response.JSON200 == nil {
+			return false, fmt.Errorf("%s: API returned an invalid success response", operation)
+		}
+		if response.JSON200.Data != nil {
+			for _, assignment := range *response.JSON200.Data {
+				if assignment.ResourceId == nil || *assignment.ResourceId != resource || assignment.Roles == nil {
+					continue
+				}
+				for _, assigned := range *assignment.Roles {
+					if assigned == role {
+						return true, nil
+					}
+				}
+			}
+		}
+
+		next := nextCursor(response.JSON200.Links)
+		if next == "" {
+			return false, nil
+		}
+		if _, exists := seenCursors[next]; exists {
+			return false, fmt.Errorf("%s: API returned repeated pagination cursor %q", operation, next)
+		}
+		seenCursors[next] = struct{}{}
+		params = generated.GetGroupRoleAssignmentsParams{Cursor: &next}
+	}
+}
+
 // AssignOrganizationRole grants an organization-level role directly to a user.
 func (s *Service) AssignOrganizationRole(ctx context.Context, organizationID, accountID, role string) error {
 	request := generated.OrganizationLevelRoleApiRequest{
@@ -407,6 +510,85 @@ func (s *Service) hasDirectRole(ctx context.Context, operation, organizationID, 
 		seenCursors[next] = struct{}{}
 		params = generated.GetUserRoleAssignmentsParams{Cursor: &next}
 	}
+}
+
+// Workspace is a single Atlassian app instance in an organization. ID is the
+// resource ARI that role assignments refer to.
+type Workspace struct {
+	ID      string
+	TypeKey *string
+	Name    *string
+	Type    *string
+	Status  *string
+}
+
+// SearchWorkspaces follows all cursors and returns every workspace in the
+// organization, optionally narrowed by a name or URL substring.
+//
+// The response advertises links.next as a URL but returns a cursor, and the
+// request rejects a cursor sent alongside any other property, so follow-up
+// pages send a cursor-only body instead of amending the original request.
+func (s *Service) SearchWorkspaces(ctx context.Context, organizationID, search string) ([]Workspace, error) {
+	const operation = "search workspaces"
+	limit := pageLimit
+	request := generated.QueryWorkspacesV2JSONRequestBody{Limit: &limit}
+	if search != "" {
+		var query generated.QueryVariants
+		if err := query.FromSearchWorkspacesOperand(generated.SearchWorkspacesOperand{SearchWorkspaces: &search}); err != nil {
+			return nil, fmt.Errorf("%s: %w", operation, err)
+		}
+		request.Query = nullable.NewNullableWithValue(query)
+	}
+
+	var workspaces []Workspace
+	seenCursors := map[string]struct{}{}
+	for {
+		response, err := s.client.QueryWorkspacesV2WithResponse(ctx, organizationID, request)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", operation, err)
+		}
+		if response.StatusCode() != http.StatusOK {
+			return nil, fmt.Errorf("%s: %w", operation, responseError(response.HTTPResponse, response.Body))
+		}
+		if response.JSON200 == nil {
+			return nil, fmt.Errorf("%s: API returned an invalid success response", operation)
+		}
+		if response.JSON200.Data != nil {
+			for _, workspace := range *response.JSON200.Data {
+				converted, err := workspaceFromGenerated(workspace)
+				if err != nil {
+					return nil, fmt.Errorf("%s: %w", operation, err)
+				}
+				workspaces = append(workspaces, converted)
+			}
+		}
+
+		next := ""
+		if response.JSON200.Links != nil && response.JSON200.Links.Next != nil {
+			next = *response.JSON200.Links.Next
+		}
+		if next == "" {
+			return workspaces, nil
+		}
+		if _, exists := seenCursors[next]; exists {
+			return nil, fmt.Errorf("%s: API returned repeated pagination cursor %q", operation, next)
+		}
+		seenCursors[next] = struct{}{}
+		request = generated.QueryWorkspacesV2JSONRequestBody{Cursor: nullable.NewNullableWithValue(next)}
+	}
+}
+
+func workspaceFromGenerated(workspace generated.WorkspaceModel) (Workspace, error) {
+	if workspace.Id == nil || strings.TrimSpace(*workspace.Id) == "" {
+		return Workspace{}, fmt.Errorf("API returned a workspace without id")
+	}
+	converted := Workspace{ID: *workspace.Id, Type: workspace.Type}
+	if workspace.Attributes != nil {
+		converted.TypeKey = workspace.Attributes.TypeKey
+		converted.Name = workspace.Attributes.Name
+		converted.Status = enumPointer(workspace.Attributes.Status)
+	}
+	return converted, nil
 }
 
 func searchRequest(filters SearchUsersRequest) generated.MultiDirectoryUserSearchRequest {

@@ -604,3 +604,262 @@ func jsonResponse(request *http.Request, statusCode int, body string) *http.Resp
 		Request:    request,
 	}
 }
+
+func TestGroupRoleMutationsUseExactEndpointsAndBodies(t *testing.T) {
+	t.Parallel()
+
+	type call struct {
+		method string
+		path   string
+		body   map[string]any
+		status int
+	}
+	var calls []call
+	service := newTestService(t, func(r *http.Request) *http.Response {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		// Assign answers 200 and revoke answers 204; asserting the exact code
+		// keeps a copied 204 check from silently failing every assignment.
+		status := http.StatusOK
+		if strings.HasSuffix(r.URL.Path, "/revoke") {
+			status = http.StatusNoContent
+		}
+		calls = append(calls, call{method: r.Method, path: r.URL.Path, body: body, status: status})
+		return jsonResponse(r, status, "")
+	})
+
+	if err := service.AssignGroupRole(context.Background(), "org", "directory", "group", "ari:cloud:confluence::site/site-id", "atlassian/user"); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.RevokeGroupRole(context.Background(), "org", "directory", "group", "ari:cloud:confluence::site/site-id", "atlassian/user"); err != nil {
+		t.Fatal(err)
+	}
+
+	want := []call{
+		{
+			method: http.MethodPost,
+			path:   "/admin/v2/orgs/org/directories/directory/groups/group/role-assignments/assign",
+			body:   map[string]any{"resourceId": "ari:cloud:confluence::site/site-id", "roleId": "atlassian/user"},
+			status: http.StatusOK,
+		},
+		{
+			method: http.MethodPost,
+			path:   "/admin/v2/orgs/org/directories/directory/groups/group/role-assignments/revoke",
+			body:   map[string]any{"resourceId": "ari:cloud:confluence::site/site-id", "roleId": "atlassian/user"},
+			status: http.StatusNoContent,
+		},
+	}
+	if !reflect.DeepEqual(calls, want) {
+		t.Errorf("calls = %#v, want %#v", calls, want)
+	}
+}
+
+func TestGroupRoleMutationsDoNotRetry(t *testing.T) {
+	t.Parallel()
+
+	for name, mutate := range map[string]func(*Service) error{
+		"assign": func(s *Service) error {
+			return s.AssignGroupRole(context.Background(), "org", "directory", "group", "resource", "atlassian/user")
+		},
+		"revoke": func(s *Service) error {
+			return s.RevokeGroupRole(context.Background(), "org", "directory", "group", "resource", "atlassian/user")
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var calls atomic.Int32
+			service := newTestService(t, func(r *http.Request) *http.Response {
+				calls.Add(1)
+				return jsonResponse(r, http.StatusInternalServerError, `{"message":"temporary failure"}`)
+			})
+			if err := mutate(service); err == nil {
+				t.Fatal("mutation error = nil")
+			}
+			if calls.Load() != 1 {
+				t.Fatalf("calls = %d, want 1", calls.Load())
+			}
+		})
+	}
+}
+
+func TestHasGroupRoleFollowsAllPages(t *testing.T) {
+	t.Parallel()
+
+	var cursors []string
+	service := newTestService(t, func(r *http.Request) *http.Response {
+		query := r.URL.Query()
+		cursors = append(cursors, query.Get("cursor"))
+		if query.Get("cursor") == "" {
+			// The first request narrows the search server side. A later cursor
+			// request must carry the cursor alone, because the endpoint
+			// discards every other parameter once a cursor is present.
+			if got := query.Get("resourceIds"); got != "resource" {
+				t.Errorf("resourceIds = %q, want %q", got, "resource")
+			}
+			if got := query.Get("roleIds"); got != "atlassian/user" {
+				t.Errorf("roleIds = %q, want %q", got, "atlassian/user")
+			}
+			if got := query.Get("limit"); got == "" {
+				t.Error("limit is not set on the first request")
+			}
+			return jsonResponse(r, http.StatusOK, `{"data":[{"resourceId":"other","roles":["atlassian/user"]}],"links":{"next":"page-2"}}`)
+		}
+		if got := query.Get("resourceIds"); got != "" {
+			t.Errorf("resourceIds = %q on a cursor request, want none", got)
+		}
+		return jsonResponse(r, http.StatusOK, `{"data":[{"resourceId":"resource","roles":["atlassian/admin","atlassian/user"]}],"links":{}}`)
+	})
+
+	present, err := service.HasGroupRole(context.Background(), "org", "directory", "group", "resource", "atlassian/user")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !present {
+		t.Fatal("HasGroupRole() = false, want true")
+	}
+	if !reflect.DeepEqual(cursors, []string{"", "page-2"}) {
+		t.Errorf("cursors = %#v", cursors)
+	}
+}
+
+func TestHasGroupRoleIgnoresDefaultRoleAndOtherResources(t *testing.T) {
+	t.Parallel()
+
+	// defaultRole reports what the resource grants by default and is
+	// independent of what the group holds, so it must not count as an
+	// assignment. A matching role on a different resource must not count
+	// either.
+	cases := map[string]string{
+		"default role only":  `{"data":[{"resourceId":"resource","defaultRole":"atlassian/user","roles":[]}],"links":{}}`,
+		"different resource": `{"data":[{"resourceId":"other","roles":["atlassian/user"]}],"links":{}}`,
+		"different role":     `{"data":[{"resourceId":"resource","roles":["atlassian/admin"]}],"links":{}}`,
+	}
+	for name, body := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			service := newTestService(t, func(r *http.Request) *http.Response {
+				return jsonResponse(r, http.StatusOK, body)
+			})
+			present, err := service.HasGroupRole(context.Background(), "org", "directory", "group", "resource", "atlassian/user")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if present {
+				t.Fatal("HasGroupRole() = true, want false")
+			}
+		})
+	}
+}
+
+func TestHasGroupRoleRejectsRepeatedCursor(t *testing.T) {
+	t.Parallel()
+
+	service := newTestService(t, func(r *http.Request) *http.Response {
+		return jsonResponse(r, http.StatusOK, `{"data":[],"links":{"next":"same"}}`)
+	})
+	_, err := service.HasGroupRole(context.Background(), "org", "directory", "group", "resource", "atlassian/user")
+	if err == nil || !strings.Contains(err.Error(), "repeated pagination cursor") {
+		t.Fatalf("HasGroupRole() error = %v, want repeated cursor error", err)
+	}
+}
+
+func TestSearchWorkspacesFollowsPagesWithCursorOnlyBodies(t *testing.T) {
+	t.Parallel()
+
+	// The response advertises links.next as a URL but returns a cursor, and the
+	// API rejects a cursor sent alongside any other property, so follow-up
+	// requests must carry the cursor and nothing else.
+	var bodies []map[string]any
+	service := newTestService(t, func(r *http.Request) *http.Response {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		bodies = append(bodies, body)
+		if _, paged := body["cursor"]; !paged {
+			return jsonResponse(r, http.StatusOK, `{"data":[{"id":"ari:cloud:confluence::site/site-id","type":"Confluence","attributes":{"name":"folio-sec","typeKey":"confluence","status":"online"}}],"links":{"next":"page-2"}}`)
+		}
+		return jsonResponse(r, http.StatusOK, `{"data":[{"id":"ari:cloud:jira-software::site/site-id","attributes":{"typeKey":"jira-software"}}],"links":{"next":null}}`)
+	})
+
+	workspaces, err := service.SearchWorkspaces(context.Background(), "org", "folio-sec")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(workspaces) != 2 {
+		t.Fatalf("workspaces length = %d, want 2", len(workspaces))
+	}
+	if workspaces[0].ID != "ari:cloud:confluence::site/site-id" {
+		t.Errorf("workspaces[0].ID = %q", workspaces[0].ID)
+	}
+	if workspaces[0].TypeKey == nil || *workspaces[0].TypeKey != "confluence" {
+		t.Errorf("workspaces[0].TypeKey = %v", workspaces[0].TypeKey)
+	}
+	if workspaces[0].Status == nil || *workspaces[0].Status != "online" {
+		t.Errorf("workspaces[0].Status = %v", workspaces[0].Status)
+	}
+
+	if len(bodies) != 2 {
+		t.Fatalf("request count = %d, want 2", len(bodies))
+	}
+	if _, searched := bodies[0]["query"]; !searched {
+		t.Errorf("first request body = %#v, want a query", bodies[0])
+	}
+	if want := map[string]any{"cursor": "page-2"}; !reflect.DeepEqual(bodies[1], want) {
+		t.Errorf("second request body = %#v, want %#v", bodies[1], want)
+	}
+}
+
+func TestSearchWorkspacesRejectsWorkspaceWithoutID(t *testing.T) {
+	t.Parallel()
+
+	service := newTestService(t, func(r *http.Request) *http.Response {
+		return jsonResponse(r, http.StatusOK, `{"data":[{"attributes":{"typeKey":"confluence"}}],"links":{}}`)
+	})
+	_, err := service.SearchWorkspaces(context.Background(), "org", "")
+	if err == nil || !strings.Contains(err.Error(), "without id") {
+		t.Fatalf("SearchWorkspaces() error = %v, want missing id error", err)
+	}
+}
+
+func TestGroupRoleMutationsAcceptAnySuccessStatus(t *testing.T) {
+	t.Parallel()
+
+	// The documented codes are 200 for assign and 204 for revoke, but the same
+	// specification misdescribes this endpoint family's pagination links, and
+	// rejecting an undocumented 2xx would leave a granted role untracked.
+	for _, status := range []int{http.StatusOK, http.StatusCreated, http.StatusAccepted, http.StatusNoContent} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			t.Parallel()
+			service := newTestService(t, func(r *http.Request) *http.Response {
+				return jsonResponse(r, status, "")
+			})
+			if err := service.AssignGroupRole(context.Background(), "org", "directory", "group", "resource", "atlassian/user"); err != nil {
+				t.Errorf("AssignGroupRole() error = %v", err)
+			}
+			if err := service.RevokeGroupRole(context.Background(), "org", "directory", "group", "resource", "atlassian/user"); err != nil {
+				t.Errorf("RevokeGroupRole() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestGroupRoleMutationsRejectErrorStatuses(t *testing.T) {
+	t.Parallel()
+
+	for _, status := range []int{http.StatusBadRequest, http.StatusForbidden, http.StatusConflict} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			t.Parallel()
+			service := newTestService(t, func(r *http.Request) *http.Response {
+				return jsonResponse(r, status, `{"message":"nope"}`)
+			})
+			err := service.AssignGroupRole(context.Background(), "org", "directory", "group", "resource", "atlassian/user")
+			var httpErr *admin.HTTPError
+			if !errors.As(err, &httpErr) || httpErr.StatusCode != status {
+				t.Fatalf("AssignGroupRole() error = %v, want HTTPError with status %d", err, status)
+			}
+		})
+	}
+}

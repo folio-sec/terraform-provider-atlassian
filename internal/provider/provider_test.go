@@ -41,11 +41,11 @@ func TestProviderRegistersOrganizationTypes(t *testing.T) {
 	t.Parallel()
 
 	p := New("test")()
-	if got := len(p.DataSources(context.Background())); got != 4 {
-		t.Fatalf("DataSources() length = %d, want 4", got)
+	if got := len(p.DataSources(context.Background())); got != 5 {
+		t.Fatalf("DataSources() length = %d, want 5", got)
 	}
-	if got := len(p.Resources(context.Background())); got != 4 {
-		t.Fatalf("Resources() length = %d, want 4", got)
+	if got := len(p.Resources(context.Background())); got != 5 {
+		t.Fatalf("Resources() length = %d, want 5", got)
 	}
 	resourceNames := map[string]bool{}
 	for _, constructor := range p.Resources(context.Background()) {
@@ -59,13 +59,16 @@ func TestProviderRegistersOrganizationTypes(t *testing.T) {
 	if !resourceNames["atlassian_organization_group"] {
 		t.Error("organization group resource is not registered")
 	}
+	if !resourceNames["atlassian_organization_group_role_assignment"] {
+		t.Error("organization group role assignment resource is not registered")
+	}
 	dataSourceNames := map[string]bool{}
 	for _, constructor := range p.DataSources(context.Background()) {
 		var response datasource.MetadataResponse
 		constructor().Metadata(context.Background(), datasource.MetadataRequest{ProviderTypeName: "atlassian"}, &response)
 		dataSourceNames[response.TypeName] = true
 	}
-	for _, name := range []string{"atlassian_organization_group", "atlassian_organization_groups", "atlassian_organization_user", "atlassian_organization_users"} {
+	for _, name := range []string{"atlassian_organization_group", "atlassian_organization_groups", "atlassian_organization_user", "atlassian_organization_users", "atlassian_organization_workspaces"} {
 		if !dataSourceNames[name] {
 			t.Errorf("data source %q is not registered", name)
 		}

@@ -537,6 +537,42 @@ func (e RoleId) Valid() bool {
 	}
 }
 
+// Defines values for SandboxType.
+const (
+	CHILD SandboxType = "CHILD"
+	NONE  SandboxType = "NONE"
+)
+
+// Valid indicates whether the value is a known member of the SandboxType enum.
+func (e SandboxType) Valid() bool {
+	switch e {
+	case CHILD:
+		return true
+	case NONE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SortFieldOrder.
+const (
+	SortFieldOrderAsc  SortFieldOrder = "asc"
+	SortFieldOrderDesc SortFieldOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the SortFieldOrder enum.
+func (e SortFieldOrder) Valid() bool {
+	switch e {
+	case SortFieldOrderAsc:
+		return true
+	case SortFieldOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Status.
 const (
 	StatusActive      Status = "active"
@@ -558,6 +594,72 @@ func (e Status) Valid() bool {
 	case StatusNotInvited:
 		return true
 	case StatusSuspended:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkspaceModelAttributesStatus.
+const (
+	Deprecated WorkspaceModelAttributesStatus = "deprecated"
+	Offline    WorkspaceModelAttributesStatus = "offline"
+	Online     WorkspaceModelAttributesStatus = "online"
+)
+
+// Valid indicates whether the value is a known member of the WorkspaceModelAttributesStatus enum.
+func (e WorkspaceModelAttributesStatus) Valid() bool {
+	switch e {
+	case Deprecated:
+		return true
+	case Offline:
+		return true
+	case Online:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetGroupRoleAssignmentsParamsRoleIds.
+const (
+	GetGroupRoleAssignmentsParamsRoleIdsAtlassianadmin           GetGroupRoleAssignmentsParamsRoleIds = "atlassian/admin"
+	GetGroupRoleAssignmentsParamsRoleIdsAtlassianaiAccess        GetGroupRoleAssignmentsParamsRoleIds = "atlassian/ai-access"
+	GetGroupRoleAssignmentsParamsRoleIdsAtlassianbasic           GetGroupRoleAssignmentsParamsRoleIds = "atlassian/basic"
+	GetGroupRoleAssignmentsParamsRoleIdsAtlassiancontributor     GetGroupRoleAssignmentsParamsRoleIds = "atlassian/contributor"
+	GetGroupRoleAssignmentsParamsRoleIdsAtlassiancustomer        GetGroupRoleAssignmentsParamsRoleIds = "atlassian/customer"
+	GetGroupRoleAssignmentsParamsRoleIdsAtlassianguest           GetGroupRoleAssignmentsParamsRoleIds = "atlassian/guest"
+	GetGroupRoleAssignmentsParamsRoleIdsAtlassianorgAdmin        GetGroupRoleAssignmentsParamsRoleIds = "atlassian/org-admin"
+	GetGroupRoleAssignmentsParamsRoleIdsAtlassiansiteAdmin       GetGroupRoleAssignmentsParamsRoleIds = "atlassian/site-admin"
+	GetGroupRoleAssignmentsParamsRoleIdsAtlassianstakeholder     GetGroupRoleAssignmentsParamsRoleIds = "atlassian/stakeholder"
+	GetGroupRoleAssignmentsParamsRoleIdsAtlassianuser            GetGroupRoleAssignmentsParamsRoleIds = "atlassian/user"
+	GetGroupRoleAssignmentsParamsRoleIdsAtlassianuserAccessAdmin GetGroupRoleAssignmentsParamsRoleIds = "atlassian/user-access-admin"
+)
+
+// Valid indicates whether the value is a known member of the GetGroupRoleAssignmentsParamsRoleIds enum.
+func (e GetGroupRoleAssignmentsParamsRoleIds) Valid() bool {
+	switch e {
+	case GetGroupRoleAssignmentsParamsRoleIdsAtlassianadmin:
+		return true
+	case GetGroupRoleAssignmentsParamsRoleIdsAtlassianaiAccess:
+		return true
+	case GetGroupRoleAssignmentsParamsRoleIdsAtlassianbasic:
+		return true
+	case GetGroupRoleAssignmentsParamsRoleIdsAtlassiancontributor:
+		return true
+	case GetGroupRoleAssignmentsParamsRoleIdsAtlassiancustomer:
+		return true
+	case GetGroupRoleAssignmentsParamsRoleIdsAtlassianguest:
+		return true
+	case GetGroupRoleAssignmentsParamsRoleIdsAtlassianorgAdmin:
+		return true
+	case GetGroupRoleAssignmentsParamsRoleIdsAtlassiansiteAdmin:
+		return true
+	case GetGroupRoleAssignmentsParamsRoleIdsAtlassianstakeholder:
+		return true
+	case GetGroupRoleAssignmentsParamsRoleIdsAtlassianuser:
+		return true
+	case GetGroupRoleAssignmentsParamsRoleIdsAtlassianuserAccessAdmin:
 		return true
 	default:
 		return false
@@ -702,6 +804,17 @@ type ApplicationError struct {
 // Example: unmanaged
 type ClaimStatus string
 
+// EntitlementModelV2 defines model for EntitlementModelV2.
+type EntitlementModelV2 struct {
+	Attributes *struct {
+		Key     *string                   `json:"key,omitempty"`
+		Plan    nullable.Nullable[string] `json:"plan,omitempty"`
+		PlanKey nullable.Nullable[string] `json:"planKey,omitempty"`
+	} `json:"attributes,omitempty"`
+	Id   *string `json:"id,omitempty"`
+	Type *string `json:"type,omitempty"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	// Code Example: <string>
@@ -734,6 +847,15 @@ type ErrorsApplicationErrorsModel struct {
 type FeatureFilter struct {
 	// Features Returns workspaces, which contains feature listed
 	Features *[]string `json:"features,omitempty"`
+}
+
+// FeatureModelV2 defines model for FeatureModelV2.
+type FeatureModelV2 struct {
+	Attributes *struct {
+		Fields *map[string]map[string]interface{} `json:"fields,omitempty"`
+	} `json:"attributes,omitempty"`
+	Id   *string `json:"id,omitempty"`
+	Type *string `json:"type,omitempty"`
 }
 
 // FieldOperand Returns workspaces where a specified event field has one of the specified values. Absent of values makes this operator no-op.
@@ -789,12 +911,30 @@ type LinkPageCursor struct {
 	Self *string `json:"self,omitempty"`
 }
 
+// LinkPageModel Links for a Paginated response
+type LinkPageModel struct {
+	// Next URL to fetch the Next Page
+	Next *string `json:"next,omitempty"`
+
+	// Prev URL to fetch the Previous Page
+	Prev *string `json:"prev,omitempty"`
+
+	// Self URL to fetch this Page
+	Self *string `json:"self,omitempty"`
+}
+
 // LinkSelfCursor Links for a resource with a self cursor, for use in a cursor parameter.
 type LinkSelfCursor struct {
 	// Self Cursor to fetch this resource.
 	//
 	// Example: ECg53CukK1twBo0LK1u9nw
 	Self *string `json:"self,omitempty"`
+}
+
+// LinkSelfModel defines model for LinkSelfModel.
+type LinkSelfModel struct {
+	// Self URL to fetch this resource
+	Self string `json:"self"`
 }
 
 // ManagementAccess Management access for the group. This is used to determine if the group can be deleted, modified, or read.
@@ -816,6 +956,14 @@ type ManagementAccess struct {
 //   - `suspended` - the account is suspended in all directories within the organization, to which the requestor has permission to access.
 //   - `no_membership` - the account is in none of the organization’s directories.
 type MembershipStatus string
+
+// MetaV2 defines model for MetaV2.
+type MetaV2 struct {
+	EndIndex   nullable.Nullable[int] `json:"endIndex,omitempty"`
+	PageSize   *int                   `json:"pageSize,omitempty"`
+	StartIndex nullable.Nullable[int] `json:"startIndex,omitempty"`
+	Total      *int                   `json:"total,omitempty"`
+}
 
 // MultiDirectoryGroup defines model for MultiDirectoryGroup.
 type MultiDirectoryGroup struct {
@@ -902,6 +1050,38 @@ type MultiDirectoryGroupDetails struct {
 		// Example: jira-administrators
 		Name *string `json:"name,omitempty"`
 	} `json:"data,omitempty"`
+}
+
+// MultiDirectoryGroupRoleAssignment The role assignment for the group.
+type MultiDirectoryGroupRoleAssignment struct {
+	// DefaultRole Indicates which role is granted by default for the resource ID.
+	//
+	// Example: atlassian/org-admin
+	DefaultRole nullable.Nullable[string] `json:"defaultRole,omitempty"`
+
+	// ResourceId The resource ID from the role assignment relationship. The resource ID is in the Atlassian  Resource Identifier (ARI) format.
+	//
+	// Example: ari:cloud:jira-core::site/1
+	ResourceId *ResourceId `json:"resourceId,omitempty"`
+
+	// ResourceOwner The resource owner of the product.
+	//
+	// Example: jira-core
+	ResourceOwner *ResourceOwner `json:"resourceOwner,omitempty"`
+
+	// Roles The roles assigned to the resource ID.
+	//
+	// Example: ["atlassian/org-admin","atlassian/site-admin","atlassian/user-access-admin"]
+	Roles *RoleIds `json:"roles,omitempty"`
+}
+
+// MultiDirectoryGroupRoleAssignmentPage defines model for MultiDirectoryGroupRoleAssignmentPage.
+type MultiDirectoryGroupRoleAssignmentPage struct {
+	// Data A page of group role assignments.
+	Data *[]MultiDirectoryGroupRoleAssignment `json:"data,omitempty"`
+
+	// Links Links for a paginated response, for use in a cursor parameter.
+	Links *LinkPageCursor `json:"links,omitempty"`
 }
 
 // MultiDirectoryGroupSearchPage defines model for MultiDirectoryGroupSearchPage.
@@ -1538,6 +1718,15 @@ type OrganizationLevelRoleApiRequest struct {
 // OrganizationLevelRoleApiRequestRole defines model for OrganizationLevelRoleApiRequest.Role.
 type OrganizationLevelRoleApiRequestRole string
 
+// PageDataResponseV2 defines model for PageDataResponseV2.
+type PageDataResponseV2 struct {
+	Data *[]WorkspaceModel `json:"data,omitempty"`
+
+	// Links Links for a Paginated response
+	Links *LinkPageModel `json:"links,omitempty"`
+	Meta  *MetaV2        `json:"meta,omitempty"`
+}
+
 // PlatformRole Example: ["atlassian/org-admin"]
 type PlatformRole string
 
@@ -1545,6 +1734,15 @@ type PlatformRole string
 type PolicyFilter struct {
 	// Policies Returns workspaces, which contains policy listed
 	Policies *[]string `json:"policies,omitempty"`
+}
+
+// PolicyModelV2 defines model for PolicyModelV2.
+type PolicyModelV2 struct {
+	Attributes *struct {
+		Fields *map[string]map[string]interface{} `json:"fields,omitempty"`
+	} `json:"attributes,omitempty"`
+	Id   *string `json:"id,omitempty"`
+	Type *string `json:"type,omitempty"`
 }
 
 // ProxyError defines model for ProxyError.
@@ -1601,12 +1799,47 @@ type RoleApiRequestRole string
 //   - `atlassian/ai-access` - Can use AI features in AI-enabled apps they have access to.
 type RoleId string
 
+// RoleIds The roles assigned to the resource ID.
+//
+// Example: ["atlassian/org-admin","atlassian/site-admin","atlassian/user-access-admin"]
+type RoleIds = []string
+
+// Sandbox defines model for Sandbox.
+type Sandbox struct {
+	Type *SandboxType `json:"type,omitempty"`
+}
+
+// SandboxType defines model for Sandbox.Type.
+type SandboxType string
+
 // SearchWorkspacesOperand defines model for SearchWorkspacesOperand.
 type SearchWorkspacesOperand struct {
 	// SearchWorkspaces Returns workspaces, which partially contain the specified text in workspace name or url.
 	SearchWorkspaces *string `json:"searchWorkspaces,omitempty"`
 	Value            *string `json:"value,omitempty"`
 }
+
+// SearchWorkspacesRequestV2 Workspaces request supporting enhanced Workspace searching.
+type SearchWorkspacesRequestV2 struct {
+	// Cursor A base-64 encoded continuation token used for pagination. When a cursor is provided in the request body, no other properties may be present.
+	Cursor nullable.Nullable[string] `json:"cursor,omitempty"`
+
+	// Limit Specifies the maximum page size.
+	Limit *int `json:"limit,omitempty"`
+
+	// Query Possible operators/operand in the event query.
+	Query nullable.Nullable[QueryVariants] `json:"query,omitempty"`
+	Sort  nullable.Nullable[[]SortField]   `json:"sort,omitempty"`
+}
+
+// SortField defines model for SortField.
+type SortField struct {
+	Field *string         `json:"field,omitempty"`
+	Order *SortFieldOrder `json:"order,omitempty"`
+}
+
+// SortFieldOrder defines model for SortField.Order.
+type SortFieldOrder string
 
 // Status The status for the user account. This status is a composite of `accountStatus` and `membershipStatus`.
 //   - `active` - `accountStatus` is `active` and `membershipStatus` is `active`.
@@ -1624,6 +1857,56 @@ type UserCounts struct {
 	//
 	// Example: 10
 	Resources *int `json:"resources,omitempty"`
+}
+
+// WorkspaceModel defines model for WorkspaceModel.
+type WorkspaceModel struct {
+	Attributes    *WorkspaceModel_Attributes                      `json:"attributes,omitempty"`
+	Id            *string                                         `json:"id,omitempty"`
+	Links         *LinkSelfModel                                  `json:"links,omitempty"`
+	Relationships *map[string][]WorkspaceModel_Relationships_Item `json:"relationships,omitempty"`
+	Type          *string                                         `json:"type,omitempty"`
+}
+
+// WorkspaceModelAttributesStatus defines model for WorkspaceModel.Attributes.Status.
+type WorkspaceModelAttributesStatus string
+
+// WorkspaceModel_Attributes defines model for WorkspaceModel.Attributes.
+type WorkspaceModel_Attributes struct {
+	Avatars *map[string]interface{} `json:"avatars,omitempty"`
+
+	// Capacity The maximum number of users/seats allowed for the workspace. Populated for Bitbucket workspaces. May also be present for sited workspaces (e.g. Jira, Confluence) when license data is available. Not available for Trello workspaces.
+	Capacity nullable.Nullable[int] `json:"capacity,omitempty"`
+
+	// CreatedAt The ISO 8601 timestamp indicating when the workspace was created (activated). Only populated populated for sited workspaces (e.g. Jira, Confluence) when created at timestamp is available. Not available for Bitbucket or Trello workspaces.
+	CreatedAt nullable.Nullable[string] `json:"createdAt,omitempty"`
+
+	// CreatedBy The ARI (Atlassian Resource Identifier) of the Atlassian account that created the workspace. Only populated for sited workspaces (e.g. Jira, Confluence) when a creator account identifier is available. Not available for Bitbucket or Trello workspaces.
+	CreatedBy     nullable.Nullable[string]       `json:"createdBy,omitempty"`
+	HostUrl       nullable.Nullable[string]       `json:"hostUrl,omitempty"`
+	Icons         *map[string]interface{}         `json:"icons,omitempty"`
+	Labels        *[]string                       `json:"labels,omitempty"`
+	Name          *string                         `json:"name,omitempty"`
+	Owner         nullable.Nullable[string]       `json:"owner,omitempty"`
+	Realm         *string                         `json:"realm,omitempty"`
+	Regions       *[]string                       `json:"regions,omitempty"`
+	Sandbox       nullable.Nullable[Sandbox]      `json:"sandbox,omitempty"`
+	Status        *WorkspaceModelAttributesStatus `json:"status,omitempty"`
+	StatusDetails *[]string                       `json:"statusDetails,omitempty"`
+	Type          *string                         `json:"type,omitempty"`
+	TypeKey       *string                         `json:"typeKey,omitempty"`
+
+	// UpdatedAt The ISO 8601 timestamp indicating when the workspace was last updated. This field is not populated for any workspace type and will always be absent.
+	UpdatedAt nullable.Nullable[string] `json:"updatedAt,omitempty"`
+
+	// Usage The maximum number of active users/seats allowed for the workspace (soft limit). Only populated for Bitbucket workspaces. Not available for other workspace types
+	Usage                nullable.Nullable[int] `json:"usage,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// WorkspaceModel_Relationships_Item defines model for WorkspaceModel.relationships.Item.
+type WorkspaceModel_Relationships_Item struct {
+	union json.RawMessage
 }
 
 // AccountIdParam defines model for accountIdParam.
@@ -1694,6 +1977,59 @@ type AddUserToGroupJSONBody struct {
 	AccountId string `json:"accountId"`
 }
 
+// GetGroupRoleAssignmentsParams defines parameters for GetGroupRoleAssignments.
+type GetGroupRoleAssignmentsParams struct {
+	// Cursor Sets the cursor position to retrieve the next set of results. If present, all other parameters are discarded when searching.
+	Cursor *CursorParam `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit The desired number of results for the search request.
+	Limit *LimitParam `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// DirectoryIds A list of directory IDs. The requestor must have permissions to  administer resources linked to these directories.
+	DirectoryIds *DirectoryIdsParam `form:"directoryIds,omitempty" json:"directoryIds,omitempty"`
+
+	// ResourceOwners The list of resource owners to filter the results by. Used to identify resources using their owner to which the user has at least one role assigned to.
+	ResourceOwners *ResourceOwnersParam `form:"resourceOwners,omitempty" json:"resourceOwners,omitempty"`
+
+	// ResourceIds A list of resource IDs. The resource IDs should be specified  using the Atlassian Resource Identifier (ARI) format. Example ARI: `ari:cloud:jira-core::site/1`
+	ResourceIds *ResourceIdsParam `form:"resourceIds,omitempty" json:"resourceIds,omitempty"`
+
+	// RoleIds A list of role IDs. The Atlassian canonical roles are used to determine the permissions of the user against resources within  the organization. The allowed roles are:
+	//    - `atlassian/user` - Can access the product, with no product admin permissions
+	//    - `atlassian/admin` - Can access the product, with product admin permissions
+	//    - `atlassian/guest` - Can only access one space you or space admins specify
+	//    - `atlassian/customer` - (Jira Service Management) Can visit help center, submit help requests, and view articles (non-billable)
+	//    - `atlassian/user-access-admin` - No product access. Can administer users and groups for this product in Atlassian Administration
+	//    - `atlassian/contributor` - Can access the product to view, comment, and vote only (non-billable)
+	//    - `atlassian/basic` - Can access basic product features, with no product admin permissions (non-billable)
+	//    - `atlassian/stakeholder` - Can receive incident updates and has the same product access as Customer. Non-billable but available only on Premium and Enterprise plans
+	//    - `atlassian/org-admin` - An organization admin is the highest level of admin and can complete any administrative task in Atlassian Administration
+	//    - `atlassian/site-admin` - Site admins can access Atlassian Administration and complete tasks related to the specific site they are administering.
+	//    - `atlassian/ai-access` - Can use AI features in AI-enabled apps they have access to.
+	RoleIds *RoleIdsParam `form:"roleIds,omitempty" json:"roleIds,omitempty"`
+}
+
+// GetGroupRoleAssignmentsParamsRoleIds defines parameters for GetGroupRoleAssignments.
+type GetGroupRoleAssignmentsParamsRoleIds string
+
+// AssignGroupRoleJSONBody defines parameters for AssignGroupRole.
+type AssignGroupRoleJSONBody struct {
+	// ResourceId A resource or workspace refers to a specific instance of an Atlassian app, which has a unique ID. Use the [Get workspaces endpoint](https://developer.atlassian.com/cloud/admin/organization/rest/api-group-workspaces/#api-v2-orgs-orgid-workspaces-post) to find the resource ID.
+	ResourceId string `json:"resourceId"`
+
+	// RoleId Valid values: atlassian/user, atlassian/user-access-admin, atlassian/admin, atlassian/guest, atlassian/contributor, atlassian/customer, atlassian/basic, atlassian/stakeholder, atlassian/viewer
+	RoleId string `json:"roleId"`
+}
+
+// RevokeGroupRoleJSONBody defines parameters for RevokeGroupRole.
+type RevokeGroupRoleJSONBody struct {
+	// ResourceId A resource or workspace refers to a specific instance of an Atlassian app, which has a unique ID. Use the [Get workspaces endpoint](https://developer.atlassian.com/cloud/admin/organization/rest/api-group-workspaces/#api-v2-orgs-orgid-workspaces-post) to find the resource ID.
+	ResourceId string `json:"resourceId"`
+
+	// RoleId Valid values: atlassian/user, atlassian/user-access-admin, atlassian/admin, atlassian/guest, atlassian/contributor, atlassian/customer, atlassian/basic, atlassian/stakeholder, atlassian/viewer
+	RoleId string `json:"roleId"`
+}
+
 // GetUserRoleAssignmentsParams defines parameters for GetUserRoleAssignments.
 type GetUserRoleAssignmentsParams struct {
 	// Cursor Sets the cursor position to retrieve the next set of results. If present, all other parameters are discarded when searching.
@@ -1750,8 +2086,340 @@ type SearchDirectoryGroupsJSONRequestBody = MultiDirectoryGroupSearchRequest
 // AddUserToGroupJSONRequestBody defines body for AddUserToGroup for application/json ContentType.
 type AddUserToGroupJSONRequestBody AddUserToGroupJSONBody
 
+// AssignGroupRoleJSONRequestBody defines body for AssignGroupRole for application/json ContentType.
+type AssignGroupRoleJSONRequestBody AssignGroupRoleJSONBody
+
+// RevokeGroupRoleJSONRequestBody defines body for RevokeGroupRole for application/json ContentType.
+type RevokeGroupRoleJSONRequestBody RevokeGroupRoleJSONBody
+
 // SearchDirectoryUsersJSONRequestBody defines body for SearchDirectoryUsers for application/json ContentType.
 type SearchDirectoryUsersJSONRequestBody = MultiDirectoryUserSearchRequest
+
+// QueryWorkspacesV2JSONRequestBody defines body for QueryWorkspacesV2 for application/json ContentType.
+type QueryWorkspacesV2JSONRequestBody = SearchWorkspacesRequestV2
+
+// Getter for additional properties for WorkspaceModel_Attributes. Returns the specified
+// element and whether it was found
+func (a WorkspaceModel_Attributes) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for WorkspaceModel_Attributes
+func (a *WorkspaceModel_Attributes) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for WorkspaceModel_Attributes to handle AdditionalProperties
+func (a *WorkspaceModel_Attributes) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["avatars"]; found {
+		err = json.Unmarshal(raw, &a.Avatars)
+		if err != nil {
+			return fmt.Errorf("error reading 'avatars': %w", err)
+		}
+		delete(object, "avatars")
+	}
+
+	if raw, found := object["capacity"]; found {
+		err = json.Unmarshal(raw, &a.Capacity)
+		if err != nil {
+			return fmt.Errorf("error reading 'capacity': %w", err)
+		}
+		delete(object, "capacity")
+	}
+
+	if raw, found := object["createdAt"]; found {
+		err = json.Unmarshal(raw, &a.CreatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'createdAt': %w", err)
+		}
+		delete(object, "createdAt")
+	}
+
+	if raw, found := object["createdBy"]; found {
+		err = json.Unmarshal(raw, &a.CreatedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'createdBy': %w", err)
+		}
+		delete(object, "createdBy")
+	}
+
+	if raw, found := object["hostUrl"]; found {
+		err = json.Unmarshal(raw, &a.HostUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'hostUrl': %w", err)
+		}
+		delete(object, "hostUrl")
+	}
+
+	if raw, found := object["icons"]; found {
+		err = json.Unmarshal(raw, &a.Icons)
+		if err != nil {
+			return fmt.Errorf("error reading 'icons': %w", err)
+		}
+		delete(object, "icons")
+	}
+
+	if raw, found := object["labels"]; found {
+		err = json.Unmarshal(raw, &a.Labels)
+		if err != nil {
+			return fmt.Errorf("error reading 'labels': %w", err)
+		}
+		delete(object, "labels")
+	}
+
+	if raw, found := object["name"]; found {
+		err = json.Unmarshal(raw, &a.Name)
+		if err != nil {
+			return fmt.Errorf("error reading 'name': %w", err)
+		}
+		delete(object, "name")
+	}
+
+	if raw, found := object["owner"]; found {
+		err = json.Unmarshal(raw, &a.Owner)
+		if err != nil {
+			return fmt.Errorf("error reading 'owner': %w", err)
+		}
+		delete(object, "owner")
+	}
+
+	if raw, found := object["realm"]; found {
+		err = json.Unmarshal(raw, &a.Realm)
+		if err != nil {
+			return fmt.Errorf("error reading 'realm': %w", err)
+		}
+		delete(object, "realm")
+	}
+
+	if raw, found := object["regions"]; found {
+		err = json.Unmarshal(raw, &a.Regions)
+		if err != nil {
+			return fmt.Errorf("error reading 'regions': %w", err)
+		}
+		delete(object, "regions")
+	}
+
+	if raw, found := object["sandbox"]; found {
+		err = json.Unmarshal(raw, &a.Sandbox)
+		if err != nil {
+			return fmt.Errorf("error reading 'sandbox': %w", err)
+		}
+		delete(object, "sandbox")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if raw, found := object["statusDetails"]; found {
+		err = json.Unmarshal(raw, &a.StatusDetails)
+		if err != nil {
+			return fmt.Errorf("error reading 'statusDetails': %w", err)
+		}
+		delete(object, "statusDetails")
+	}
+
+	if raw, found := object["type"]; found {
+		err = json.Unmarshal(raw, &a.Type)
+		if err != nil {
+			return fmt.Errorf("error reading 'type': %w", err)
+		}
+		delete(object, "type")
+	}
+
+	if raw, found := object["typeKey"]; found {
+		err = json.Unmarshal(raw, &a.TypeKey)
+		if err != nil {
+			return fmt.Errorf("error reading 'typeKey': %w", err)
+		}
+		delete(object, "typeKey")
+	}
+
+	if raw, found := object["updatedAt"]; found {
+		err = json.Unmarshal(raw, &a.UpdatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'updatedAt': %w", err)
+		}
+		delete(object, "updatedAt")
+	}
+
+	if raw, found := object["usage"]; found {
+		err = json.Unmarshal(raw, &a.Usage)
+		if err != nil {
+			return fmt.Errorf("error reading 'usage': %w", err)
+		}
+		delete(object, "usage")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for WorkspaceModel_Attributes to handle AdditionalProperties
+func (a WorkspaceModel_Attributes) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Avatars != nil {
+		object["avatars"], err = json.Marshal(a.Avatars)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'avatars': %w", err)
+		}
+	}
+
+	if a.Capacity != nil {
+		object["capacity"], err = json.Marshal(a.Capacity)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'capacity': %w", err)
+		}
+	}
+
+	if a.CreatedAt != nil {
+		object["createdAt"], err = json.Marshal(a.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'createdAt': %w", err)
+		}
+	}
+
+	if a.CreatedBy != nil {
+		object["createdBy"], err = json.Marshal(a.CreatedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'createdBy': %w", err)
+		}
+	}
+
+	if a.HostUrl != nil {
+		object["hostUrl"], err = json.Marshal(a.HostUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'hostUrl': %w", err)
+		}
+	}
+
+	if a.Icons != nil {
+		object["icons"], err = json.Marshal(a.Icons)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'icons': %w", err)
+		}
+	}
+
+	if a.Labels != nil {
+		object["labels"], err = json.Marshal(a.Labels)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'labels': %w", err)
+		}
+	}
+
+	if a.Name != nil {
+		object["name"], err = json.Marshal(a.Name)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'name': %w", err)
+		}
+	}
+
+	if a.Owner != nil {
+		object["owner"], err = json.Marshal(a.Owner)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'owner': %w", err)
+		}
+	}
+
+	if a.Realm != nil {
+		object["realm"], err = json.Marshal(a.Realm)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'realm': %w", err)
+		}
+	}
+
+	if a.Regions != nil {
+		object["regions"], err = json.Marshal(a.Regions)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'regions': %w", err)
+		}
+	}
+
+	if a.Sandbox != nil {
+		object["sandbox"], err = json.Marshal(a.Sandbox)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'sandbox': %w", err)
+		}
+	}
+
+	if a.Status != nil {
+		object["status"], err = json.Marshal(a.Status)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'status': %w", err)
+		}
+	}
+
+	if a.StatusDetails != nil {
+		object["statusDetails"], err = json.Marshal(a.StatusDetails)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'statusDetails': %w", err)
+		}
+	}
+
+	if a.Type != nil {
+		object["type"], err = json.Marshal(a.Type)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'type': %w", err)
+		}
+	}
+
+	if a.TypeKey != nil {
+		object["typeKey"], err = json.Marshal(a.TypeKey)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'typeKey': %w", err)
+		}
+	}
+
+	if a.UpdatedAt != nil {
+		object["updatedAt"], err = json.Marshal(a.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'updatedAt': %w", err)
+		}
+	}
+
+	if a.Usage != nil {
+		object["usage"], err = json.Marshal(a.Usage)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'usage': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
 
 // AsAndOperator returns the union data inside the QueryVariants as a AndOperator
 func (t QueryVariants) AsAndOperator() (AndOperator, error) {
@@ -1915,6 +2583,94 @@ func (t QueryVariants) MarshalJSON() ([]byte, error) {
 }
 
 func (t *QueryVariants) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsPolicyModelV2 returns the union data inside the WorkspaceModel_Relationships_Item as a PolicyModelV2
+func (t WorkspaceModel_Relationships_Item) AsPolicyModelV2() (PolicyModelV2, error) {
+	var body PolicyModelV2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPolicyModelV2 overwrites any union data inside the WorkspaceModel_Relationships_Item as the provided PolicyModelV2
+func (t *WorkspaceModel_Relationships_Item) FromPolicyModelV2(v PolicyModelV2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePolicyModelV2 performs a merge with any union data inside the WorkspaceModel_Relationships_Item, using the provided PolicyModelV2
+func (t *WorkspaceModel_Relationships_Item) MergePolicyModelV2(v PolicyModelV2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsEntitlementModelV2 returns the union data inside the WorkspaceModel_Relationships_Item as a EntitlementModelV2
+func (t WorkspaceModel_Relationships_Item) AsEntitlementModelV2() (EntitlementModelV2, error) {
+	var body EntitlementModelV2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromEntitlementModelV2 overwrites any union data inside the WorkspaceModel_Relationships_Item as the provided EntitlementModelV2
+func (t *WorkspaceModel_Relationships_Item) FromEntitlementModelV2(v EntitlementModelV2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeEntitlementModelV2 performs a merge with any union data inside the WorkspaceModel_Relationships_Item, using the provided EntitlementModelV2
+func (t *WorkspaceModel_Relationships_Item) MergeEntitlementModelV2(v EntitlementModelV2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsFeatureModelV2 returns the union data inside the WorkspaceModel_Relationships_Item as a FeatureModelV2
+func (t WorkspaceModel_Relationships_Item) AsFeatureModelV2() (FeatureModelV2, error) {
+	var body FeatureModelV2
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFeatureModelV2 overwrites any union data inside the WorkspaceModel_Relationships_Item as the provided FeatureModelV2
+func (t *WorkspaceModel_Relationships_Item) FromFeatureModelV2(v FeatureModelV2) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFeatureModelV2 performs a merge with any union data inside the WorkspaceModel_Relationships_Item, using the provided FeatureModelV2
+func (t *WorkspaceModel_Relationships_Item) MergeFeatureModelV2(v FeatureModelV2) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t WorkspaceModel_Relationships_Item) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *WorkspaceModel_Relationships_Item) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -2412,6 +3168,52 @@ type ClientInterface interface {
 	// Corresponds with DELETE /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships/{accountId} (the `RemoveUserFromGroup` operationId).
 	RemoveUserFromGroup(ctx context.Context, orgId string, directoryId string, groupId string, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetGroupRoleAssignments Get group role assignments
+	//
+	// Returns a page of role assignments for a group that match the supplied parameters.
+	//
+	// #### Scopes
+	// **[Authorization scopes](/cloud/admin/scopes/) required:** `read:groups:admin`
+	//
+	// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments (the `GetGroupRoleAssignments` operationId).
+	GetGroupRoleAssignments(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, groupId GroupIdParam, params *GetGroupRoleAssignmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AssignGroupRoleWithBody Grant access to group
+	//
+	// Assign a role to a group to assign all members the same role.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/assign (the `AssignGroupRole` operationId).
+	AssignGroupRoleWithBody(ctx context.Context, orgId string, directoryId string, groupId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AssignGroupRole Grant access to group
+	//
+	// Assign a role to a group to assign all members the same role.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/assign (the `AssignGroupRole` operationId).
+	AssignGroupRole(ctx context.Context, orgId string, directoryId string, groupId string, body AssignGroupRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RevokeGroupRoleWithBody Remove access from group
+	//
+	// Revoke a role from a group to remove access to an app from all members. A member can still access the app if they’re in another group that grants access to the same app.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/revoke (the `RevokeGroupRole` operationId).
+	RevokeGroupRoleWithBody(ctx context.Context, orgId string, directoryId string, groupId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RevokeGroupRole Remove access from group
+	//
+	// Revoke a role from a group to remove access to an app from all members. A member can still access the app if they’re in another group that grants access to the same app.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/revoke (the `RevokeGroupRole` operationId).
+	RevokeGroupRole(ctx context.Context, orgId string, directoryId string, groupId string, body RevokeGroupRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// SearchDirectoryUsersWithBody Search for users in an organization
 	//
 	// Return a page of users in an organization that match the supplied parameters.
@@ -2450,6 +3252,38 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/users/{userId} (the `GetDirectoryUserDetails` operationId).
 	GetDirectoryUserDetails(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, userId UserIdParam, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// QueryWorkspacesV2WithBody Get list of workspaces
+	//
+	// A workspace refers to a specific instance of an Atlassian product that is accessed through a unique URL. Whenever a user initiates or adds a new product instance, it results in the creation of a distinct workspace.
+	//
+	// This API will:
+	// - Return a paginated list of workspaces in a given org
+	// - Return more details about an organization's products (including product URL).
+	//
+	// #### Scopes
+	// **[Authorization scopes](/cloud/admin/scopes/) required:** `read:workspaces:admin`
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/workspaces (the `QueryWorkspacesV2` operationId).
+	QueryWorkspacesV2WithBody(ctx context.Context, orgId OrgIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// QueryWorkspacesV2 Get list of workspaces
+	//
+	// A workspace refers to a specific instance of an Atlassian product that is accessed through a unique URL. Whenever a user initiates or adds a new product instance, it results in the creation of a distinct workspace.
+	//
+	// This API will:
+	// - Return a paginated list of workspaces in a given org
+	// - Return more details about an organization's products (including product URL).
+	//
+	// #### Scopes
+	// **[Authorization scopes](/cloud/admin/scopes/) required:** `read:workspaces:admin`
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/workspaces (the `QueryWorkspacesV2` operationId).
+	QueryWorkspacesV2(ctx context.Context, orgId OrgIdParam, body QueryWorkspacesV2JSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 // AssignOrganizationLevelRoleWithBody Assign organization-level role
@@ -2793,6 +3627,102 @@ func (c *Client) RemoveUserFromGroup(ctx context.Context, orgId string, director
 	return c.Client.Do(req)
 }
 
+// GetGroupRoleAssignments Get group role assignments
+//
+// Returns a page of role assignments for a group that match the supplied parameters.
+//
+// #### Scopes
+// **[Authorization scopes](/cloud/admin/scopes/) required:** `read:groups:admin`
+//
+// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments (the `GetGroupRoleAssignments` operationId).
+func (c *Client) GetGroupRoleAssignments(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, groupId GroupIdParam, params *GetGroupRoleAssignmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetGroupRoleAssignmentsRequest(c.Server, orgId, directoryId, groupId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AssignGroupRoleWithBody Grant access to group
+//
+// Assign a role to a group to assign all members the same role.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/assign (the `AssignGroupRole` operationId).
+func (c *Client) AssignGroupRoleWithBody(ctx context.Context, orgId string, directoryId string, groupId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAssignGroupRoleRequestWithBody(c.Server, orgId, directoryId, groupId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AssignGroupRole Grant access to group
+//
+// Assign a role to a group to assign all members the same role.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/assign (the `AssignGroupRole` operationId).
+func (c *Client) AssignGroupRole(ctx context.Context, orgId string, directoryId string, groupId string, body AssignGroupRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAssignGroupRoleRequest(c.Server, orgId, directoryId, groupId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RevokeGroupRoleWithBody Remove access from group
+//
+// Revoke a role from a group to remove access to an app from all members. A member can still access the app if they’re in another group that grants access to the same app.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/revoke (the `RevokeGroupRole` operationId).
+func (c *Client) RevokeGroupRoleWithBody(ctx context.Context, orgId string, directoryId string, groupId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRevokeGroupRoleRequestWithBody(c.Server, orgId, directoryId, groupId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RevokeGroupRole Remove access from group
+//
+// Revoke a role from a group to remove access to an app from all members. A member can still access the app if they’re in another group that grants access to the same app.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/revoke (the `RevokeGroupRole` operationId).
+func (c *Client) RevokeGroupRole(ctx context.Context, orgId string, directoryId string, groupId string, body RevokeGroupRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRevokeGroupRoleRequest(c.Server, orgId, directoryId, groupId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // SearchDirectoryUsersWithBody Search for users in an organization
 //
 // Return a page of users in an organization that match the supplied parameters.
@@ -2862,6 +3792,58 @@ func (c *Client) GetUserRoleAssignments(ctx context.Context, orgId OrgIdParam, d
 // Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/users/{userId} (the `GetDirectoryUserDetails` operationId).
 func (c *Client) GetDirectoryUserDetails(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, userId UserIdParam, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetDirectoryUserDetailsRequest(c.Server, orgId, directoryId, userId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// QueryWorkspacesV2WithBody Get list of workspaces
+//
+// A workspace refers to a specific instance of an Atlassian product that is accessed through a unique URL. Whenever a user initiates or adds a new product instance, it results in the creation of a distinct workspace.
+//
+// This API will:
+// - Return a paginated list of workspaces in a given org
+// - Return more details about an organization's products (including product URL).
+//
+// #### Scopes
+// **[Authorization scopes](/cloud/admin/scopes/) required:** `read:workspaces:admin`
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v2/orgs/{orgId}/workspaces (the `QueryWorkspacesV2` operationId).
+func (c *Client) QueryWorkspacesV2WithBody(ctx context.Context, orgId OrgIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewQueryWorkspacesV2RequestWithBody(c.Server, orgId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// QueryWorkspacesV2 Get list of workspaces
+//
+// A workspace refers to a specific instance of an Atlassian product that is accessed through a unique URL. Whenever a user initiates or adds a new product instance, it results in the creation of a distinct workspace.
+//
+// This API will:
+// - Return a paginated list of workspaces in a given org
+// - Return more details about an organization's products (including product URL).
+//
+// #### Scopes
+// **[Authorization scopes](/cloud/admin/scopes/) required:** `read:workspaces:admin`
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v2/orgs/{orgId}/workspaces (the `QueryWorkspacesV2` operationId).
+func (c *Client) QueryWorkspacesV2(ctx context.Context, orgId OrgIdParam, body QueryWorkspacesV2JSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewQueryWorkspacesV2Request(c.Server, orgId, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3408,6 +4390,263 @@ func NewRemoveUserFromGroupRequest(server string, orgId string, directoryId stri
 	return req, nil
 }
 
+// NewGetGroupRoleAssignmentsRequest constructs an http.Request for the GetGroupRoleAssignments method
+func NewGetGroupRoleAssignmentsRequest(server string, orgId OrgIdParam, directoryId DirectoryIdParam, groupId GroupIdParam, params *GetGroupRoleAssignmentsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "directoryId", directoryId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithOptions("simple", false, "groupId", groupId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v2/orgs/%s/directories/%s/groups/%s/role-assignments", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.DirectoryIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "directoryIds", *params.DirectoryIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ResourceOwners != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "resourceOwners", *params.ResourceOwners, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.ResourceIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "resourceIds", *params.ResourceIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.RoleIds != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "roleIds", *params.RoleIds, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "array", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewAssignGroupRoleRequest calls the generic AssignGroupRole builder with application/json body
+func NewAssignGroupRoleRequest(server string, orgId string, directoryId string, groupId string, body AssignGroupRoleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAssignGroupRoleRequestWithBody(server, orgId, directoryId, groupId, "application/json", bodyReader)
+}
+
+// NewAssignGroupRoleRequestWithBody constructs an http.Request for the AssignGroupRole method, with any body, and a specified content type
+func NewAssignGroupRoleRequestWithBody(server string, orgId string, directoryId string, groupId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "directoryId", directoryId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithOptions("simple", false, "groupId", groupId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v2/orgs/%s/directories/%s/groups/%s/role-assignments/assign", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRevokeGroupRoleRequest calls the generic RevokeGroupRole builder with application/json body
+func NewRevokeGroupRoleRequest(server string, orgId string, directoryId string, groupId string, body RevokeGroupRoleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRevokeGroupRoleRequestWithBody(server, orgId, directoryId, groupId, "application/json", bodyReader)
+}
+
+// NewRevokeGroupRoleRequestWithBody constructs an http.Request for the RevokeGroupRole method, with any body, and a specified content type
+func NewRevokeGroupRoleRequestWithBody(server string, orgId string, directoryId string, groupId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "directoryId", directoryId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam2 string
+
+	pathParam2, err = runtime.StyleParamWithOptions("simple", false, "groupId", groupId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v2/orgs/%s/directories/%s/groups/%s/role-assignments/revoke", pathParam0, pathParam1, pathParam2)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewSearchDirectoryUsersRequest calls the generic SearchDirectoryUsers builder with application/json body
 func NewSearchDirectoryUsersRequest(server string, orgId OrgIdParam, directoryId DirectoryIdParam, body SearchDirectoryUsersJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -3645,6 +4884,53 @@ func NewGetDirectoryUserDetailsRequest(server string, orgId OrgIdParam, director
 	return req, nil
 }
 
+// NewQueryWorkspacesV2Request calls the generic QueryWorkspacesV2 builder with application/json body
+func NewQueryWorkspacesV2Request(server string, orgId OrgIdParam, body QueryWorkspacesV2JSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewQueryWorkspacesV2RequestWithBody(server, orgId, "application/json", bodyReader)
+}
+
+// NewQueryWorkspacesV2RequestWithBody constructs an http.Request for the QueryWorkspacesV2 method, with any body, and a specified content type
+func NewQueryWorkspacesV2RequestWithBody(server string, orgId OrgIdParam, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v2/orgs/%s/workspaces", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -3866,6 +5152,54 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with DELETE /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/memberships/{accountId} (the `RemoveUserFromGroup` operationId).
 	RemoveUserFromGroupWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, accountId string, reqEditors ...RequestEditorFn) (*RemoveUserFromGroupResponse, error)
 
+	// GetGroupRoleAssignmentsWithResponse Get group role assignments
+	//
+	// Returns a page of role assignments for a group that match the supplied parameters.
+	//
+	// #### Scopes
+	// **[Authorization scopes](/cloud/admin/scopes/) required:** `read:groups:admin`
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments (the `GetGroupRoleAssignments` operationId).
+	GetGroupRoleAssignmentsWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, groupId GroupIdParam, params *GetGroupRoleAssignmentsParams, reqEditors ...RequestEditorFn) (*GetGroupRoleAssignmentsResponse, error)
+
+	// AssignGroupRoleWithBodyWithResponse Grant access to group
+	//
+	// Assign a role to a group to assign all members the same role.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/assign (the `AssignGroupRole` operationId).
+	AssignGroupRoleWithBodyWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AssignGroupRoleResponse, error)
+
+	// AssignGroupRoleWithResponse Grant access to group
+	//
+	// Assign a role to a group to assign all members the same role.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/assign (the `AssignGroupRole` operationId).
+	AssignGroupRoleWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, body AssignGroupRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*AssignGroupRoleResponse, error)
+
+	// RevokeGroupRoleWithBodyWithResponse Remove access from group
+	//
+	// Revoke a role from a group to remove access to an app from all members. A member can still access the app if they’re in another group that grants access to the same app.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/revoke (the `RevokeGroupRole` operationId).
+	RevokeGroupRoleWithBodyWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RevokeGroupRoleResponse, error)
+
+	// RevokeGroupRoleWithResponse Remove access from group
+	//
+	// Revoke a role from a group to remove access to an app from all members. A member can still access the app if they’re in another group that grants access to the same app.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/revoke (the `RevokeGroupRole` operationId).
+	RevokeGroupRoleWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, body RevokeGroupRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*RevokeGroupRoleResponse, error)
+
 	// SearchDirectoryUsersWithBodyWithResponse Search for users in an organization
 	//
 	// Return a page of users in an organization that match the supplied parameters.
@@ -3908,6 +5242,38 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/users/{userId} (the `GetDirectoryUserDetails` operationId).
 	GetDirectoryUserDetailsWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, userId UserIdParam, reqEditors ...RequestEditorFn) (*GetDirectoryUserDetailsResponse, error)
+
+	// QueryWorkspacesV2WithBodyWithResponse Get list of workspaces
+	//
+	// A workspace refers to a specific instance of an Atlassian product that is accessed through a unique URL. Whenever a user initiates or adds a new product instance, it results in the creation of a distinct workspace.
+	//
+	// This API will:
+	// - Return a paginated list of workspaces in a given org
+	// - Return more details about an organization's products (including product URL).
+	//
+	// #### Scopes
+	// **[Authorization scopes](/cloud/admin/scopes/) required:** `read:workspaces:admin`
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/workspaces (the `QueryWorkspacesV2` operationId).
+	QueryWorkspacesV2WithBodyWithResponse(ctx context.Context, orgId OrgIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*QueryWorkspacesV2Response, error)
+
+	// QueryWorkspacesV2WithResponse Get list of workspaces
+	//
+	// A workspace refers to a specific instance of an Atlassian product that is accessed through a unique URL. Whenever a user initiates or adds a new product instance, it results in the creation of a distinct workspace.
+	//
+	// This API will:
+	// - Return a paginated list of workspaces in a given org
+	// - Return more details about an organization's products (including product URL).
+	//
+	// #### Scopes
+	// **[Authorization scopes](/cloud/admin/scopes/) required:** `read:workspaces:admin`
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v2/orgs/{orgId}/workspaces (the `QueryWorkspacesV2` operationId).
+	QueryWorkspacesV2WithResponse(ctx context.Context, orgId OrgIdParam, body QueryWorkspacesV2JSONRequestBody, reqEditors ...RequestEditorFn) (*QueryWorkspacesV2Response, error)
 }
 
 type AssignOrganizationLevelRoleResponse struct {
@@ -4516,6 +5882,157 @@ func (r RemoveUserFromGroupResponse) ContentType() string {
 	return ""
 }
 
+type GetGroupRoleAssignmentsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *MultiDirectoryGroupRoleAssignmentPage
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *Errors
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Errors
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *Errors
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *Errors
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *Errors
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *Errors
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetGroupRoleAssignmentsResponse) GetJSON200() *MultiDirectoryGroupRoleAssignmentPage {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r GetGroupRoleAssignmentsResponse) GetJSON400() *Errors {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetGroupRoleAssignmentsResponse) GetJSON401() *Errors {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r GetGroupRoleAssignmentsResponse) GetJSON403() *Errors {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetGroupRoleAssignmentsResponse) GetJSON404() *Errors {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r GetGroupRoleAssignmentsResponse) GetJSON429() *Errors {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetGroupRoleAssignmentsResponse) GetJSON500() *Errors {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetGroupRoleAssignmentsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetGroupRoleAssignmentsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetGroupRoleAssignmentsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetGroupRoleAssignmentsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type AssignGroupRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// GetBody returns the raw response body bytes
+func (r AssignGroupRoleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r AssignGroupRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AssignGroupRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AssignGroupRoleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RevokeGroupRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// GetBody returns the raw response body bytes
+func (r RevokeGroupRoleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RevokeGroupRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RevokeGroupRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RevokeGroupRoleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type SearchDirectoryUsersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -4752,6 +6269,82 @@ func (r GetDirectoryUserDetailsResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetDirectoryUserDetailsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type QueryWorkspacesV2Response struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *PageDataResponseV2
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ApplicationError
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ProxyError
+	// JSON403 the response for an HTTP 403 `application/json` response
+	JSON403 *ApplicationError
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *ApplicationError
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ApplicationError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r QueryWorkspacesV2Response) GetJSON200() *PageDataResponseV2 {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r QueryWorkspacesV2Response) GetJSON400() *ApplicationError {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r QueryWorkspacesV2Response) GetJSON401() *ProxyError {
+	return r.JSON401
+}
+
+// GetJSON403 returns the response for an HTTP 403 `application/json` response
+func (r QueryWorkspacesV2Response) GetJSON403() *ApplicationError {
+	return r.JSON403
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r QueryWorkspacesV2Response) GetJSON404() *ApplicationError {
+	return r.JSON404
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r QueryWorkspacesV2Response) GetJSON500() *ApplicationError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r QueryWorkspacesV2Response) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r QueryWorkspacesV2Response) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r QueryWorkspacesV2Response) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r QueryWorkspacesV2Response) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -5037,6 +6630,84 @@ func (c *ClientWithResponses) RemoveUserFromGroupWithResponse(ctx context.Contex
 	return ParseRemoveUserFromGroupResponse(rsp)
 }
 
+// GetGroupRoleAssignmentsWithResponse Get group role assignments
+//
+// Returns a page of role assignments for a group that match the supplied parameters.
+//
+// #### Scopes
+// **[Authorization scopes](/cloud/admin/scopes/) required:** `read:groups:admin`
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments (the `GetGroupRoleAssignments` operationId).
+func (c *ClientWithResponses) GetGroupRoleAssignmentsWithResponse(ctx context.Context, orgId OrgIdParam, directoryId DirectoryIdParam, groupId GroupIdParam, params *GetGroupRoleAssignmentsParams, reqEditors ...RequestEditorFn) (*GetGroupRoleAssignmentsResponse, error) {
+	rsp, err := c.GetGroupRoleAssignments(ctx, orgId, directoryId, groupId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetGroupRoleAssignmentsResponse(rsp)
+}
+
+// AssignGroupRoleWithBodyWithResponse Grant access to group
+//
+// Assign a role to a group to assign all members the same role.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/assign (the `AssignGroupRole` operationId).
+func (c *ClientWithResponses) AssignGroupRoleWithBodyWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AssignGroupRoleResponse, error) {
+	rsp, err := c.AssignGroupRoleWithBody(ctx, orgId, directoryId, groupId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAssignGroupRoleResponse(rsp)
+}
+
+// AssignGroupRoleWithResponse Grant access to group
+//
+// Assign a role to a group to assign all members the same role.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/assign (the `AssignGroupRole` operationId).
+func (c *ClientWithResponses) AssignGroupRoleWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, body AssignGroupRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*AssignGroupRoleResponse, error) {
+	rsp, err := c.AssignGroupRole(ctx, orgId, directoryId, groupId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAssignGroupRoleResponse(rsp)
+}
+
+// RevokeGroupRoleWithBodyWithResponse Remove access from group
+//
+// Revoke a role from a group to remove access to an app from all members. A member can still access the app if they’re in another group that grants access to the same app.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/revoke (the `RevokeGroupRole` operationId).
+func (c *ClientWithResponses) RevokeGroupRoleWithBodyWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RevokeGroupRoleResponse, error) {
+	rsp, err := c.RevokeGroupRoleWithBody(ctx, orgId, directoryId, groupId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRevokeGroupRoleResponse(rsp)
+}
+
+// RevokeGroupRoleWithResponse Remove access from group
+//
+// Revoke a role from a group to remove access to an app from all members. A member can still access the app if they’re in another group that grants access to the same app.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/revoke (the `RevokeGroupRole` operationId).
+func (c *ClientWithResponses) RevokeGroupRoleWithResponse(ctx context.Context, orgId string, directoryId string, groupId string, body RevokeGroupRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*RevokeGroupRoleResponse, error) {
+	rsp, err := c.RevokeGroupRole(ctx, orgId, directoryId, groupId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRevokeGroupRoleResponse(rsp)
+}
+
 // SearchDirectoryUsersWithBodyWithResponse Search for users in an organization
 //
 // Return a page of users in an organization that match the supplied parameters.
@@ -5102,6 +6773,50 @@ func (c *ClientWithResponses) GetDirectoryUserDetailsWithResponse(ctx context.Co
 		return nil, err
 	}
 	return ParseGetDirectoryUserDetailsResponse(rsp)
+}
+
+// QueryWorkspacesV2WithBodyWithResponse Get list of workspaces
+//
+// A workspace refers to a specific instance of an Atlassian product that is accessed through a unique URL. Whenever a user initiates or adds a new product instance, it results in the creation of a distinct workspace.
+//
+// This API will:
+// - Return a paginated list of workspaces in a given org
+// - Return more details about an organization's products (including product URL).
+//
+// #### Scopes
+// **[Authorization scopes](/cloud/admin/scopes/) required:** `read:workspaces:admin`
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v2/orgs/{orgId}/workspaces (the `QueryWorkspacesV2` operationId).
+func (c *ClientWithResponses) QueryWorkspacesV2WithBodyWithResponse(ctx context.Context, orgId OrgIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*QueryWorkspacesV2Response, error) {
+	rsp, err := c.QueryWorkspacesV2WithBody(ctx, orgId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseQueryWorkspacesV2Response(rsp)
+}
+
+// QueryWorkspacesV2WithResponse Get list of workspaces
+//
+// A workspace refers to a specific instance of an Atlassian product that is accessed through a unique URL. Whenever a user initiates or adds a new product instance, it results in the creation of a distinct workspace.
+//
+// This API will:
+// - Return a paginated list of workspaces in a given org
+// - Return more details about an organization's products (including product URL).
+//
+// #### Scopes
+// **[Authorization scopes](/cloud/admin/scopes/) required:** `read:workspaces:admin`
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v2/orgs/{orgId}/workspaces (the `QueryWorkspacesV2` operationId).
+func (c *ClientWithResponses) QueryWorkspacesV2WithResponse(ctx context.Context, orgId OrgIdParam, body QueryWorkspacesV2JSONRequestBody, reqEditors ...RequestEditorFn) (*QueryWorkspacesV2Response, error) {
+	rsp, err := c.QueryWorkspacesV2(ctx, orgId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseQueryWorkspacesV2Response(rsp)
 }
 
 // ParseAssignOrganizationLevelRoleResponse parses an HTTP response from a AssignOrganizationLevelRoleWithResponse call
@@ -5560,6 +7275,106 @@ func ParseRemoveUserFromGroupResponse(rsp *http.Response) (*RemoveUserFromGroupR
 	return response, nil
 }
 
+// ParseGetGroupRoleAssignmentsResponse parses an HTTP response from a GetGroupRoleAssignmentsWithResponse call
+func ParseGetGroupRoleAssignmentsResponse(rsp *http.Response) (*GetGroupRoleAssignmentsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetGroupRoleAssignmentsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest MultiDirectoryGroupRoleAssignmentPage
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAssignGroupRoleResponse parses an HTTP response from a AssignGroupRoleWithResponse call
+func ParseAssignGroupRoleResponse(rsp *http.Response) (*AssignGroupRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AssignGroupRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
+// ParseRevokeGroupRoleResponse parses an HTTP response from a RevokeGroupRoleWithResponse call
+func ParseRevokeGroupRoleResponse(rsp *http.Response) (*RevokeGroupRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RevokeGroupRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	return response, nil
+}
+
 // ParseSearchDirectoryUsersResponse parses an HTTP response from a SearchDirectoryUsersWithResponse call
 func ParseSearchDirectoryUsersResponse(rsp *http.Response) (*SearchDirectoryUsersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -5747,6 +7562,67 @@ func ParseGetDirectoryUserDetailsResponse(rsp *http.Response) (*GetDirectoryUser
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest Errors
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseQueryWorkspacesV2Response parses an HTTP response from a QueryWorkspacesV2WithResponse call
+func ParseQueryWorkspacesV2Response(rsp *http.Response) (*QueryWorkspacesV2Response, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &QueryWorkspacesV2Response{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest PageDataResponseV2
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ApplicationError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ProxyError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ApplicationError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ApplicationError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ApplicationError
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

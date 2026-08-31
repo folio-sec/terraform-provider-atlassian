@@ -39,6 +39,16 @@ actions:
     description: Add an operation ID for deleting a group.
     update:
       operationId: deleteGroup
+  # The upstream group role assignment mutations omit operationId, so
+  # oapi-codegen does not generate methods for them without these corrections.
+  - target: "$['paths']['/v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/assign']['post']"
+    description: Add an operation ID for granting a role to a group.
+    update:
+      operationId: assignGroupRole
+  - target: "$['paths']['/v2/orgs/{orgId}/directories/{directoryId}/groups/{groupId}/role-assignments/revoke']['post']"
+    description: Add an operation ID for revoking a role from a group.
+    update:
+      operationId: revokeGroupRole
   # The upstream resource-scoped role operations also constrain the account ID
   # to a UUID, which rejects every account ID Atlassian issues.
   - target: "$['paths']['/v1/orgs/{orgId}/users/{userId}/roles/assign']['post']['parameters'][1]['schema']['format']"
