@@ -79,6 +79,7 @@ func (p *AtlassianProvider) Resources(_ context.Context) []func() resource.Resou
 	return []func() resource.Resource{
 		organizationservice.NewGroupResource,
 		organizationservice.NewGroupMembershipResource,
+		organizationservice.NewGroupRoleAssignmentResource,
 		organizationservice.NewUserOrganizationRoleAssignmentResource,
 		organizationservice.NewUserRoleAssignmentResource,
 	}
@@ -90,6 +91,7 @@ func (p *AtlassianProvider) DataSources(_ context.Context) []func() datasource.D
 		organizationservice.NewGroupsDataSource,
 		organizationservice.NewUserDataSource,
 		organizationservice.NewUsersDataSource,
+		organizationservice.NewWorkspacesDataSource,
 	}
 }
 

@@ -479,3 +479,168 @@ func TestMutationOutcomeMayBeAmbiguous(t *testing.T) {
 		}
 	}
 }
+
+func TestWorkspacesDataSourceSchemaReturnsWorkspacesAsSet(t *testing.T) {
+	t.Parallel()
+
+	var response datasource.SchemaResponse
+	NewWorkspacesDataSource().Schema(context.Background(), datasource.SchemaRequest{}, &response)
+	if response.Diagnostics.HasError() {
+		t.Fatalf("Schema() diagnostics = %v", response.Diagnostics)
+	}
+	workspaces, ok := response.Schema.Attributes["workspaces"].(datasourceschema.SetNestedAttribute)
+	if !ok {
+		t.Fatalf("workspaces attribute type = %T, want schema.SetNestedAttribute", response.Schema.Attributes["workspaces"])
+	}
+	if !workspaces.Computed {
+		t.Fatal("workspaces attribute must be computed")
+	}
+	// The workspace ID is the resource ARI that role assignments refer to, so
+	// it must be exposed rather than only accepted as a filter.
+	for _, name := range []string{"id", "type_key", "name", "type", "status"} {
+		if _, exists := workspaces.NestedObject.Attributes[name]; !exists {
+			t.Errorf("workspace attribute %q is missing", name)
+		}
+	}
+	if !response.Schema.Attributes["organization_id"].IsRequired() {
+		t.Error("organization_id must be required")
+	}
+	// The endpoint takes its filters under a single query property, and the
+	// provider mirrors that shape rather than flattening one operand out of it.
+	query, ok := response.Schema.Attributes["query"].(datasourceschema.SingleNestedAttribute)
+	if !ok {
+		t.Fatalf("query attribute type = %T, want schema.SingleNestedAttribute", response.Schema.Attributes["query"])
+	}
+	if !query.IsOptional() {
+		t.Error("query must be optional")
+	}
+	for _, name := range []string{"search", "fields", "features"} {
+		if _, exists := query.Attributes[name]; !exists {
+			t.Errorf("query operand %q is missing", name)
+		}
+	}
+	// The endpoint rejects a policies operand as an invalid request body even
+	// when it carries a policy ID read back from the organization's own policy
+	// list, so exposing it would ship an attribute that always fails.
+	if _, exists := query.Attributes["policies"]; exists {
+		t.Error("query exposes the policies operand, which the endpoint rejects")
+	}
+	if _, exists := response.Schema.Attributes["search"]; exists {
+		t.Error("search must live under query, not at the top level")
+	}
+	// sort and limit shape the response rather than which workspaces match, so
+	// they stay internal to the provider.
+	for _, name := range []string{"sort", "limit", "cursor"} {
+		if _, exists := response.Schema.Attributes[name]; exists {
+			t.Errorf("schema exposes response-shaping attribute %q", name)
+		}
+		if _, exists := query.Attributes[name]; exists {
+			t.Errorf("query exposes response-shaping attribute %q", name)
+		}
+	}
+}
+
+func TestSharedValueValidators(t *testing.T) {
+	t.Parallel()
+
+	t.Run("non-empty", func(t *testing.T) {
+		t.Parallel()
+		tests := map[string]struct {
+			value     types.String
+			wantError bool
+		}{
+			"set":        {value: types.StringValue("value")},
+			"blank":      {value: types.StringValue("   "), wantError: true},
+			"empty":      {value: types.StringValue(""), wantError: true},
+			"null":       {value: types.StringNull()},
+			"unknown":    {value: types.StringUnknown()},
+			"whitespace": {value: types.StringValue("\t\n"), wantError: true},
+		}
+		for name, test := range tests {
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+				diagnostics := validateNonEmpty("summary", namedValue{"attribute", test.value})
+				if diagnostics.HasError() != test.wantError {
+					t.Fatalf("diagnostics = %v, wantError = %t", diagnostics, test.wantError)
+				}
+			})
+		}
+	})
+
+	t.Run("resource ari", func(t *testing.T) {
+		t.Parallel()
+		tests := map[string]struct {
+			value     types.String
+			wantError bool
+		}{
+			"site ari":      {value: types.StringValue("ari:cloud:confluence::site/site-id")},
+			"workspace ari": {value: types.StringValue("ari:cloud:studio::workspace/workspace-id")},
+			"bare id":       {value: types.StringValue("site-id"), wantError: true},
+			"other scheme":  {value: types.StringValue("ari:server:jira::site/site-id"), wantError: true},
+			"null":          {value: types.StringNull()},
+		}
+		for name, test := range tests {
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+				diagnostics := validateResourceARI("summary", test.value)
+				if diagnostics.HasError() != test.wantError {
+					t.Fatalf("diagnostics = %v, wantError = %t", diagnostics, test.wantError)
+				}
+			})
+		}
+	})
+}
+
+func TestValidateWorkspaceQueryFields(t *testing.T) {
+	t.Parallel()
+
+	stringSetValue := func(values ...string) types.Set {
+		elements := make([]attr.Value, len(values))
+		for i, value := range values {
+			elements[i] = types.StringValue(value)
+		}
+		set, diagnostics := types.SetValue(types.StringType, elements)
+		if diagnostics.HasError() {
+			t.Fatalf("SetValue() diagnostics = %v", diagnostics)
+		}
+		return set
+	}
+
+	tests := map[string]struct {
+		model     workspaceQueryFieldModel
+		wantError bool
+	}{
+		"populated": {
+			model: workspaceQueryFieldModel{Name: types.StringValue("attributes.type"), Values: stringSetValue("confluence")},
+		},
+		"blank name": {
+			model:     workspaceQueryFieldModel{Name: types.StringValue("  "), Values: stringSetValue("confluence")},
+			wantError: true,
+		},
+		"empty values": {
+			model:     workspaceQueryFieldModel{Name: types.StringValue("attributes.type"), Values: stringSetValue()},
+			wantError: true,
+		},
+		// A filter derived from another object is unknown while validating, and
+		// rejecting it here would refuse a configuration that is fine once the
+		// value resolves. The service layer checks it again after planning.
+		"unknown values": {
+			model: workspaceQueryFieldModel{Name: types.StringValue("attributes.type"), Values: types.SetUnknown(types.StringType)},
+		},
+		"unknown name": {
+			model: workspaceQueryFieldModel{Name: types.StringUnknown(), Values: stringSetValue("confluence")},
+		},
+		"null values": {
+			model: workspaceQueryFieldModel{Name: types.StringValue("attributes.type"), Values: types.SetNull(types.StringType)},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			diagnostics := validateWorkspaceQueryFields("summary", []workspaceQueryFieldModel{test.model})
+			if diagnostics.HasError() != test.wantError {
+				t.Fatalf("diagnostics = %v, wantError = %t", diagnostics, test.wantError)
+			}
+		})
+	}
+}

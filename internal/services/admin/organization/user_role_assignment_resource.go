@@ -134,26 +134,16 @@ func (r *userRoleAssignmentResource) ValidateConfig(ctx context.Context, req res
 }
 
 func validateUserRoleAssignmentValues(values userRoleAssignmentValues) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	attributes := []struct {
-		name  string
-		value types.String
-	}{
-		{"organization_id", values.OrganizationID},
-		{"directory_id", values.DirectoryID},
-		{"account_id", values.AccountID},
-		{"resource", values.Resource},
-		{"role", values.Role},
-	}
-	for _, item := range attributes {
-		if !item.value.IsNull() && !item.value.IsUnknown() && strings.TrimSpace(item.value.ValueString()) == "" {
-			diagnostics.AddError("Invalid user role assignment", fmt.Sprintf("%s must not be empty.", item.name))
-		}
-	}
-	if !values.Resource.IsNull() && !values.Resource.IsUnknown() && !strings.HasPrefix(values.Resource.ValueString(), "ari:cloud:") {
-		diagnostics.AddError("Invalid user role assignment", "resource must be an Atlassian cloud resource identifier beginning with ari:cloud:.")
-	}
-	if !values.Role.IsNull() && !values.Role.IsUnknown() {
+	const summary = "Invalid user role assignment"
+	diagnostics := validateNonEmpty(summary,
+		namedValue{"organization_id", values.OrganizationID},
+		namedValue{"directory_id", values.DirectoryID},
+		namedValue{"account_id", values.AccountID},
+		namedValue{"resource", values.Resource},
+		namedValue{"role", values.Role},
+	)
+	diagnostics.Append(validateResourceARI(summary, values.Resource)...)
+	if knownString(values.Role) {
 		allowedRoles := stringSet("atlassian/user", "atlassian/user-access-admin", "atlassian/admin", "atlassian/guest", "atlassian/contributor", "atlassian/customer", "atlassian/basic", "atlassian/stakeholder", "atlassian/site-admin")
 		if _, allowed := allowedRoles[values.Role.ValueString()]; !allowed {
 			diagnostics.AddError("Invalid user role assignment", fmt.Sprintf("%q is not a supported application role.", values.Role.ValueString()))
