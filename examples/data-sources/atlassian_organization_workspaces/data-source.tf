@@ -10,7 +10,3 @@ data "atlassian_organization_workspaces" "example" {
     }]
   }
 }
-
-output "confluence_resource_ari" {
-  value = one(data.atlassian_organization_workspaces.example.workspaces).id
-}

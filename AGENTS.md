@@ -51,6 +51,13 @@ code. Update it when the same implementation or review mistake recurs.
 - Validate import identity values with the same rules as resource
   configuration. Keep string-ID import for `terraform import` CLI compatibility
   even though Terraform 1.12+ resource identity is preferred.
+- Keep each example under `examples/data-sources` and `examples/resources` to
+  the block being documented, because the file is rendered verbatim into the
+  registry page for that one type. A data source example declares the `data`
+  block and nothing else; a resource example declares the `resource` block plus
+  only the `data` blocks its arguments actually reference. Leave out `output`,
+  `variable`, `provider`, and `terraform` blocks; `examples/provider` is the
+  only place provider configuration belongs.
 
 ## Organization API behavior
 
