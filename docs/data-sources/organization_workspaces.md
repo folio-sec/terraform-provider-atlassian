@@ -3,12 +3,12 @@
 page_title: "atlassian_organization_workspaces Data Source - atlassian"
 subcategory: "Cloud Admin"
 description: |-
-  Searches all pages of an Atlassian organization and returns every matching workspace. A workspace is a single app instance, and its ID is the resource ARI that role assignments refer to.
+  Queries all pages of an Atlassian organization and returns every matching workspace. A workspace is a single app instance, and its ID is the resource ARI that role assignments refer to.
 ---
 
 # atlassian_organization_workspaces (Data Source)
 
-Searches all pages of an Atlassian organization and returns every matching workspace. A workspace is a single app instance, and its ID is the resource ARI that role assignments refer to.
+Queries all pages of an Atlassian organization and returns every matching workspace. A workspace is a single app instance, and its ID is the resource ARI that role assignments refer to.
 
 ## Example Usage
 

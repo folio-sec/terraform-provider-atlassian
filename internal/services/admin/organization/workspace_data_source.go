@@ -46,7 +46,7 @@ func (d *workspacesDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 		return schema.StringAttribute{Description: description, Computed: true}
 	}
 	resp.Schema = schema.Schema{
-		Description: "Searches all pages of an Atlassian organization and returns every matching workspace. A workspace is a single app instance, and its ID is the resource ARI that role assignments refer to.",
+		Description: "Queries all pages of an Atlassian organization and returns every matching workspace. A workspace is a single app instance, and its ID is the resource ARI that role assignments refer to.",
 		Attributes: map[string]schema.Attribute{
 			"organization_id": schema.StringAttribute{Description: "Atlassian organization ID used in the Organization API path.", Required: true},
 			"search":          schema.StringAttribute{Description: "Free-text search matching part of a workspace name or URL.", Optional: true},
@@ -101,9 +101,9 @@ func (d *workspacesDataSource) Read(ctx context.Context, req datasource.ReadRequ
 		return
 	}
 
-	workspaces, err := d.client.SearchWorkspaces(ctx, config.OrganizationID.ValueString(), config.Search.ValueString())
+	workspaces, err := d.client.QueryWorkspaces(ctx, config.OrganizationID.ValueString(), config.Search.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("Unable to search organization workspaces", err.Error())
+		resp.Diagnostics.AddError("Unable to query organization workspaces", err.Error())
 		return
 	}
 	results := make([]workspaceResultModel, 0, len(workspaces))

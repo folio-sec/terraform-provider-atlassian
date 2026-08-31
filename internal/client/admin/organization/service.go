@@ -522,14 +522,14 @@ type Workspace struct {
 	Status  *string
 }
 
-// SearchWorkspaces follows all cursors and returns every workspace in the
+// QueryWorkspaces follows all cursors and returns every workspace in the
 // organization, optionally narrowed by a name or URL substring.
 //
 // The response advertises links.next as a URL but returns a cursor, and the
 // request rejects a cursor sent alongside any other property, so follow-up
 // pages send a cursor-only body instead of amending the original request.
-func (s *Service) SearchWorkspaces(ctx context.Context, organizationID, search string) ([]Workspace, error) {
-	const operation = "search workspaces"
+func (s *Service) QueryWorkspaces(ctx context.Context, organizationID, search string) ([]Workspace, error) {
+	const operation = "query workspaces"
 	limit := pageLimit
 	request := generated.QueryWorkspacesV2JSONRequestBody{Limit: &limit}
 	if search != "" {

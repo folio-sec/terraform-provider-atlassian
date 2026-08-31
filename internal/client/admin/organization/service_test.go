@@ -765,7 +765,7 @@ func TestHasGroupRoleRejectsRepeatedCursor(t *testing.T) {
 	}
 }
 
-func TestSearchWorkspacesFollowsPagesWithCursorOnlyBodies(t *testing.T) {
+func TestQueryWorkspacesFollowsPagesWithCursorOnlyBodies(t *testing.T) {
 	t.Parallel()
 
 	// The response advertises links.next as a URL but returns a cursor, and the
@@ -784,7 +784,7 @@ func TestSearchWorkspacesFollowsPagesWithCursorOnlyBodies(t *testing.T) {
 		return jsonResponse(r, http.StatusOK, `{"data":[{"id":"ari:cloud:jira-software::site/site-id","attributes":{"typeKey":"jira-software"}}],"links":{"next":null}}`)
 	})
 
-	workspaces, err := service.SearchWorkspaces(context.Background(), "org", "folio-sec")
+	workspaces, err := service.QueryWorkspaces(context.Background(), "org", "folio-sec")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -812,15 +812,15 @@ func TestSearchWorkspacesFollowsPagesWithCursorOnlyBodies(t *testing.T) {
 	}
 }
 
-func TestSearchWorkspacesRejectsWorkspaceWithoutID(t *testing.T) {
+func TestQueryWorkspacesRejectsWorkspaceWithoutID(t *testing.T) {
 	t.Parallel()
 
 	service := newTestService(t, func(r *http.Request) *http.Response {
 		return jsonResponse(r, http.StatusOK, `{"data":[{"attributes":{"typeKey":"confluence"}}],"links":{}}`)
 	})
-	_, err := service.SearchWorkspaces(context.Background(), "org", "")
+	_, err := service.QueryWorkspaces(context.Background(), "org", "")
 	if err == nil || !strings.Contains(err.Error(), "without id") {
-		t.Fatalf("SearchWorkspaces() error = %v, want missing id error", err)
+		t.Fatalf("QueryWorkspaces() error = %v, want missing id error", err)
 	}
 }
 
