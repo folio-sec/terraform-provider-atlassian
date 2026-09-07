@@ -80,3 +80,62 @@ actions:
   - target: "$['paths']['/v1/orgs/{orgId}/users/{userId}/role-assignments/revoke']['post']['parameters'][0]['schema']['format']"
     description: Keep the revoke endpoint organization ID consistent with other Organization API operations.
     remove: true
+
+  # Live policy responses (2026-09-07) include undocumented types/statuses,
+  # heterogeneous rules (including arrays), and additional metadata. Keep these
+  # response corrections separate from the documented mutation input models.
+  - target: "$['components']['schemas']['PolicyModel']['properties']['attributes']['properties']['type']['enum']"
+    remove: true
+  - target: "$['components']['schemas']['PolicyModel']['properties']['attributes']['properties']['status']['enum']"
+    remove: true
+  - target: "$['components']['schemas']['Resource']['properties']['applicationStatus']['enum']"
+    remove: true
+  - target: "$['components']['schemas']['PolicyModel']['properties']['attributes']['properties']['rule']"
+    remove: true
+  - target: "$['components']['schemas']"
+    update:
+      PolicyJSON:
+        description: Arbitrary policy response JSON, preserving heterogeneous structures and numeric precision.
+        x-go-type: json.RawMessage
+  - target: "$['components']['schemas']['PolicyModel']['properties']['attributes']['properties']"
+    update:
+      rule:
+        $ref: '#/components/schemas/PolicyJSON'
+      id:
+        type: string
+      ownerId:
+        type: string
+      metadata:
+        $ref: '#/components/schemas/PolicyJSON'
+      createdAt:
+        type: string
+      updatedAt:
+        type: string
+      queryData:
+        type: string
+  - target: "$['components']['schemas']['PolicyModel']['properties']"
+    update:
+      links:
+        $ref: '#/components/schemas/PolicyJSON'
+      message:
+        $ref: '#/components/schemas/PolicyJSON'
+  # Resource meta contains migrationEndDateTime (not migrationEndDataTime)
+  # and server-owned job fields absent from the shared request Meta schema.
+  - target: "$['components']['schemas']['Resource']['properties']['meta']"
+    remove: true
+  - target: "$['components']['schemas']['Resource']['properties']['links']"
+    remove: true
+  - target: "$['components']['schemas']['Resource']['properties']"
+    update:
+      meta:
+        $ref: '#/components/schemas/PolicyJSON'
+      links:
+        $ref: '#/components/schemas/PolicyJSON'
+      metadata:
+        $ref: '#/components/schemas/PolicyJSON'
+      type:
+        type: string
+      createdAt:
+        type: string
+      updatedAt:
+        type: string

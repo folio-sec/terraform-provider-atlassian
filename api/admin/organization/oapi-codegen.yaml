@@ -6,6 +6,11 @@ generate:
   client: true
 output-options:
   include-operation-ids:
+    - getPolicies
+    - getPolicyById
+    - createPolicy
+    - updatePolicy
+    - deletePolicy
     - searchDirectoryUsers
     - getDirectoryUserDetails
     - searchDirectoryGroups

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/control"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
 )
 
@@ -19,6 +20,7 @@ type Config struct {
 // Client composes the API-family-specific services used by the provider.
 type Client struct {
 	Admin        *admin.Client
+	Control      *control.Service
 	Organization *organization.Service
 }
 
@@ -42,6 +44,10 @@ func New(config Config) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("configure Organization API service: %w", err)
 	}
+	controlClient, err := control.NewService(adminClient)
+	if err != nil {
+		return nil, fmt.Errorf("configure Admin Control API service: %w", err)
+	}
 
-	return &Client{Admin: adminClient, Organization: organizationClient}, nil
+	return &Client{Admin: adminClient, Control: controlClient, Organization: organizationClient}, nil
 }

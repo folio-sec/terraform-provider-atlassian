@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/v2.8.0/configuration-schema.json
+package: generated
+output: internal/client/admin/control/generated/client.gen.go
+generate:
+  models: true
+  client: true
+output-options:
+  include-operation-ids:
+    - getDataSecurityPolicies
+    - createDataSecurityPolicy
+    - getDataSecurityPolicy
+    - updateDataSecurityPolicy
+    - deleteDataSecurityPolicy
+  nullable-type: true
+  overlay:
+    path: api/admin/control/overlay.yaml
+    strict: true

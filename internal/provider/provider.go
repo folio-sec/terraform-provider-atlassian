@@ -6,7 +6,9 @@ import (
 	"os"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
+	datasecuritypolicyservice "github.com/folio-sec/terraform-provider-atlassian/internal/services/admin/control/data_security_policy"
 	organizationservice "github.com/folio-sec/terraform-provider-atlassian/internal/services/admin/organization"
+	organizationpolicyservice "github.com/folio-sec/terraform-provider-atlassian/internal/services/admin/organization/policy"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -78,6 +80,8 @@ func (p *AtlassianProvider) Configure(ctx context.Context, req provider.Configur
 func (p *AtlassianProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		organizationservice.NewGroupResource,
+		organizationpolicyservice.NewPolicyResource,
+		datasecuritypolicyservice.NewDataSecurityPolicyResource,
 		organizationservice.NewGroupMembershipResource,
 		organizationservice.NewGroupRoleAssignmentResource,
 		organizationservice.NewUserOrganizationRoleAssignmentResource,
@@ -88,6 +92,8 @@ func (p *AtlassianProvider) Resources(_ context.Context) []func() resource.Resou
 func (p *AtlassianProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		organizationservice.NewGroupDataSource,
+		organizationpolicyservice.NewPolicyDataSource,
+		organizationpolicyservice.NewPoliciesDataSource,
 		organizationservice.NewGroupsDataSource,
 		organizationservice.NewUserDataSource,
 		organizationservice.NewUsersDataSource,

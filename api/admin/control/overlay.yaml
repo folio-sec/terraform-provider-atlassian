@@ -1,0 +1,30 @@
+overlay: 1.0.0
+info:
+  title: Atlassian Admin Control API corrections
+  version: 1.0.0
+actions:
+  # Keep this client specific to data-security V2 policy CRUD. Deletion remains
+  # on V1 because the published Control API does not expose a V2 delete.
+  - target: "$['paths']['/admin/control/v2/orgs/{orgId}/policies']['get']['operationId']"
+    update: getDataSecurityPolicies
+  - target: "$['paths']['/admin/control/v2/orgs/{orgId}/policies']['post']['operationId']"
+    update: createDataSecurityPolicy
+  - target: "$['paths']['/admin/control/v2/orgs/{orgId}/policies/{policyId}']['get']['operationId']"
+    update: getDataSecurityPolicy
+  - target: "$['paths']['/admin/control/v2/orgs/{orgId}/policies/{policyId}']['put']['operationId']"
+    update: updateDataSecurityPolicy
+  - target: "$['paths']['/admin/control/v1/orgs/{orgId}/policies/{policyId}']['delete']['operationId']"
+    update: deleteDataSecurityPolicy
+  # ORG is required by the published cookbook and accepted by the live API,
+  # although it is missing from the OpenAPI PolicyCoverage enum.
+  - target: "$['components']['schemas']['Models.PolicyCoverage']['enum']"
+    update:
+      - UNASSIGNED
+      - ORG
+      - WORKSPACE
+      - CONTAINER
+      - CLASSIFICATION
+      - DC_WORKSPACE
+  # Deleted drafts remain readable as status=deleted after DELETE 202.
+  - target: "$['components']['schemas']['Models.DataSecurityPolicyAttributes']['properties']['status']['enum']"
+    remove: true
