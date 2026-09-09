@@ -227,3 +227,43 @@ func TestRateLimitFinalResponseStillPausesOtherRequests(t *testing.T) {
 		}
 	})
 }
+
+func TestRateLimitPacingExpiresAtReset(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		idle     time.Duration
+		cooldown bool
+		want     time.Duration
+	}{
+		{"expires at reset", 59 * time.Second, false, time.Minute},
+		{"preserves minimum spacing", time.Minute - 100*time.Millisecond, false, time.Minute + 100*time.Millisecond},
+		{"preserves server cooldown", 59 * time.Second, true, 69 * time.Second},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				limiter := &rateLimitedTransport{}
+				start := time.Now()
+				reset := start.Add(time.Minute).Format(time.RFC3339)
+				limiter.observe(&http.Response{StatusCode: http.StatusOK, Header: http.Header{
+					"X-Ratelimit-Remaining": {"2"}, "X-Ratelimit-Reset": {reset},
+				}}, start)
+				time.Sleep(tc.idle)
+				if err := limiter.wait(context.Background()); err != nil {
+					t.Fatal(err)
+				}
+				limiter.observe(&http.Response{StatusCode: http.StatusOK, Header: http.Header{
+					"X-Ratelimit-Remaining": {"1"}, "X-Ratelimit-Reset": {reset},
+				}}, time.Now())
+				if tc.cooldown {
+					limiter.observe(&http.Response{StatusCode: http.StatusTooManyRequests, Header: http.Header{"Retry-After": {"10"}}}, time.Now())
+				}
+				if err := limiter.wait(context.Background()); err != nil {
+					t.Fatal(err)
+				}
+				if got := time.Since(start); got != tc.want {
+					t.Fatalf("dispatch at %s, want %s", got, tc.want)
+				}
+			})
+		})
+	}
+}

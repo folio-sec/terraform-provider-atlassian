@@ -69,7 +69,10 @@ func (t *rateLimitedTransport) wait(ctx context.Context) error {
 		if !until.After(now) {
 			interval := defaultRequestInterval
 			if t.intervalUntil.After(now) && t.interval > interval {
-				interval = t.interval
+				// The server-derived interval expires with its quota window.
+				// Keep the local minimum spacing even when reset is imminent;
+				// blockedUntil independently preserves server cooldowns.
+				interval = max(interval, min(t.interval, t.intervalUntil.Sub(now)))
 			}
 			t.next = now.Add(interval)
 			t.mu.Unlock()
