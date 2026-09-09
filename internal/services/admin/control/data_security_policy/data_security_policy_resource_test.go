@@ -9,6 +9,7 @@ import (
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/control/generated"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -83,6 +84,54 @@ func desiredFixture() desiredPolicy {
 	return desiredPolicy{Name: "draft", Status: "draft", Effect: "allow", Coverage: "ORG", Description: "temporary"}
 }
 
+func TestDataSecurityPolicyValidationAllowsUnknownNestedObjects(t *testing.T) {
+	t.Parallel()
+
+	dataAttributeTypes := dataTypes()
+	attributesTypes := dataAttributeTypes["attributes"].(types.ObjectType).AttrTypes
+	ruleTypes := attributesTypes["rule"].(types.ObjectType).AttrTypes
+	exportTypes := ruleTypes["export"].(types.ObjectType).AttrTypes
+	metadataTypes := attributesTypes["metadata"].(types.ObjectType).AttrTypes
+	export := types.ObjectValueMust(exportTypes, map[string]attr.Value{
+		"effect": types.StringValue("allow"),
+	})
+	rule := types.ObjectValueMust(ruleTypes, map[string]attr.Value{
+		"export": export,
+	})
+	metadata := types.ObjectValueMust(metadataTypes, map[string]attr.Value{
+		"policy_coverage_level": types.StringValue("ORG"),
+		"description":           types.StringValue("temporary"),
+	})
+
+	for name, nested := range map[string]struct {
+		rule     types.Object
+		metadata types.Object
+	}{
+		"rule":     {rule: types.ObjectUnknown(ruleTypes), metadata: metadata},
+		"metadata": {rule: rule, metadata: types.ObjectUnknown(metadataTypes)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			attributes := types.ObjectValueMust(attributesTypes, map[string]attr.Value{
+				"type":     types.StringValue("data-security"),
+				"name":     types.StringValue("draft"),
+				"status":   types.StringValue("draft"),
+				"rule":     nested.rule,
+				"metadata": nested.metadata,
+			})
+			data := types.ObjectValueMust(dataAttributeTypes, map[string]attr.Value{
+				"id":         types.StringNull(),
+				"type":       types.StringValue("policy"),
+				"attributes": attributes,
+			})
+			_, diagnostics := planValues(context.Background(), resourceModel{Data: data}, true)
+			if diagnostics.HasError() {
+				t.Fatal(diagnostics)
+			}
+		})
+	}
+}
+
 func TestDataSecurityPolicyRequestModels(t *testing.T) {
 	t.Parallel()
 
@@ -134,6 +183,22 @@ func TestDataSecurityPolicyReadDeletedRemovesState(t *testing.T) {
 				t.Fatalf("state = %v, diagnostics = %v", response.State, response.Diagnostics)
 			}
 		})
+	}
+}
+
+func TestDataSecurityPolicyReadPreservesStateOnInvalidDeletedResponse(t *testing.T) {
+	t.Parallel()
+
+	subject := &dataSecurityPolicyResource{client: &fakePolicyClient{
+		get: func(context.Context, string, string) (generated.ModelsDataSecurityPolicy, error) {
+			return testPolicy(t, "deleted"), errors.New("response ID does not match requested ID")
+		},
+	}}
+	state, identity := testState(t, subject)
+	response := resource.ReadResponse{State: state, Identity: identity}
+	subject.Read(context.Background(), resource.ReadRequest{State: state}, &response)
+	if !response.Diagnostics.HasError() || response.State.Raw.IsNull() {
+		t.Fatalf("state = %v, diagnostics = %v", response.State, response.Diagnostics)
 	}
 }
 
@@ -190,6 +255,27 @@ func TestDataSecurityPolicyDeleteCompletesOnDeletedStatus(t *testing.T) {
 	subject.Delete(context.Background(), resource.DeleteRequest{State: state}, &response)
 	if response.Diagnostics.HasError() || deletes != 1 || reads != 2 {
 		t.Fatalf("deletes = %d, reads = %d, diagnostics = %v", deletes, reads, response.Diagnostics)
+	}
+}
+
+func TestDataSecurityPolicyDeleteRejectsInvalidDeletedResponse(t *testing.T) {
+	t.Parallel()
+
+	deletes := 0
+	subject := &dataSecurityPolicyResource{client: &fakePolicyClient{
+		get: func(context.Context, string, string) (generated.ModelsDataSecurityPolicy, error) {
+			return testPolicy(t, "deleted"), errors.New("response ID does not match requested ID")
+		},
+		delete: func(context.Context, string, string) error {
+			deletes++
+			return nil
+		},
+	}}
+	state, _ := testState(t, subject)
+	var response resource.DeleteResponse
+	subject.Delete(context.Background(), resource.DeleteRequest{State: state}, &response)
+	if !response.Diagnostics.HasError() || deletes != 0 {
+		t.Fatalf("deletes = %d, diagnostics = %v", deletes, response.Diagnostics)
 	}
 }
 

@@ -50,49 +50,69 @@ func planValues(ctx context.Context, model resourceModel, allowUnknown bool) (de
 }
 
 func nestedPlanValues(ctx context.Context, attributes attributesModel, allowUnknown bool) (desiredPolicy, diag.Diagnostics) {
-	var desired desiredPolicy
-	var diagnostics diag.Diagnostics
-	var rule ruleModel
-	var metadata metadataModel
-	diagnostics.Append(attributes.Rule.As(ctx, &rule, basetypes.ObjectAsOptions{})...)
-	diagnostics.Append(attributes.Metadata.As(ctx, &metadata, basetypes.ObjectAsOptions{})...)
-	if diagnostics.HasError() {
-		return desired, diagnostics
+	desired := desiredPolicy{
+		Name:   attributes.Name.ValueString(),
+		Status: attributes.Status.ValueString(),
 	}
-	for name, value := range map[string]types.String{
+	var diagnostics diag.Diagnostics
+	desired.Coverage, desired.Description, diagnostics = metadataPlanValues(ctx, attributes.Metadata, allowUnknown)
+	effect, ruleDiagnostics := ruleEffectPlanValue(ctx, attributes.Rule, allowUnknown)
+	diagnostics.Append(ruleDiagnostics...)
+	desired.Effect = effect
+	return desired, diagnostics
+}
+
+func metadataPlanValues(ctx context.Context, value types.Object, allowUnknown bool) (string, string, diag.Diagnostics) {
+	var diagnostics diag.Diagnostics
+	if value.IsUnknown() {
+		return "", "", diagnostics
+	}
+	var metadata metadataModel
+	diagnostics.Append(value.As(ctx, &metadata, basetypes.ObjectAsOptions{})...)
+	if diagnostics.HasError() {
+		return "", "", diagnostics
+	}
+	for name, attribute := range map[string]types.String{
 		"metadata.policy_coverage_level": metadata.PolicyCoverageLevel,
 		"metadata.description":           metadata.Description,
 	} {
-		if value.IsNull() || (!allowUnknown && value.IsUnknown()) {
+		if attribute.IsNull() || (!allowUnknown && attribute.IsUnknown()) {
 			diagnostics.AddError("Invalid data-security policy", name+" must be known and non-null.")
 		}
 	}
 	if !metadata.PolicyCoverageLevel.IsUnknown() && metadata.PolicyCoverageLevel.ValueString() != "ORG" {
 		diagnostics.AddError("Unsupported data-security coverage", "Only ORG policy coverage has a verified lifecycle.")
 	}
+	return metadata.PolicyCoverageLevel.ValueString(), metadata.Description.ValueString(), diagnostics
+}
+
+func ruleEffectPlanValue(ctx context.Context, value types.Object, allowUnknown bool) (string, diag.Diagnostics) {
+	var diagnostics diag.Diagnostics
+	if value.IsUnknown() {
+		return "", diagnostics
+	}
+	var rule ruleModel
+	diagnostics.Append(value.As(ctx, &rule, basetypes.ObjectAsOptions{})...)
+	if diagnostics.HasError() {
+		return "", diagnostics
+	}
 	if rule.Export.IsUnknown() && allowUnknown {
-		return desired, diagnostics
+		return "", diagnostics
 	}
 	if rule.Export.IsNull() || rule.Export.IsUnknown() {
 		diagnostics.AddError("Invalid data-security policy", "rule.export must be known and non-null.")
-		return desired, diagnostics
+		return "", diagnostics
 	}
 	var effect effectModel
 	diagnostics.Append(rule.Export.As(ctx, &effect, basetypes.ObjectAsOptions{})...)
-	desired = desiredPolicy{
-		Name:        attributes.Name.ValueString(),
-		Status:      attributes.Status.ValueString(),
-		Effect:      effect.Effect.ValueString(),
-		Coverage:    metadata.PolicyCoverageLevel.ValueString(),
-		Description: metadata.Description.ValueString(),
-	}
-	if !effect.Effect.IsUnknown() && desired.Effect != "allow" && desired.Effect != "block" {
+	result := effect.Effect.ValueString()
+	if !effect.Effect.IsUnknown() && result != "allow" && result != "block" {
 		diagnostics.AddError("Unsupported data-security rule", "rule.export.effect must be allow or block.")
 	}
 	if !allowUnknown && effect.Effect.IsUnknown() {
 		diagnostics.AddError("Invalid data-security policy", "rule.export.effect must be known before a mutation.")
 	}
-	return desired, diagnostics
+	return result, diagnostics
 }
 
 func validateAttributes(attributes attributesModel, allowUnknown bool) diag.Diagnostics {
@@ -186,7 +206,7 @@ func (r *dataSecurityPolicyResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 	policy, err := r.client.GetDataSecurityPolicy(ctx, model.OrganizationID.ValueString(), model.PolicyID.ValueString())
-	if notFound(err) || policy.Attributes.Status != nil && *policy.Attributes.Status == "deleted" {
+	if notFound(err) || (err == nil && policy.Attributes.Status != nil && *policy.Attributes.Status == "deleted") {
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -251,7 +271,7 @@ func (r *dataSecurityPolicyResource) Delete(ctx context.Context, req resource.De
 	}
 	organizationID, policyID := model.OrganizationID.ValueString(), model.PolicyID.ValueString()
 	policy, err := r.client.GetDataSecurityPolicy(opCtx, organizationID, policyID)
-	if notFound(err) || policy.Attributes.Status != nil && *policy.Attributes.Status == "deleted" {
+	if notFound(err) || (err == nil && policy.Attributes.Status != nil && *policy.Attributes.Status == "deleted") {
 		return
 	}
 	if err != nil {
