@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -72,11 +73,23 @@ func NewWithBaseURL(baseURL *url.URL, apiKey string, httpClient *http.Client) (*
 	baseURLCopy := *baseURL
 	baseURLCopy.Path = strings.TrimRight(baseURLCopy.Path, "/")
 	retryClient := retryablehttp.NewClient()
-	retryClient.HTTPClient = httpClient
+	// Copy the caller's client so installing shared throttling does not mutate
+	// http.DefaultClient or a transport used by another provider configuration.
+	limitedClient := *httpClient
+	transport := httpClient.Transport
+	if transport == nil {
+		transport = http.DefaultTransport
+	}
+	limitedClient.Transport = &rateLimitedTransport{base: transport}
+	retryClient.HTTPClient = &limitedClient
 	retryClient.Logger = nil
 	retryClient.RetryMax = 4
 	retryClient.ErrorHandler = retryablehttp.PassthroughErrorHandler
+	retryClient.Backoff = sharedRateLimitBackoff
 	retryClient.CheckRetry = func(ctx context.Context, response *http.Response, err error) (bool, error) {
+		if errors.Is(err, errRateLimitWait) {
+			return false, err
+		}
 		if disableRetry, _ := ctx.Value(disableRetryContextKey{}).(bool); disableRetry {
 			// A rate limited request is rejected before the server applies it, so
 			// resending it cannot duplicate a mutation. Any other outcome stays
