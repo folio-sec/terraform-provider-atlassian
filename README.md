@@ -61,6 +61,28 @@ resource "atlassian_organization_user_role_assignment" "jira" {
 }
 ```
 
+## API rate limiting
+
+Each provider client spaces Admin API requests at least 200 milliseconds apart
+(including retries). This is a conservative local pacing policy, not an
+Atlassian quota. Valid `X-RateLimit-Remaining` and `X-RateLimit-Reset` headers
+can slow requests further; an exhausted budget pauses subsequent requests
+until reset.
+
+A `429` response pauses all subsequent requests on that client, including
+requests to other Admin API endpoints. The provider honors `Retry-After` and
+exhausted-budget reset deadlines, and otherwise uses the reset header or
+exponential backoff with jitter. Requests already in flight cannot be recalled.
+Separate provider configurations and Terraform processes do not share the
+limiter; coordinate concurrent runs that use the same server quota.
+
+A request fails if a single wait for permission to send exceeds five minutes,
+or earlier if its context is cancelled. Server deadlines are not shortened to
+force a retry. The existing limit of four retries remains in effect. Mutations
+are retried only after rate limiting; ambiguous failures retain the existing
+read-back verification behavior. Large plans and applies may take longer as
+requests are paced, without changing membership state or caching reads.
+
 ## Contribution
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
