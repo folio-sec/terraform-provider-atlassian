@@ -37,7 +37,8 @@ type apiClient interface {
 // client. Pagination, Terraform-facing types, and idempotency policy remain in
 // this handwritten layer.
 type Service struct {
-	client apiClient
+	client   apiClient
+	policies generated.ClientInterface
 }
 
 func NewService(client *admin.Client) (*Service, error) {
@@ -49,7 +50,7 @@ func NewService(client *admin.Client) (*Service, error) {
 	if err != nil {
 		return nil, fmt.Errorf("configure Organization API client: %w", err)
 	}
-	return &Service{client: generatedClient}, nil
+	return &Service{client: generatedClient, policies: generatedClient.ClientInterface}, nil
 }
 
 type SearchUsersRequest struct {

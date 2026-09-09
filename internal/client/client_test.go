@@ -32,7 +32,7 @@ func TestNew(t *testing.T) {
 			if err != nil {
 				t.Fatalf("New() error = %v", err)
 			}
-			if got.Admin == nil || got.Organization == nil {
+			if got.Admin == nil || got.Control == nil || got.Organization == nil {
 				t.Fatal("Admin API services are nil")
 			}
 		})

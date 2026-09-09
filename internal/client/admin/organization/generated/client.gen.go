@@ -72,6 +72,66 @@ func (e ClaimStatus) Valid() bool {
 	}
 }
 
+// Defines values for ErrorInternalErrorModelErrorsCode.
+const (
+	ADMIN5001 ErrorInternalErrorModelErrorsCode = "ADMIN-500-1"
+)
+
+// Valid indicates whether the value is a known member of the ErrorInternalErrorModelErrorsCode enum.
+func (e ErrorInternalErrorModelErrorsCode) Valid() bool {
+	switch e {
+	case ADMIN5001:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ErrorInvalidResourceModelErrorsCode.
+const (
+	ADMIN4004 ErrorInvalidResourceModelErrorsCode = "ADMIN-400-4"
+)
+
+// Valid indicates whether the value is a known member of the ErrorInvalidResourceModelErrorsCode enum.
+func (e ErrorInvalidResourceModelErrorsCode) Valid() bool {
+	switch e {
+	case ADMIN4004:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ErrorOrgNotFoundModelErrorsCode.
+const (
+	ADMIN4042 ErrorOrgNotFoundModelErrorsCode = "ADMIN-404-2"
+)
+
+// Valid indicates whether the value is a known member of the ErrorOrgNotFoundModelErrorsCode enum.
+func (e ErrorOrgNotFoundModelErrorsCode) Valid() bool {
+	switch e {
+	case ADMIN4042:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ErrorPolicyNotFoundModelErrorsCode.
+const (
+	ADMIN4045 ErrorPolicyNotFoundModelErrorsCode = "ADMIN-404-5"
+)
+
+// Valid indicates whether the value is a known member of the ErrorPolicyNotFoundModelErrorsCode enum.
+func (e ErrorPolicyNotFoundModelErrorsCode) Valid() bool {
+	switch e {
+	case ADMIN4045:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GroupSortByDirection.
 const (
 	GroupSortByDirectionAsc  GroupSortByDirection = "asc"
@@ -450,6 +510,123 @@ func (e PlatformRole) Valid() bool {
 	}
 }
 
+// Defines values for PolicyCreateModelAttributesStatus.
+const (
+	PolicyCreateModelAttributesStatusDisabled PolicyCreateModelAttributesStatus = "disabled"
+	PolicyCreateModelAttributesStatusEnabled  PolicyCreateModelAttributesStatus = "enabled"
+)
+
+// Valid indicates whether the value is a known member of the PolicyCreateModelAttributesStatus enum.
+func (e PolicyCreateModelAttributesStatus) Valid() bool {
+	switch e {
+	case PolicyCreateModelAttributesStatusDisabled:
+		return true
+	case PolicyCreateModelAttributesStatusEnabled:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PolicyCreateModelAttributesType.
+const (
+	PolicyCreateModelAttributesTypeDataResidency PolicyCreateModelAttributesType = "data-residency"
+	PolicyCreateModelAttributesTypeIpAllowlist   PolicyCreateModelAttributesType = "ip-allowlist"
+)
+
+// Valid indicates whether the value is a known member of the PolicyCreateModelAttributesType enum.
+func (e PolicyCreateModelAttributesType) Valid() bool {
+	switch e {
+	case PolicyCreateModelAttributesTypeDataResidency:
+		return true
+	case PolicyCreateModelAttributesTypeIpAllowlist:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PolicyCreateModelType.
+const (
+	PolicyCreateModelTypePolicy PolicyCreateModelType = "policy"
+)
+
+// Valid indicates whether the value is a known member of the PolicyCreateModelType enum.
+func (e PolicyCreateModelType) Valid() bool {
+	switch e {
+	case PolicyCreateModelTypePolicy:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PolicyModelType.
+const (
+	PolicyModelTypePolicy PolicyModelType = "policy"
+)
+
+// Valid indicates whether the value is a known member of the PolicyModelType enum.
+func (e PolicyModelType) Valid() bool {
+	switch e {
+	case PolicyModelTypePolicy:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PolicyUpdateModelAttributesStatus.
+const (
+	PolicyUpdateModelAttributesStatusDisabled PolicyUpdateModelAttributesStatus = "disabled"
+	PolicyUpdateModelAttributesStatusEnabled  PolicyUpdateModelAttributesStatus = "enabled"
+)
+
+// Valid indicates whether the value is a known member of the PolicyUpdateModelAttributesStatus enum.
+func (e PolicyUpdateModelAttributesStatus) Valid() bool {
+	switch e {
+	case PolicyUpdateModelAttributesStatusDisabled:
+		return true
+	case PolicyUpdateModelAttributesStatusEnabled:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PolicyUpdateModelAttributesType.
+const (
+	PolicyUpdateModelAttributesTypeDataResidency PolicyUpdateModelAttributesType = "data-residency"
+	PolicyUpdateModelAttributesTypeIpAllowlist   PolicyUpdateModelAttributesType = "ip-allowlist"
+)
+
+// Valid indicates whether the value is a known member of the PolicyUpdateModelAttributesType enum.
+func (e PolicyUpdateModelAttributesType) Valid() bool {
+	switch e {
+	case PolicyUpdateModelAttributesTypeDataResidency:
+		return true
+	case PolicyUpdateModelAttributesTypeIpAllowlist:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PolicyUpdateModelType.
+const (
+	PolicyUpdateModelTypePolicy PolicyUpdateModelType = "policy"
+)
+
+// Valid indicates whether the value is a known member of the PolicyUpdateModelType enum.
+func (e PolicyUpdateModelType) Valid() bool {
+	switch e {
+	case PolicyUpdateModelTypePolicy:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RoleApiRequestRole.
 const (
 	RoleApiRequestRoleAtlassianadmin           RoleApiRequestRole = "atlassian/admin"
@@ -724,6 +901,11 @@ type AccountStatus string
 // Example: atlassian
 type AccountType string
 
+// AllowIfContainedRule Applicable when policy type is `ip-allowlist` or `data-residency`
+type AllowIfContainedRule struct {
+	In []string `json:"in"`
+}
+
 // AndOperator Returns workspaces matching all of the nested query variants. Absence of nested variants makes this operator no-op.
 type AndOperator struct {
 	// And Returns workspaces matching all of the nested query variants. Absence of nested variants makes this operator no-op.
@@ -833,6 +1015,94 @@ type Error struct {
 	Title *string `json:"title,omitempty"`
 }
 
+// ErrorInternalErrorModel Internal error
+type ErrorInternalErrorModel struct {
+	Errors *[]struct {
+		Code *ErrorInternalErrorModelErrorsCode `json:"code,omitempty"`
+
+		// Detail Human-readable explanation specific to this occurrence of the error, and a suggested action to resolve it.
+		Detail *string `json:"detail,omitempty"`
+
+		// Id A unique identifier for this particular occurrence of the error.
+		Id *string `json:"id,omitempty"`
+
+		// Status The HTTP status code applicable to this error.
+		Status *string `json:"status,omitempty"`
+
+		// Title Human-readable summary of the error.
+		Title *string `json:"title,omitempty"`
+	} `json:"errors,omitempty"`
+}
+
+// ErrorInternalErrorModelErrorsCode defines model for ErrorInternalErrorModel.Errors.Code.
+type ErrorInternalErrorModelErrorsCode string
+
+// ErrorInvalidResourceModel Resource is not valid
+type ErrorInvalidResourceModel struct {
+	Errors *[]struct {
+		Code *ErrorInvalidResourceModelErrorsCode `json:"code,omitempty"`
+
+		// Detail Human-readable explanation specific to this occurrence of the error, and a suggested action to resolve it.
+		Detail *string `json:"detail,omitempty"`
+
+		// Id A unique identifier for this particular occurrence of the error.
+		Id *string `json:"id,omitempty"`
+
+		// Status The HTTP status code applicable to this error.
+		Status *string `json:"status,omitempty"`
+
+		// Title Human-readable summary of the error.
+		Title *string `json:"title,omitempty"`
+	} `json:"errors,omitempty"`
+}
+
+// ErrorInvalidResourceModelErrorsCode defines model for ErrorInvalidResourceModel.Errors.Code.
+type ErrorInvalidResourceModelErrorsCode string
+
+// ErrorOrgNotFoundModel Organization not found
+type ErrorOrgNotFoundModel struct {
+	Errors *[]struct {
+		Code *ErrorOrgNotFoundModelErrorsCode `json:"code,omitempty"`
+
+		// Detail Human-readable explanation specific to this occurrence of the error, and a suggested action to resolve it.
+		Detail *string `json:"detail,omitempty"`
+
+		// Id A unique identifier for this particular occurrence of the error.
+		Id *string `json:"id,omitempty"`
+
+		// Status The HTTP status code applicable to this error.
+		Status *string `json:"status,omitempty"`
+
+		// Title Human-readable summary of the error.
+		Title *string `json:"title,omitempty"`
+	} `json:"errors,omitempty"`
+}
+
+// ErrorOrgNotFoundModelErrorsCode defines model for ErrorOrgNotFoundModel.Errors.Code.
+type ErrorOrgNotFoundModelErrorsCode string
+
+// ErrorPolicyNotFoundModel Policy not found
+type ErrorPolicyNotFoundModel struct {
+	Errors *[]struct {
+		Code *ErrorPolicyNotFoundModelErrorsCode `json:"code,omitempty"`
+
+		// Detail Human-readable explanation specific to this occurrence of the error, and a suggested action to resolve it.
+		Detail *string `json:"detail,omitempty"`
+
+		// Id A unique identifier for this particular occurrence of the error.
+		Id *string `json:"id,omitempty"`
+
+		// Status The HTTP status code applicable to this error.
+		Status *string `json:"status,omitempty"`
+
+		// Title Human-readable summary of the error.
+		Title *string `json:"title,omitempty"`
+	} `json:"errors,omitempty"`
+}
+
+// ErrorPolicyNotFoundModelErrorsCode defines model for ErrorPolicyNotFoundModel.Errors.Code.
+type ErrorPolicyNotFoundModelErrorsCode string
+
 // Errors defines model for Errors.
 type Errors struct {
 	Errors *[]Error `json:"errors,omitempty"`
@@ -937,6 +1207,11 @@ type LinkSelfModel struct {
 	Self string `json:"self"`
 }
 
+// Links defines model for Links.
+type Links struct {
+	Ticket *string `json:"ticket,omitempty"`
+}
+
 // ManagementAccess Management access for the group. This is used to determine if the group can be deleted, modified, or read.
 type ManagementAccess struct {
 	// Deletable If true, the group can be deleted.
@@ -956,6 +1231,14 @@ type ManagementAccess struct {
 //   - `suspended` - the account is suspended in all directories within the organization, to which the requestor has permission to access.
 //   - `no_membership` - the account is in none of the organization’s directories.
 type MembershipStatus string
+
+// Meta defines model for Meta.
+type Meta struct {
+	AtlassianAccountId     *string `json:"atlassianAccountId,omitempty"`
+	MigrationEndDataTime   *string `json:"migrationEndDataTime,omitempty"`
+	MigrationStartDateTime *string `json:"migrationStartDateTime,omitempty"`
+	ScheduledDate          *string `json:"scheduledDate,omitempty"`
+}
 
 // MetaV2 defines model for MetaV2.
 type MetaV2 struct {
@@ -1730,11 +2013,107 @@ type PageDataResponseV2 struct {
 // PlatformRole Example: ["atlassian/org-admin"]
 type PlatformRole string
 
+// Policy defines model for Policy.
+type Policy struct {
+	Data *PolicyModel `json:"data,omitempty"`
+}
+
+// PolicyCreateInput defines model for PolicyCreateInput.
+type PolicyCreateInput struct {
+	Data *PolicyCreateModel `json:"data,omitempty"`
+}
+
+// PolicyCreateModel defines model for PolicyCreateModel.
+type PolicyCreateModel struct {
+	// Attributes Attributes of this object
+	Attributes struct {
+		// Name Name of this Policy
+		Name *string `json:"name,omitempty"`
+
+		// Resources list of resources Policy is associated with
+		Resources *[]ResourceInput `json:"resources,omitempty"`
+
+		// Rule Rule of the Policy
+		Rule *PolicyCreateModel_Attributes_Rule `json:"rule,omitempty"`
+
+		// Status Status of this Policy
+		Status *PolicyCreateModelAttributesStatus `json:"status,omitempty"`
+
+		// Type Type of this Policy
+		Type PolicyCreateModelAttributesType `json:"type"`
+	} `json:"attributes"`
+
+	// Type Type of this object
+	Type PolicyCreateModelType `json:"type"`
+}
+
+// PolicyCreateModel_Attributes_Rule Rule of the Policy
+type PolicyCreateModel_Attributes_Rule struct {
+	union json.RawMessage
+}
+
+// PolicyCreateModelAttributesStatus Status of this Policy
+type PolicyCreateModelAttributesStatus string
+
+// PolicyCreateModelAttributesType Type of this Policy
+type PolicyCreateModelAttributesType string
+
+// PolicyCreateModelType Type of this object
+type PolicyCreateModelType string
+
 // PolicyFilter defines model for PolicyFilter.
 type PolicyFilter struct {
 	// Policies Returns workspaces, which contains policy listed
 	Policies *[]string `json:"policies,omitempty"`
 }
+
+// PolicyJSON Arbitrary policy response JSON, preserving heterogeneous structures and numeric precision.
+type PolicyJSON = json.RawMessage
+
+// PolicyModel defines model for PolicyModel.
+type PolicyModel struct {
+	// Attributes Attributes of this object
+	Attributes struct {
+		CreatedAt *string `json:"createdAt,omitempty"`
+		Id        *string `json:"id,omitempty"`
+
+		// Metadata Arbitrary policy response JSON, preserving heterogeneous structures and numeric precision.
+		Metadata *PolicyJSON `json:"metadata,omitempty"`
+
+		// Name Name of this Policy
+		Name      *string `json:"name,omitempty"`
+		OwnerId   *string `json:"ownerId,omitempty"`
+		QueryData *string `json:"queryData,omitempty"`
+
+		// Resources list of resources Policy is associated with
+		Resources *[]Resource `json:"resources,omitempty"`
+
+		// Rule Arbitrary policy response JSON, preserving heterogeneous structures and numeric precision.
+		Rule *PolicyJSON `json:"rule,omitempty"`
+
+		// Status Status of this Policy
+		Status *string `json:"status,omitempty"`
+
+		// Type Type of this Policy
+		Type      string  `json:"type"`
+		UpdatedAt *string `json:"updatedAt,omitempty"`
+	} `json:"attributes"`
+
+	// Id Unique identifier of the Policy
+	Id string `json:"id"`
+
+	// Links Arbitrary policy response JSON, preserving heterogeneous structures and numeric precision.
+	Links *PolicyJSON `json:"links,omitempty"`
+
+	// Message Arbitrary policy response JSON, preserving heterogeneous structures and numeric precision.
+	Message *PolicyJSON `json:"message,omitempty"`
+
+	// Type Type of this object
+	Type PolicyModelType `json:"type"`
+}
+
+// PolicyModelType Type of this object
+type PolicyModelType string
 
 // PolicyModelV2 defines model for PolicyModelV2.
 type PolicyModelV2 struct {
@@ -1744,6 +2123,68 @@ type PolicyModelV2 struct {
 	Id   *string `json:"id,omitempty"`
 	Type *string `json:"type,omitempty"`
 }
+
+// PolicyPage defines model for PolicyPage.
+type PolicyPage struct {
+	// Data 0 or more values of Policy are returned
+	Data *[]PolicyModel `json:"data,omitempty"`
+
+	// Links Links for a Paginated response
+	Links *LinkPageModel `json:"links,omitempty"`
+	Meta  *struct {
+		// Next Value for the next cursor
+		Next nullable.Nullable[string] `json:"next,omitempty"`
+
+		// PageSize Number of items in a page
+		PageSize *int `json:"page_size,omitempty"`
+	} `json:"meta,omitempty"`
+}
+
+// PolicyUpdateInput defines model for PolicyUpdateInput.
+type PolicyUpdateInput struct {
+	Data *PolicyUpdateModel `json:"data,omitempty"`
+}
+
+// PolicyUpdateModel defines model for PolicyUpdateModel.
+type PolicyUpdateModel struct {
+	// Attributes Attributes of this object
+	Attributes struct {
+		// Name Name of this Policy
+		Name *string `json:"name,omitempty"`
+
+		// Resources list of resources Policy is associated with
+		Resources *[]ResourceInput `json:"resources,omitempty"`
+
+		// Rule Rule of the Policy
+		Rule *PolicyUpdateModel_Attributes_Rule `json:"rule,omitempty"`
+
+		// Status Status of this Policy
+		Status *PolicyUpdateModelAttributesStatus `json:"status,omitempty"`
+
+		// Type Type of this Policy
+		Type PolicyUpdateModelAttributesType `json:"type"`
+	} `json:"attributes"`
+
+	// Id Unique identifier of the Policy
+	Id *string `json:"id,omitempty"`
+
+	// Type Type of this object
+	Type PolicyUpdateModelType `json:"type"`
+}
+
+// PolicyUpdateModel_Attributes_Rule Rule of the Policy
+type PolicyUpdateModel_Attributes_Rule struct {
+	union json.RawMessage
+}
+
+// PolicyUpdateModelAttributesStatus Status of this Policy
+type PolicyUpdateModelAttributesStatus string
+
+// PolicyUpdateModelAttributesType Type of this Policy
+type PolicyUpdateModelAttributesType string
+
+// PolicyUpdateModelType Type of this object
+type PolicyUpdateModelType string
 
 // ProxyError defines model for ProxyError.
 type ProxyError struct {
@@ -1759,10 +2200,36 @@ type QueryVariants struct {
 	union json.RawMessage
 }
 
+// Resource defines model for Resource.
+type Resource struct {
+	// ApplicationStatus Status of policy application on resource
+	ApplicationStatus string  `json:"applicationStatus"`
+	CreatedAt         *string `json:"createdAt,omitempty"`
+	Id                string  `json:"id"`
+
+	// Links Arbitrary policy response JSON, preserving heterogeneous structures and numeric precision.
+	Links *PolicyJSON `json:"links,omitempty"`
+
+	// Meta Arbitrary policy response JSON, preserving heterogeneous structures and numeric precision.
+	Meta *PolicyJSON `json:"meta,omitempty"`
+
+	// Metadata Arbitrary policy response JSON, preserving heterogeneous structures and numeric precision.
+	Metadata  *PolicyJSON `json:"metadata,omitempty"`
+	Type      *string     `json:"type,omitempty"`
+	UpdatedAt *string     `json:"updatedAt,omitempty"`
+}
+
 // ResourceId The resource ID from the role assignment relationship. The resource ID is in the Atlassian  Resource Identifier (ARI) format.
 //
 // Example: ari:cloud:jira-core::site/1
 type ResourceId = string
+
+// ResourceInput defines model for ResourceInput.
+type ResourceInput struct {
+	Id    string `json:"id"`
+	Links *Links `json:"links,omitempty"`
+	Meta  *Meta  `json:"meta,omitempty"`
+}
 
 // ResourceOwner The resource owner of the product.
 //
@@ -1942,6 +2409,42 @@ type RoleIdsParam = []string
 // UserIdParam defines model for userIdParam.
 type UserIdParam = string
 
+// ErrorInternalError Internal error
+type ErrorInternalError = ErrorInternalErrorModel
+
+// ErrorInvalidResource Resource is not valid
+type ErrorInvalidResource = ErrorInvalidResourceModel
+
+// ErrorRateLimited defines model for Error.RateLimited.
+type ErrorRateLimited = ProxyError
+
+// ErrorUnauthenticated defines model for Error.Unauthenticated.
+type ErrorUnauthenticated = ProxyError
+
+// GetPoliciesParams defines parameters for GetPolicies.
+type GetPoliciesParams struct {
+	// Cursor Sets the starting point for the page of results to return.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Type Sets the type for the page of policies to return.
+	Type *string `form:"type,omitempty" json:"type,omitempty"`
+}
+
+// DeletePolicy404JSONResponseBody defines parameters for DeletePolicy.
+type DeletePolicy404JSONResponseBody struct {
+	union json.RawMessage
+}
+
+// GetPolicyById404JSONResponseBody defines parameters for GetPolicyById.
+type GetPolicyById404JSONResponseBody struct {
+	union json.RawMessage
+}
+
+// UpdatePolicy404JSONResponseBody defines parameters for UpdatePolicy.
+type UpdatePolicy404JSONResponseBody struct {
+	union json.RawMessage
+}
+
 // AssignOrganizationLevelRole401JSONResponseBody defines parameters for AssignOrganizationLevelRole.
 type AssignOrganizationLevelRole401JSONResponseBody struct {
 	union json.RawMessage
@@ -2064,6 +2567,12 @@ type GetUserRoleAssignmentsParams struct {
 
 // GetUserRoleAssignmentsParamsRoleIds defines parameters for GetUserRoleAssignments.
 type GetUserRoleAssignmentsParamsRoleIds string
+
+// CreatePolicyJSONRequestBody defines body for CreatePolicy for application/json ContentType.
+type CreatePolicyJSONRequestBody = PolicyCreateInput
+
+// UpdatePolicyJSONRequestBody defines body for UpdatePolicy for application/json ContentType.
+type UpdatePolicyJSONRequestBody = PolicyUpdateInput
 
 // AssignOrganizationLevelRoleJSONRequestBody defines body for AssignOrganizationLevelRole for application/json ContentType.
 type AssignOrganizationLevelRoleJSONRequestBody = OrganizationLevelRoleApiRequest
@@ -2421,6 +2930,78 @@ func (a WorkspaceModel_Attributes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
+// AsAllowIfContainedRule returns the union data inside the PolicyCreateModel_Attributes_Rule as a AllowIfContainedRule
+func (t PolicyCreateModel_Attributes_Rule) AsAllowIfContainedRule() (AllowIfContainedRule, error) {
+	var body AllowIfContainedRule
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAllowIfContainedRule overwrites any union data inside the PolicyCreateModel_Attributes_Rule as the provided AllowIfContainedRule
+func (t *PolicyCreateModel_Attributes_Rule) FromAllowIfContainedRule(v AllowIfContainedRule) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAllowIfContainedRule performs a merge with any union data inside the PolicyCreateModel_Attributes_Rule, using the provided AllowIfContainedRule
+func (t *PolicyCreateModel_Attributes_Rule) MergeAllowIfContainedRule(v AllowIfContainedRule) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t PolicyCreateModel_Attributes_Rule) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *PolicyCreateModel_Attributes_Rule) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsAllowIfContainedRule returns the union data inside the PolicyUpdateModel_Attributes_Rule as a AllowIfContainedRule
+func (t PolicyUpdateModel_Attributes_Rule) AsAllowIfContainedRule() (AllowIfContainedRule, error) {
+	var body AllowIfContainedRule
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromAllowIfContainedRule overwrites any union data inside the PolicyUpdateModel_Attributes_Rule as the provided AllowIfContainedRule
+func (t *PolicyUpdateModel_Attributes_Rule) FromAllowIfContainedRule(v AllowIfContainedRule) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeAllowIfContainedRule performs a merge with any union data inside the PolicyUpdateModel_Attributes_Rule, using the provided AllowIfContainedRule
+func (t *PolicyUpdateModel_Attributes_Rule) MergeAllowIfContainedRule(v AllowIfContainedRule) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t PolicyUpdateModel_Attributes_Rule) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *PolicyUpdateModel_Attributes_Rule) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // AsAndOperator returns the union data inside the QueryVariants as a AndOperator
 func (t QueryVariants) AsAndOperator() (AndOperator, error) {
 	var body AndOperator
@@ -2671,6 +3252,192 @@ func (t WorkspaceModel_Relationships_Item) MarshalJSON() ([]byte, error) {
 }
 
 func (t *WorkspaceModel_Relationships_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsErrorPolicyNotFoundModel returns the union data inside the DeletePolicy404JSONResponseBody as a ErrorPolicyNotFoundModel
+func (t DeletePolicy404JSONResponseBody) AsErrorPolicyNotFoundModel() (ErrorPolicyNotFoundModel, error) {
+	var body ErrorPolicyNotFoundModel
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromErrorPolicyNotFoundModel overwrites any union data inside the DeletePolicy404JSONResponseBody as the provided ErrorPolicyNotFoundModel
+func (t *DeletePolicy404JSONResponseBody) FromErrorPolicyNotFoundModel(v ErrorPolicyNotFoundModel) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeErrorPolicyNotFoundModel performs a merge with any union data inside the DeletePolicy404JSONResponseBody, using the provided ErrorPolicyNotFoundModel
+func (t *DeletePolicy404JSONResponseBody) MergeErrorPolicyNotFoundModel(v ErrorPolicyNotFoundModel) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsErrorOrgNotFoundModel returns the union data inside the DeletePolicy404JSONResponseBody as a ErrorOrgNotFoundModel
+func (t DeletePolicy404JSONResponseBody) AsErrorOrgNotFoundModel() (ErrorOrgNotFoundModel, error) {
+	var body ErrorOrgNotFoundModel
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromErrorOrgNotFoundModel overwrites any union data inside the DeletePolicy404JSONResponseBody as the provided ErrorOrgNotFoundModel
+func (t *DeletePolicy404JSONResponseBody) FromErrorOrgNotFoundModel(v ErrorOrgNotFoundModel) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeErrorOrgNotFoundModel performs a merge with any union data inside the DeletePolicy404JSONResponseBody, using the provided ErrorOrgNotFoundModel
+func (t *DeletePolicy404JSONResponseBody) MergeErrorOrgNotFoundModel(v ErrorOrgNotFoundModel) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t DeletePolicy404JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *DeletePolicy404JSONResponseBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsErrorPolicyNotFoundModel returns the union data inside the GetPolicyById404JSONResponseBody as a ErrorPolicyNotFoundModel
+func (t GetPolicyById404JSONResponseBody) AsErrorPolicyNotFoundModel() (ErrorPolicyNotFoundModel, error) {
+	var body ErrorPolicyNotFoundModel
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromErrorPolicyNotFoundModel overwrites any union data inside the GetPolicyById404JSONResponseBody as the provided ErrorPolicyNotFoundModel
+func (t *GetPolicyById404JSONResponseBody) FromErrorPolicyNotFoundModel(v ErrorPolicyNotFoundModel) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeErrorPolicyNotFoundModel performs a merge with any union data inside the GetPolicyById404JSONResponseBody, using the provided ErrorPolicyNotFoundModel
+func (t *GetPolicyById404JSONResponseBody) MergeErrorPolicyNotFoundModel(v ErrorPolicyNotFoundModel) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsErrorOrgNotFoundModel returns the union data inside the GetPolicyById404JSONResponseBody as a ErrorOrgNotFoundModel
+func (t GetPolicyById404JSONResponseBody) AsErrorOrgNotFoundModel() (ErrorOrgNotFoundModel, error) {
+	var body ErrorOrgNotFoundModel
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromErrorOrgNotFoundModel overwrites any union data inside the GetPolicyById404JSONResponseBody as the provided ErrorOrgNotFoundModel
+func (t *GetPolicyById404JSONResponseBody) FromErrorOrgNotFoundModel(v ErrorOrgNotFoundModel) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeErrorOrgNotFoundModel performs a merge with any union data inside the GetPolicyById404JSONResponseBody, using the provided ErrorOrgNotFoundModel
+func (t *GetPolicyById404JSONResponseBody) MergeErrorOrgNotFoundModel(v ErrorOrgNotFoundModel) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t GetPolicyById404JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *GetPolicyById404JSONResponseBody) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsErrorPolicyNotFoundModel returns the union data inside the UpdatePolicy404JSONResponseBody as a ErrorPolicyNotFoundModel
+func (t UpdatePolicy404JSONResponseBody) AsErrorPolicyNotFoundModel() (ErrorPolicyNotFoundModel, error) {
+	var body ErrorPolicyNotFoundModel
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromErrorPolicyNotFoundModel overwrites any union data inside the UpdatePolicy404JSONResponseBody as the provided ErrorPolicyNotFoundModel
+func (t *UpdatePolicy404JSONResponseBody) FromErrorPolicyNotFoundModel(v ErrorPolicyNotFoundModel) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeErrorPolicyNotFoundModel performs a merge with any union data inside the UpdatePolicy404JSONResponseBody, using the provided ErrorPolicyNotFoundModel
+func (t *UpdatePolicy404JSONResponseBody) MergeErrorPolicyNotFoundModel(v ErrorPolicyNotFoundModel) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsErrorOrgNotFoundModel returns the union data inside the UpdatePolicy404JSONResponseBody as a ErrorOrgNotFoundModel
+func (t UpdatePolicy404JSONResponseBody) AsErrorOrgNotFoundModel() (ErrorOrgNotFoundModel, error) {
+	var body ErrorOrgNotFoundModel
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromErrorOrgNotFoundModel overwrites any union data inside the UpdatePolicy404JSONResponseBody as the provided ErrorOrgNotFoundModel
+func (t *UpdatePolicy404JSONResponseBody) FromErrorOrgNotFoundModel(v ErrorOrgNotFoundModel) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeErrorOrgNotFoundModel performs a merge with any union data inside the UpdatePolicy404JSONResponseBody, using the provided ErrorOrgNotFoundModel
+func (t *UpdatePolicy404JSONResponseBody) MergeErrorOrgNotFoundModel(v ErrorOrgNotFoundModel) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t UpdatePolicy404JSONResponseBody) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *UpdatePolicy404JSONResponseBody) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
@@ -2997,6 +3764,63 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 
+	// GetPolicies Get list of policies
+	//
+	// Returns information about org policies.
+	//
+	// Corresponds with GET /v1/orgs/{orgId}/policies (the `GetPolicies` operationId).
+	GetPolicies(ctx context.Context, orgId OrgIdParam, params *GetPoliciesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreatePolicyWithBody Create a policy
+	//
+	// Create a policy for an org.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/orgs/{orgId}/policies (the `CreatePolicy` operationId).
+	CreatePolicyWithBody(ctx context.Context, orgId OrgIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreatePolicy Create a policy
+	//
+	// Create a policy for an org.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/orgs/{orgId}/policies (the `CreatePolicy` operationId).
+	CreatePolicy(ctx context.Context, orgId OrgIdParam, body CreatePolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeletePolicy Delete a policy
+	//
+	// Delete a policy for an org.
+	//
+	// Corresponds with DELETE /v1/orgs/{orgId}/policies/{policyId} (the `DeletePolicy` operationId).
+	DeletePolicy(ctx context.Context, orgId OrgIdParam, policyId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetPolicyById Get a policy by ID
+	//
+	// Returns information about a single policy by ID.
+	//
+	// Corresponds with GET /v1/orgs/{orgId}/policies/{policyId} (the `GetPolicyById` operationId).
+	GetPolicyById(ctx context.Context, orgId OrgIdParam, policyId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdatePolicyWithBody Update a policy
+	//
+	// Update a policy for an org.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /v1/orgs/{orgId}/policies/{policyId} (the `UpdatePolicy` operationId).
+	UpdatePolicyWithBody(ctx context.Context, orgId OrgIdParam, policyId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdatePolicy Update a policy
+	//
+	// Update a policy for an org.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /v1/orgs/{orgId}/policies/{policyId} (the `UpdatePolicy` operationId).
+	UpdatePolicy(ctx context.Context, orgId OrgIdParam, policyId string, body UpdatePolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// AssignOrganizationLevelRoleWithBody Assign organization-level role
 	//
 	// Assign an organization-level role to a user. These are roles that have organization-wide privileges, like organization admin.
@@ -3284,6 +4108,133 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /v2/orgs/{orgId}/workspaces (the `QueryWorkspacesV2` operationId).
 	QueryWorkspacesV2(ctx context.Context, orgId OrgIdParam, body QueryWorkspacesV2JSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+// GetPolicies Get list of policies
+//
+// Returns information about org policies.
+//
+// Corresponds with GET /v1/orgs/{orgId}/policies (the `GetPolicies` operationId).
+func (c *Client) GetPolicies(ctx context.Context, orgId OrgIdParam, params *GetPoliciesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPoliciesRequest(c.Server, orgId, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreatePolicyWithBody Create a policy
+//
+// Create a policy for an org.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/orgs/{orgId}/policies (the `CreatePolicy` operationId).
+func (c *Client) CreatePolicyWithBody(ctx context.Context, orgId OrgIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreatePolicyRequestWithBody(c.Server, orgId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreatePolicy Create a policy
+//
+// Create a policy for an org.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/orgs/{orgId}/policies (the `CreatePolicy` operationId).
+func (c *Client) CreatePolicy(ctx context.Context, orgId OrgIdParam, body CreatePolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreatePolicyRequest(c.Server, orgId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeletePolicy Delete a policy
+//
+// Delete a policy for an org.
+//
+// Corresponds with DELETE /v1/orgs/{orgId}/policies/{policyId} (the `DeletePolicy` operationId).
+func (c *Client) DeletePolicy(ctx context.Context, orgId OrgIdParam, policyId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeletePolicyRequest(c.Server, orgId, policyId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetPolicyById Get a policy by ID
+//
+// Returns information about a single policy by ID.
+//
+// Corresponds with GET /v1/orgs/{orgId}/policies/{policyId} (the `GetPolicyById` operationId).
+func (c *Client) GetPolicyById(ctx context.Context, orgId OrgIdParam, policyId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPolicyByIdRequest(c.Server, orgId, policyId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdatePolicyWithBody Update a policy
+//
+// Update a policy for an org.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /v1/orgs/{orgId}/policies/{policyId} (the `UpdatePolicy` operationId).
+func (c *Client) UpdatePolicyWithBody(ctx context.Context, orgId OrgIdParam, policyId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdatePolicyRequestWithBody(c.Server, orgId, policyId, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdatePolicy Update a policy
+//
+// Update a policy for an org.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /v1/orgs/{orgId}/policies/{policyId} (the `UpdatePolicy` operationId).
+func (c *Client) UpdatePolicy(ctx context.Context, orgId OrgIdParam, policyId string, body UpdatePolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdatePolicyRequest(c.Server, orgId, policyId, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 // AssignOrganizationLevelRoleWithBody Assign organization-level role
@@ -3852,6 +4803,262 @@ func (c *Client) QueryWorkspacesV2(ctx context.Context, orgId OrgIdParam, body Q
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewGetPoliciesRequest constructs an http.Request for the GetPolicies method
+func NewGetPoliciesRequest(server string, orgId OrgIdParam, params *GetPoliciesParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/orgs/%s/policies", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Type != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "type", *params.Type, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreatePolicyRequest calls the generic CreatePolicy builder with application/json body
+func NewCreatePolicyRequest(server string, orgId OrgIdParam, body CreatePolicyJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreatePolicyRequestWithBody(server, orgId, "application/json", bodyReader)
+}
+
+// NewCreatePolicyRequestWithBody constructs an http.Request for the CreatePolicy method, with any body, and a specified content type
+func NewCreatePolicyRequestWithBody(server string, orgId OrgIdParam, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/orgs/%s/policies", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeletePolicyRequest constructs an http.Request for the DeletePolicy method
+func NewDeletePolicyRequest(server string, orgId OrgIdParam, policyId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "policyId", policyId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/orgs/%s/policies/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetPolicyByIdRequest constructs an http.Request for the GetPolicyById method
+func NewGetPolicyByIdRequest(server string, orgId OrgIdParam, policyId string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "policyId", policyId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/orgs/%s/policies/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdatePolicyRequest calls the generic UpdatePolicy builder with application/json body
+func NewUpdatePolicyRequest(server string, orgId OrgIdParam, policyId string, body UpdatePolicyJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdatePolicyRequestWithBody(server, orgId, policyId, "application/json", bodyReader)
+}
+
+// NewUpdatePolicyRequestWithBody constructs an http.Request for the UpdatePolicy method, with any body, and a specified content type
+func NewUpdatePolicyRequestWithBody(server string, orgId OrgIdParam, policyId string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "orgId", orgId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "policyId", policyId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/orgs/%s/policies/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
 }
 
 // NewAssignOrganizationLevelRoleRequest calls the generic AssignOrganizationLevelRole builder with application/json body
@@ -4975,6 +6182,69 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 
+	// GetPoliciesWithResponse Get list of policies
+	//
+	// Returns information about org policies.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/orgs/{orgId}/policies (the `GetPolicies` operationId).
+	GetPoliciesWithResponse(ctx context.Context, orgId OrgIdParam, params *GetPoliciesParams, reqEditors ...RequestEditorFn) (*GetPoliciesResponse, error)
+
+	// CreatePolicyWithBodyWithResponse Create a policy
+	//
+	// Create a policy for an org.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/orgs/{orgId}/policies (the `CreatePolicy` operationId).
+	CreatePolicyWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreatePolicyResponse, error)
+
+	// CreatePolicyWithResponse Create a policy
+	//
+	// Create a policy for an org.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/orgs/{orgId}/policies (the `CreatePolicy` operationId).
+	CreatePolicyWithResponse(ctx context.Context, orgId OrgIdParam, body CreatePolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*CreatePolicyResponse, error)
+
+	// DeletePolicyWithResponse Delete a policy
+	//
+	// Delete a policy for an org.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /v1/orgs/{orgId}/policies/{policyId} (the `DeletePolicy` operationId).
+	DeletePolicyWithResponse(ctx context.Context, orgId OrgIdParam, policyId string, reqEditors ...RequestEditorFn) (*DeletePolicyResponse, error)
+
+	// GetPolicyByIdWithResponse Get a policy by ID
+	//
+	// Returns information about a single policy by ID.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/orgs/{orgId}/policies/{policyId} (the `GetPolicyById` operationId).
+	GetPolicyByIdWithResponse(ctx context.Context, orgId OrgIdParam, policyId string, reqEditors ...RequestEditorFn) (*GetPolicyByIdResponse, error)
+
+	// UpdatePolicyWithBodyWithResponse Update a policy
+	//
+	// Update a policy for an org.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /v1/orgs/{orgId}/policies/{policyId} (the `UpdatePolicy` operationId).
+	UpdatePolicyWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, policyId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdatePolicyResponse, error)
+
+	// UpdatePolicyWithResponse Update a policy
+	//
+	// Update a policy for an org.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /v1/orgs/{orgId}/policies/{policyId} (the `UpdatePolicy` operationId).
+	UpdatePolicyWithResponse(ctx context.Context, orgId OrgIdParam, policyId string, body UpdatePolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdatePolicyResponse, error)
+
 	// AssignOrganizationLevelRoleWithBodyWithResponse Assign organization-level role
 	//
 	// Assign an organization-level role to a user. These are roles that have organization-wide privileges, like organization admin.
@@ -5274,6 +6544,351 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /v2/orgs/{orgId}/workspaces (the `QueryWorkspacesV2` operationId).
 	QueryWorkspacesV2WithResponse(ctx context.Context, orgId OrgIdParam, body QueryWorkspacesV2JSONRequestBody, reqEditors ...RequestEditorFn) (*QueryWorkspacesV2Response, error)
+}
+
+type GetPoliciesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *PolicyPage
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorUnauthenticated
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorRateLimited
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorInternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetPoliciesResponse) GetJSON200() *PolicyPage {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetPoliciesResponse) GetJSON401() *ErrorUnauthenticated {
+	return r.JSON401
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r GetPoliciesResponse) GetJSON429() *ErrorRateLimited {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetPoliciesResponse) GetJSON500() *ErrorInternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetPoliciesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetPoliciesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetPoliciesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetPoliciesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreatePolicyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *Policy
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorInvalidResource
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorUnauthenticated
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorRateLimited
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorInternalError
+}
+
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r CreatePolicyResponse) GetJSON202() *Policy {
+	return r.JSON202
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r CreatePolicyResponse) GetJSON400() *ErrorInvalidResource {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r CreatePolicyResponse) GetJSON401() *ErrorUnauthenticated {
+	return r.JSON401
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r CreatePolicyResponse) GetJSON429() *ErrorRateLimited {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r CreatePolicyResponse) GetJSON500() *ErrorInternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r CreatePolicyResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreatePolicyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreatePolicyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreatePolicyResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeletePolicyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorInvalidResource
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorUnauthenticated
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *DeletePolicy404JSONResponseBody
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorRateLimited
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorInternalError
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r DeletePolicyResponse) GetJSON400() *ErrorInvalidResource {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r DeletePolicyResponse) GetJSON401() *ErrorUnauthenticated {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r DeletePolicyResponse) GetJSON404() *DeletePolicy404JSONResponseBody {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r DeletePolicyResponse) GetJSON429() *ErrorRateLimited {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r DeletePolicyResponse) GetJSON500() *ErrorInternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r DeletePolicyResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeletePolicyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeletePolicyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeletePolicyResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetPolicyByIdResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *Policy
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorUnauthenticated
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *GetPolicyById404JSONResponseBody
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorRateLimited
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorInternalError
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetPolicyByIdResponse) GetJSON200() *Policy {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetPolicyByIdResponse) GetJSON401() *ErrorUnauthenticated {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r GetPolicyByIdResponse) GetJSON404() *GetPolicyById404JSONResponseBody {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r GetPolicyByIdResponse) GetJSON429() *ErrorRateLimited {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetPolicyByIdResponse) GetJSON500() *ErrorInternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r GetPolicyByIdResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetPolicyByIdResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetPolicyByIdResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetPolicyByIdResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdatePolicyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *Policy
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *ErrorInvalidResource
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *ErrorUnauthenticated
+	// JSON404 the response for an HTTP 404 `application/json` response
+	JSON404 *UpdatePolicy404JSONResponseBody
+	// JSON429 the response for an HTTP 429 `application/json` response
+	JSON429 *ErrorRateLimited
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *ErrorInternalError
+}
+
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r UpdatePolicyResponse) GetJSON202() *Policy {
+	return r.JSON202
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r UpdatePolicyResponse) GetJSON400() *ErrorInvalidResource {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r UpdatePolicyResponse) GetJSON401() *ErrorUnauthenticated {
+	return r.JSON401
+}
+
+// GetJSON404 returns the response for an HTTP 404 `application/json` response
+func (r UpdatePolicyResponse) GetJSON404() *UpdatePolicy404JSONResponseBody {
+	return r.JSON404
+}
+
+// GetJSON429 returns the response for an HTTP 429 `application/json` response
+func (r UpdatePolicyResponse) GetJSON429() *ErrorRateLimited {
+	return r.JSON429
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r UpdatePolicyResponse) GetJSON500() *ErrorInternalError {
+	return r.JSON500
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdatePolicyResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdatePolicyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdatePolicyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdatePolicyResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
 }
 
 type AssignOrganizationLevelRoleResponse struct {
@@ -6351,6 +7966,111 @@ func (r QueryWorkspacesV2Response) ContentType() string {
 	return ""
 }
 
+// GetPoliciesWithResponse Get list of policies
+//
+// Returns information about org policies.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/orgs/{orgId}/policies (the `GetPolicies` operationId).
+func (c *ClientWithResponses) GetPoliciesWithResponse(ctx context.Context, orgId OrgIdParam, params *GetPoliciesParams, reqEditors ...RequestEditorFn) (*GetPoliciesResponse, error) {
+	rsp, err := c.GetPolicies(ctx, orgId, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetPoliciesResponse(rsp)
+}
+
+// CreatePolicyWithBodyWithResponse Create a policy
+//
+// Create a policy for an org.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/orgs/{orgId}/policies (the `CreatePolicy` operationId).
+func (c *ClientWithResponses) CreatePolicyWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreatePolicyResponse, error) {
+	rsp, err := c.CreatePolicyWithBody(ctx, orgId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreatePolicyResponse(rsp)
+}
+
+// CreatePolicyWithResponse Create a policy
+//
+// Create a policy for an org.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/orgs/{orgId}/policies (the `CreatePolicy` operationId).
+func (c *ClientWithResponses) CreatePolicyWithResponse(ctx context.Context, orgId OrgIdParam, body CreatePolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*CreatePolicyResponse, error) {
+	rsp, err := c.CreatePolicy(ctx, orgId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreatePolicyResponse(rsp)
+}
+
+// DeletePolicyWithResponse Delete a policy
+//
+// Delete a policy for an org.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /v1/orgs/{orgId}/policies/{policyId} (the `DeletePolicy` operationId).
+func (c *ClientWithResponses) DeletePolicyWithResponse(ctx context.Context, orgId OrgIdParam, policyId string, reqEditors ...RequestEditorFn) (*DeletePolicyResponse, error) {
+	rsp, err := c.DeletePolicy(ctx, orgId, policyId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeletePolicyResponse(rsp)
+}
+
+// GetPolicyByIdWithResponse Get a policy by ID
+//
+// Returns information about a single policy by ID.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/orgs/{orgId}/policies/{policyId} (the `GetPolicyById` operationId).
+func (c *ClientWithResponses) GetPolicyByIdWithResponse(ctx context.Context, orgId OrgIdParam, policyId string, reqEditors ...RequestEditorFn) (*GetPolicyByIdResponse, error) {
+	rsp, err := c.GetPolicyById(ctx, orgId, policyId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetPolicyByIdResponse(rsp)
+}
+
+// UpdatePolicyWithBodyWithResponse Update a policy
+//
+// Update a policy for an org.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /v1/orgs/{orgId}/policies/{policyId} (the `UpdatePolicy` operationId).
+func (c *ClientWithResponses) UpdatePolicyWithBodyWithResponse(ctx context.Context, orgId OrgIdParam, policyId string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdatePolicyResponse, error) {
+	rsp, err := c.UpdatePolicyWithBody(ctx, orgId, policyId, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdatePolicyResponse(rsp)
+}
+
+// UpdatePolicyWithResponse Update a policy
+//
+// Update a policy for an org.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /v1/orgs/{orgId}/policies/{policyId} (the `UpdatePolicy` operationId).
+func (c *ClientWithResponses) UpdatePolicyWithResponse(ctx context.Context, orgId OrgIdParam, policyId string, body UpdatePolicyJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdatePolicyResponse, error) {
+	rsp, err := c.UpdatePolicy(ctx, orgId, policyId, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdatePolicyResponse(rsp)
+}
+
 // AssignOrganizationLevelRoleWithBodyWithResponse Assign organization-level role
 //
 // Assign an organization-level role to a user. These are roles that have organization-wide privileges, like organization admin.
@@ -6817,6 +8537,279 @@ func (c *ClientWithResponses) QueryWorkspacesV2WithResponse(ctx context.Context,
 		return nil, err
 	}
 	return ParseQueryWorkspacesV2Response(rsp)
+}
+
+// ParseGetPoliciesResponse parses an HTTP response from a GetPoliciesWithResponse call
+func ParseGetPoliciesResponse(rsp *http.Response) (*GetPoliciesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetPoliciesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest PolicyPage
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorUnauthenticated
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorRateLimited
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorInternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreatePolicyResponse parses an HTTP response from a CreatePolicyWithResponse call
+func ParseCreatePolicyResponse(rsp *http.Response) (*CreatePolicyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreatePolicyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest Policy
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorInvalidResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorUnauthenticated
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorRateLimited
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorInternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeletePolicyResponse parses an HTTP response from a DeletePolicyWithResponse call
+func ParseDeletePolicyResponse(rsp *http.Response) (*DeletePolicyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeletePolicyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case rsp.StatusCode == 202:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorInvalidResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorUnauthenticated
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest DeletePolicy404JSONResponseBody
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorRateLimited
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorInternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetPolicyByIdResponse parses an HTTP response from a GetPolicyByIdWithResponse call
+func ParseGetPolicyByIdResponse(rsp *http.Response) (*GetPolicyByIdResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetPolicyByIdResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Policy
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorUnauthenticated
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest GetPolicyById404JSONResponseBody
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorRateLimited
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorInternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdatePolicyResponse parses an HTTP response from a UpdatePolicyWithResponse call
+func ParseUpdatePolicyResponse(rsp *http.Response) (*UpdatePolicyResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdatePolicyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest Policy
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorInvalidResource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest ErrorUnauthenticated
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest UpdatePolicy404JSONResponseBody
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 429:
+		var dest ErrorRateLimited
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON429 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest ErrorInternalError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseAssignOrganizationLevelRoleResponse parses an HTTP response from a AssignOrganizationLevelRoleWithResponse call

@@ -56,7 +56,7 @@ jobs:
       - run: make generate/api-client
       - name: Check generated API client is up to date
         run: |
-          git diff --exit-code -- internal/client/admin/organization/generated || \
+          git diff --exit-code -- internal/client/admin/control/generated internal/client/admin/organization/generated || \
             (echo "::error::Generated API client is out of date. Run 'make generate/api-client' and commit the changes." && exit 1)
       - run: make build
       - run: make test TESTARGS="-race -cover"
