@@ -26,6 +26,11 @@ const (
 	// AuthServiceAccount authenticates as a service account with OAuth 2.0
 	// client credentials against the api.atlassian.com gateway.
 	AuthServiceAccount
+	// AuthServiceAccountAPIToken authenticates as a service account with an
+	// API token issued to it, sent as a bearer token against the same gateway.
+	// The token is static: there is no exchange, no expiry to track, and
+	// nothing to discard when the server rejects it.
+	AuthServiceAccountAPIToken
 )
 
 func (m AuthMode) String() string {
@@ -34,6 +39,8 @@ func (m AuthMode) String() string {
 		return "basic_auth"
 	case AuthServiceAccount:
 		return "service_account"
+	case AuthServiceAccountAPIToken:
+		return "service_account_api_token"
 	default:
 		return fmt.Sprintf("AuthMode(%d)", int(m))
 	}
@@ -60,6 +67,12 @@ type Config struct {
 	// AuthServiceAccount credentials.
 	ClientID     string
 	ClientSecret string
+	// ServiceAccountAPIToken is the AuthServiceAccountAPIToken credential. It
+	// is separate from APIToken because the two are different credentials for
+	// different principals: APIToken belongs to the account named by Email and
+	// authenticates against the site, this one belongs to a service account
+	// and only works through the gateway.
+	ServiceAccountAPIToken string
 	// CloudID is the site's cloud id. Optional for AuthServiceAccount: when
 	// empty it is discovered from SiteURL on first use.
 	CloudID string
@@ -79,6 +92,7 @@ type Client struct {
 
 	email, apiToken        string
 	clientID, clientSecret string
+	serviceAccountAPIToken string
 
 	options options
 	// httpClient serves the API calls and honours WithoutRetry. helperClient
@@ -136,13 +150,14 @@ func NewForTest(config Config, baseURL string) (*Client, error) {
 
 func newClient(config Config, opts options) (*Client, error) {
 	c := &Client{
-		mode:         config.Mode,
-		cloudID:      strings.TrimSpace(config.CloudID),
-		email:        strings.TrimSpace(config.Email),
-		apiToken:     strings.TrimSpace(config.APIToken),
-		clientID:     strings.TrimSpace(config.ClientID),
-		clientSecret: strings.TrimSpace(config.ClientSecret),
-		options:      opts,
+		mode:                   config.Mode,
+		cloudID:                strings.TrimSpace(config.CloudID),
+		email:                  strings.TrimSpace(config.Email),
+		apiToken:               strings.TrimSpace(config.APIToken),
+		clientID:               strings.TrimSpace(config.ClientID),
+		clientSecret:           strings.TrimSpace(config.ClientSecret),
+		serviceAccountAPIToken: strings.TrimSpace(config.ServiceAccountAPIToken),
+		options:                opts,
 	}
 
 	if site := strings.TrimSpace(config.SiteURL); site != "" {
@@ -168,6 +183,13 @@ func newClient(config Config, opts options) (*Client, error) {
 		if c.cloudID == "" && c.site == nil {
 			return nil, fmt.Errorf("service_account requires cloud_id, or site_url to discover it from")
 		}
+	case AuthServiceAccountAPIToken:
+		if c.serviceAccountAPIToken == "" {
+			return nil, fmt.Errorf("service_account requires api_token")
+		}
+		if c.cloudID == "" && c.site == nil {
+			return nil, fmt.Errorf("service_account requires cloud_id, or site_url to discover it from")
+		}
 	default:
 		return nil, fmt.Errorf("confluence authentication mode is not set")
 	}
@@ -177,6 +199,8 @@ func newClient(config Config, opts options) (*Client, error) {
 	switch c.mode {
 	case AuthBasic:
 		c.auth = &basicAuthenticator{email: c.email, apiToken: c.apiToken}
+	case AuthServiceAccountAPIToken:
+		c.auth = &bearerAuthenticator{token: c.serviceAccountAPIToken}
 	case AuthServiceAccount:
 		// clientcredentials.Config takes TokenURL as a string; this parse only
 		// rejects a malformed endpoint here rather than at the first exchange.
@@ -265,7 +289,7 @@ func Prefix(mode AuthMode, site *url.URL, cloudID string) (*url.URL, error) {
 		copied := *site
 		copied.Path = ""
 		return &copied, nil
-	case AuthServiceAccount:
+	case AuthServiceAccount, AuthServiceAccountAPIToken:
 		if cloudID == "" {
 			return nil, fmt.Errorf("service_account prefix requires a cloud id")
 		}

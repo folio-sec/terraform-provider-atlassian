@@ -36,13 +36,20 @@ var (
 // shell for another tool; the Configure diagnostics therefore always say
 // which source a value came from.
 const (
-	envAdminAPIKey  = "ATLASSIAN_ADMIN_API_KEY" //nolint:gosec // The name of an environment variable, not a credential.
-	envSiteURL      = "ATLASSIAN_SITE_URL"
-	envEmail        = "ATLASSIAN_EMAIL"
-	envAPIToken     = "ATLASSIAN_API_TOKEN" //nolint:gosec // The name of an environment variable, not a credential.
-	envClientID     = "ATLASSIAN_CLIENT_ID"
-	envClientSecret = "ATLASSIAN_CLIENT_SECRET"
-	envCloudID      = "ATLASSIAN_CLOUD_ID"
+	envAdminAPIKey = "ATLASSIAN_ADMIN_API_KEY" //nolint:gosec // The name of an environment variable, not a credential.
+	envSiteURL     = "ATLASSIAN_SITE_URL"
+	envEmail       = "ATLASSIAN_EMAIL"
+	envAPIToken    = "ATLASSIAN_API_TOKEN" //nolint:gosec // The name of an environment variable, not a credential.
+	// Every service_account attribute is namespaced under one prefix, so which
+	// block a variable feeds is readable from its name alone. In particular
+	// the service account's API token must not share basic_auth's
+	// ATLASSIAN_API_TOKEN: a value left in a shell for another tool would
+	// otherwise configure a second Confluence credential and fail the run with
+	// a conflict the operator never wrote.
+	envClientID               = "ATLASSIAN_SERVICE_ACCOUNT_CLIENT_ID"
+	envClientSecret           = "ATLASSIAN_SERVICE_ACCOUNT_CLIENT_SECRET" //nolint:gosec // The name of an environment variable, not a credential.
+	envServiceAccountAPIToken = "ATLASSIAN_SERVICE_ACCOUNT_API_TOKEN"     //nolint:gosec // The name of an environment variable, not a credential.
+	envCloudID                = "ATLASSIAN_SERVICE_ACCOUNT_CLOUD_ID"
 )
 
 const (
@@ -70,6 +77,7 @@ type basicAuthModel struct {
 type serviceAccountModel struct {
 	ClientID     types.String `tfsdk:"client_id"`
 	ClientSecret types.String `tfsdk:"client_secret"`
+	APIToken     types.String `tfsdk:"api_token"`
 	CloudID      types.String `tfsdk:"cloud_id"`
 }
 
@@ -86,7 +94,7 @@ func (p *AtlassianProvider) Metadata(_ context.Context, _ provider.MetadataReque
 
 func (p *AtlassianProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manage Atlassian Cloud resources. Cloud Admin API types authenticate with an organization API key; Confluence types authenticate as a site user with an API token or as a service account with OAuth 2.0 client credentials. Configure only the families you use.",
+		Description: "Manage Atlassian Cloud resources. Cloud Admin API types authenticate with an organization API key; Confluence types authenticate as a site user with an API token, or as a service account with either OAuth 2.0 client credentials or an API token issued to that service account. Configure only the families you use.",
 		Attributes: map[string]schema.Attribute{
 			"admin_api_key": schema.StringAttribute{
 				Description: "Atlassian organization API key used for Cloud Admin APIs. May also be set with " + envAdminAPIKey + ". Leave unset when only Confluence types are used.",
@@ -113,7 +121,7 @@ func (p *AtlassianProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 				},
 			},
 			attrServiceAccount: schema.SingleNestedAttribute{
-				Description: "Authenticate to Confluence as a service account using OAuth 2.0 client credentials. Requests are sent through the api.atlassian.com gateway, so the site is identified by cloud_id. Exactly one of basic_auth and service_account may be configured.",
+				Description: "Authenticate to Confluence as a service account, either with OAuth 2.0 client credentials or with an API token issued to the service account. Requests are sent through the api.atlassian.com gateway, so the site is identified by cloud_id. Configure exactly one of the two credentials, and exactly one of basic_auth and service_account.",
 				Optional:    true,
 				Attributes: map[string]schema.Attribute{
 					"client_id": schema.StringAttribute{
@@ -122,6 +130,11 @@ func (p *AtlassianProvider) Schema(_ context.Context, _ provider.SchemaRequest, 
 					},
 					"client_secret": schema.StringAttribute{
 						Description: "OAuth 2.0 client secret of the service account credential. May also be set with " + envClientSecret + ".",
+						Optional:    true,
+						Sensitive:   true,
+					},
+					"api_token": schema.StringAttribute{
+						Description: "API token issued to the service account, sent as a bearer token. Set this instead of client_id and client_secret. Its scopes are fixed when it is created and cannot be changed afterwards, so it must be issued with every scope the configuration needs. May also be set with " + envServiceAccountAPIToken + ".",
 						Optional:    true,
 						Sensitive:   true,
 					},
@@ -162,6 +175,7 @@ func (p *AtlassianProvider) ValidateConfig(ctx context.Context, req provider.Val
 		root := path.Root(attrServiceAccount)
 		resp.Diagnostics.Append(validateNonEmpty(root.AtName("client_id"), account.ClientID)...)
 		resp.Diagnostics.Append(validateNonEmpty(root.AtName("client_secret"), account.ClientSecret)...)
+		resp.Diagnostics.Append(validateNonEmpty(root.AtName("api_token"), account.APIToken)...)
 		resp.Diagnostics.Append(validateNonEmpty(root.AtName("cloud_id"), account.CloudID)...)
 		if knownString(account.CloudID) && strings.TrimSpace(account.CloudID.ValueString()) != "" {
 			resp.Diagnostics.Append(validateCloudID(root.AtName("cloud_id"), account.CloudID.ValueString())...)
@@ -193,18 +207,19 @@ func (p *AtlassianProvider) Configure(ctx context.Context, req provider.Configur
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if basic.Email.IsUnknown() || basic.APIToken.IsUnknown() || account.ClientID.IsUnknown() || account.ClientSecret.IsUnknown() || account.CloudID.IsUnknown() {
+	if basic.Email.IsUnknown() || basic.APIToken.IsUnknown() || account.ClientID.IsUnknown() || account.ClientSecret.IsUnknown() || account.APIToken.IsUnknown() || account.CloudID.IsUnknown() {
 		return
 	}
 
 	credentials := resolvedCredentials{
-		adminAPIKey:  resolve(config.AdminAPIKey, envAdminAPIKey),
-		siteURL:      resolve(config.SiteURL, envSiteURL),
-		email:        resolve(basic.Email, envEmail),
-		apiToken:     resolve(basic.APIToken, envAPIToken),
-		clientID:     resolve(account.ClientID, envClientID),
-		clientSecret: resolve(account.ClientSecret, envClientSecret),
-		cloudID:      resolve(account.CloudID, envCloudID),
+		adminAPIKey:            resolve(config.AdminAPIKey, envAdminAPIKey),
+		siteURL:                resolve(config.SiteURL, envSiteURL),
+		email:                  resolve(basic.Email, envEmail),
+		apiToken:               resolve(basic.APIToken, envAPIToken),
+		clientID:               resolve(account.ClientID, envClientID),
+		clientSecret:           resolve(account.ClientSecret, envClientSecret),
+		serviceAccountAPIToken: resolve(account.APIToken, envServiceAccountAPIToken),
+		cloudID:                resolve(account.CloudID, envCloudID),
 	}
 
 	confluenceConfig, diags := credentials.confluenceConfig()
@@ -282,7 +297,10 @@ type resolvedCredentials struct {
 	apiToken     resolvedValue
 	clientID     resolvedValue
 	clientSecret resolvedValue
-	cloudID      resolvedValue
+	// serviceAccountAPIToken is the service account's own API token, not
+	// basic_auth's apiToken above.
+	serviceAccountAPIToken resolvedValue
+	cloudID                resolvedValue
 }
 
 // confluenceConfig applies the presence and combination rules and returns the
@@ -291,7 +309,8 @@ type resolvedCredentials struct {
 func (c resolvedCredentials) confluenceConfig() (*confluence.Config, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	basicPresent := c.email.set() || c.apiToken.set()
-	accountPresent := c.clientID.set() || c.clientSecret.set()
+	clientCredentialsPresent := c.clientID.set() || c.clientSecret.set()
+	accountPresent := clientCredentialsPresent || c.serviceAccountAPIToken.set()
 
 	switch {
 	case basicPresent && accountPresent:
@@ -316,12 +335,30 @@ func (c resolvedCredentials) confluenceConfig() (*confluence.Config, diag.Diagno
 			APIToken: c.apiToken.value,
 		}, diags
 	case accountPresent:
-		diags.Append(requirePair(attrServiceAccount, "client_id", c.clientID, envClientID, "client_secret", c.clientSecret, envClientSecret)...)
+		if c.serviceAccountAPIToken.set() && clientCredentialsPresent {
+			diags.AddError(
+				"Conflicting service_account credentials",
+				fmt.Sprintf("service_account.api_token and the client credentials pair are two ways to authenticate as the same service account; configure one. service_account.api_token came from %s, service_account.client_id from %s, service_account.client_secret from %s.",
+					describeSource(c.serviceAccountAPIToken), describeSource(c.clientID), describeSource(c.clientSecret)),
+			)
+			return nil, diags
+		}
+		if !c.serviceAccountAPIToken.set() {
+			diags.Append(requirePair(attrServiceAccount, "client_id", c.clientID, envClientID, "client_secret", c.clientSecret, envClientSecret)...)
+		}
 		if !c.cloudID.set() && !c.siteURL.set() {
 			diags.AddError("Missing site identity", "service_account requires service_account.cloud_id (or "+envCloudID+"), or site_url (or "+envSiteURL+") to discover the cloud id from.")
 		}
 		if diags.HasError() {
 			return nil, diags
+		}
+		if c.serviceAccountAPIToken.set() {
+			return &confluence.Config{
+				Mode:                   confluence.AuthServiceAccountAPIToken,
+				SiteURL:                c.siteURL.value,
+				ServiceAccountAPIToken: c.serviceAccountAPIToken.value,
+				CloudID:                c.cloudID.value,
+			}, diags
 		}
 		return &confluence.Config{
 			Mode:         confluence.AuthServiceAccount,

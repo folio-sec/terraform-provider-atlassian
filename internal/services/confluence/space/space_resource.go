@@ -83,6 +83,39 @@ func (r *spaceResource) Metadata(_ context.Context, req resource.MetadataRequest
 	resp.TypeName = req.ProviderTypeName + "_confluence_space"
 }
 
+// spaceResourceDescription is the registry page body for this resource. It
+// lives outside Schema so the schema itself stays readable.
+const spaceResourceDescription = "Manages a Confluence Cloud space.\n\n" +
+	"## Required OAuth scopes\n\n" +
+	"When the provider authenticates as a service account, its credential must carry the scopes for the " +
+	"operations this resource actually performs. A scope is checked when an operation runs, so a resource " +
+	"that is only ever read needs the first bullet alone.\n\n" +
+	"- Read: `read:space:confluence`\n" +
+	"- Create: `write:space:confluence`\n" +
+	"- Update: `read:space-details:confluence`, `write:space:confluence`, `write:space.permission:confluence`\n" +
+	"- Delete: `delete:space:confluence`, `read:content.metadata:confluence`\n\n" +
+	"Managing a space through its whole lifecycle therefore needs all six. Creating one also requires a " +
+	"tenant with Role-Based Access Control enabled, which is what the v2 createSpace operation is gated " +
+	"behind.\n\n" +
+	"Those six are the granular scope names, and they are all a client credentials credential needs. A " +
+	"service account API token needs more: update, delete and the delete completion check run against the " +
+	"v1 REST API, which an API token reaches only when it also carries the classic scope names. Its scopes " +
+	"are fixed when it is created, so grant the whole set then:\n\n" +
+	"- `read:space:confluence`\n" +
+	"- `write:space:confluence`\n" +
+	"- `delete:space:confluence`\n" +
+	"- `read:space-details:confluence`\n" +
+	"- `write:space.permission:confluence`\n" +
+	"- `read:content.metadata:confluence`\n" +
+	"- `write:confluence-space` (classic, for v1 update and delete)\n" +
+	"- `read:confluence-space.summary` (classic, for the v1 delete completion check)\n\n" +
+	"> **Deletion is permanent**\n" +
+	"> Deleting this resource deletes the space outright; it does not pass through the trash and cannot be undone.\n\n" +
+	"> **Write-only at create**\n" +
+	"> `template_key`, `copy_space_access_configuration`, `create_private_space` and `role_assignments` are sent " +
+	"only when the space is created. No read operation returns them, so they are never refreshed from the API " +
+	"and changing them always replaces the space."
+
 func (r *spaceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	requiresReplaceString := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 	preserveString := []planmodifier.String{stringplanmodifier.UseStateForUnknown()}
@@ -97,24 +130,7 @@ func (r *spaceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 	}
 
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a Confluence Cloud space.\n\n" +
-			"## Required OAuth scopes\n\n" +
-			"When the provider authenticates as a service account, its credential must carry the scopes for the " +
-			"operations this resource actually performs. A scope is checked when an operation runs, so a resource " +
-			"that is only ever read needs the first bullet alone.\n\n" +
-			"- Read: `read:space:confluence`\n" +
-			"- Create: `write:space:confluence`\n" +
-			"- Update: `read:space-details:confluence`, `write:space:confluence`, `write:space.permission:confluence`\n" +
-			"- Delete: `delete:space:confluence`, `read:content.metadata:confluence`\n\n" +
-			"Managing a space through its whole lifecycle therefore needs all six. Creating one also requires a " +
-			"tenant with Role-Based Access Control enabled, which is what the v2 createSpace operation is gated " +
-			"behind.\n\n" +
-			"> **Deletion is permanent**\n" +
-			"> Deleting this resource deletes the space outright; it does not pass through the trash and cannot be undone.\n\n" +
-			"> **Write-only at create**\n" +
-			"> `template_key`, `copy_space_access_configuration`, `create_private_space` and `role_assignments` are sent " +
-			"only when the space is created. No read operation returns them, so they are never refreshed from the API " +
-			"and changing them always replaces the space.",
+		MarkdownDescription: spaceResourceDescription,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description:   "Numeric-string ID of the space.",

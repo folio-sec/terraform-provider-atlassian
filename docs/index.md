@@ -19,21 +19,24 @@ organization API key. Supply it as `admin_api_key` or, preferably, through the
 
 ## Confluence Cloud
 
-Confluence types authenticate against a site in one of two ways. Configure
+Confluence types authenticate against a site in one of three ways: as a service
+account with OAuth 2.0 client credentials, as a service account with an API
+token issued to it, or as an Atlassian account over HTTP basic auth. Configure
 exactly one.
 
-**Service account (recommended for automation).** An OAuth 2.0 credential
-created for a service account in the admin console. Requests go through the
-`api.atlassian.com` gateway, so the site is identified by its cloud id, which
-the provider discovers from `site_url` when `cloud_id` is omitted.
+**Service account with client credentials (recommended for automation).** An
+OAuth 2.0 credential created for a service account in the admin console.
+Requests go through the `api.atlassian.com` gateway, so the site is identified
+by its cloud id, which the provider discovers from `site_url` when `cloud_id`
+is omitted.
 
 ```hcl
 provider "atlassian" {
   site_url = "https://example.atlassian.net"
 
   service_account = {
-    client_id     = var.client_id      # or ATLASSIAN_CLIENT_ID
-    client_secret = var.client_secret  # or ATLASSIAN_CLIENT_SECRET
+    client_id     = var.client_id      # or ATLASSIAN_SERVICE_ACCOUNT_CLIENT_ID
+    client_secret = var.client_secret  # or ATLASSIAN_SERVICE_ACCOUNT_CLIENT_SECRET
   }
 }
 ```
@@ -80,6 +83,35 @@ resource "atlassian_confluence_space" "docs" {
 }
 ```
 
+**Service account with an API token.** An API token issued to the same kind of
+service account, sent as a bearer token. It also goes through the
+`api.atlassian.com` gateway and identifies the site the same way, but there is
+no token exchange: the token is used as configured.
+
+```hcl
+provider "atlassian" {
+  site_url = "https://example.atlassian.net"
+
+  service_account = {
+    api_token = var.service_account_api_token # or ATLASSIAN_SERVICE_ACCOUNT_API_TOKEN
+  }
+}
+```
+
+Its scopes are chosen when the token is created and **cannot be changed
+afterwards**, so issue it with every scope the configuration needs. One detail
+does not apply to client credentials: the Confluence operations this provider
+runs against the v1 REST API are reachable by an API token only when it also
+carries the classic scope names, so a token that manages a space through its
+whole lifecycle needs `write:confluence-space` and
+`read:confluence-space.summary` alongside the granular ones each resource page
+lists. Every `service_account` attribute falls back to a variable under one prefix:
+`ATLASSIAN_SERVICE_ACCOUNT_CLIENT_ID`,
+`ATLASSIAN_SERVICE_ACCOUNT_CLIENT_SECRET`,
+`ATLASSIAN_SERVICE_ACCOUNT_API_TOKEN` and
+`ATLASSIAN_SERVICE_ACCOUNT_CLOUD_ID`. `ATLASSIAN_API_TOKEN` is basic auth's
+variable and does not configure this credential.
+
 **Atlassian account with an API token.** HTTP basic auth as a user, with an API
 token created at https://id.atlassian.com/manage/api-tokens. Authorization
 follows that user's own permissions.
@@ -107,7 +139,7 @@ conflicting credentials states where each value came from.
 
 - `admin_api_key` (String, Sensitive) Atlassian organization API key used for Cloud Admin APIs. May also be set with ATLASSIAN_ADMIN_API_KEY. Leave unset when only Confluence types are used.
 - `basic_auth` (Attributes) Authenticate to Confluence as an Atlassian account using HTTP basic auth with an API token. Exactly one of basic_auth and service_account may be configured. (see [below for nested schema](#nestedatt--basic_auth))
-- `service_account` (Attributes) Authenticate to Confluence as a service account using OAuth 2.0 client credentials. Requests are sent through the api.atlassian.com gateway, so the site is identified by cloud_id. Exactly one of basic_auth and service_account may be configured. (see [below for nested schema](#nestedatt--service_account))
+- `service_account` (Attributes) Authenticate to Confluence as a service account, either with OAuth 2.0 client credentials or with an API token issued to the service account. Requests are sent through the api.atlassian.com gateway, so the site is identified by cloud_id. Configure exactly one of the two credentials, and exactly one of basic_auth and service_account. (see [below for nested schema](#nestedatt--service_account))
 - `site_url` (String) Confluence Cloud site URL, for example https://example.atlassian.net. A bare host is accepted. Must not carry a path, query, or fragment. Required with basic_auth; with service_account it is only needed when cloud_id is omitted, to discover it. May also be set with ATLASSIAN_SITE_URL.
 
 <a id="nestedatt--basic_auth"></a>
@@ -124,6 +156,7 @@ Optional:
 
 Optional:
 
-- `client_id` (String) OAuth 2.0 client ID of the service account credential. May also be set with ATLASSIAN_CLIENT_ID.
-- `client_secret` (String, Sensitive) OAuth 2.0 client secret of the service account credential. May also be set with ATLASSIAN_CLIENT_SECRET.
-- `cloud_id` (String) Cloud ID of the Confluence site, a lowercase UUID. When omitted it is discovered from site_url on first use. May also be set with ATLASSIAN_CLOUD_ID.
+- `api_token` (String, Sensitive) API token issued to the service account, sent as a bearer token. Set this instead of client_id and client_secret. Its scopes are fixed when it is created and cannot be changed afterwards, so it must be issued with every scope the configuration needs. May also be set with ATLASSIAN_SERVICE_ACCOUNT_API_TOKEN.
+- `client_id` (String) OAuth 2.0 client ID of the service account credential. May also be set with ATLASSIAN_SERVICE_ACCOUNT_CLIENT_ID.
+- `client_secret` (String, Sensitive) OAuth 2.0 client secret of the service account credential. May also be set with ATLASSIAN_SERVICE_ACCOUNT_CLIENT_SECRET.
+- `cloud_id` (String) Cloud ID of the Confluence site, a lowercase UUID. When omitted it is discovered from site_url on first use. May also be set with ATLASSIAN_SERVICE_ACCOUNT_CLOUD_ID.

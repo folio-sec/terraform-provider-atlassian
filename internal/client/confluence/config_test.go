@@ -79,6 +79,17 @@ func TestNew(t *testing.T) {
 			config:  Config{Mode: AuthServiceAccount, ClientID: "id", CloudID: "x"},
 			wantErr: "both client_id and client_secret",
 		},
+		"service account api token with cloud id": {
+			config: Config{Mode: AuthServiceAccountAPIToken, ServiceAccountAPIToken: "token", CloudID: "a7c408f1-ec5f-410e-8f27-62dbefebe6b6"},
+		},
+		"service account api token without a token": {
+			config:  Config{Mode: AuthServiceAccountAPIToken, CloudID: "a7c408f1-ec5f-410e-8f27-62dbefebe6b6"},
+			wantErr: "requires api_token",
+		},
+		"service account api token with neither cloud id nor site": {
+			config:  Config{Mode: AuthServiceAccountAPIToken, ServiceAccountAPIToken: "token"},
+			wantErr: "requires cloud_id, or site_url",
+		},
 		"invalid site url is rejected": {
 			config:  Config{Mode: AuthBasic, SiteURL: "https://example.atlassian.net/wiki", Email: "a@example.com", APIToken: "tok"},
 			wantErr: "must not include a path",
@@ -132,6 +143,11 @@ func TestBaseURLs(t *testing.T) {
 			wantV1: "https://api.atlassian.com/ex/confluence/" + cloudID + "/wiki/rest/api/longtask/1",
 			wantV2: "https://api.atlassian.com/ex/confluence/" + cloudID + "/wiki/api/v2/spaces",
 		},
+		"service account api token": {
+			mode:   AuthServiceAccountAPIToken,
+			wantV1: "https://api.atlassian.com/ex/confluence/" + cloudID + "/wiki/rest/api/longtask/1",
+			wantV2: "https://api.atlassian.com/ex/confluence/" + cloudID + "/wiki/api/v2/spaces",
+		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -164,6 +180,9 @@ func TestPrefixErrors(t *testing.T) {
 	}
 	if _, err := Prefix(AuthServiceAccount, nil, ""); err == nil {
 		t.Error("Prefix(AuthServiceAccount, no cloud id) returned no error")
+	}
+	if _, err := Prefix(AuthServiceAccountAPIToken, nil, ""); err == nil {
+		t.Error("Prefix(AuthServiceAccountAPIToken, no cloud id) returned no error")
 	}
 	if _, err := Prefix(AuthMode(0), nil, ""); err == nil {
 		t.Error("Prefix(unknown mode) returned no error")

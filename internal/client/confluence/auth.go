@@ -48,6 +48,24 @@ func (a *basicAuthenticator) authorize(_ context.Context, req *http.Request) err
 // only lose the credential the provider was configured with.
 func (a *basicAuthenticator) invalidate() {}
 
+// bearerAuthenticator authenticates with a token the provider was configured
+// with, rather than one this client obtained. A service account API token is
+// such a credential: it is sent as a bearer token to the gateway and carries
+// the scopes chosen when it was created.
+type bearerAuthenticator struct {
+	token string
+}
+
+func (a *bearerAuthenticator) authorize(_ context.Context, req *http.Request) error {
+	req.Header.Set("Authorization", "Bearer "+a.token)
+	return nil
+}
+
+// invalidate does nothing, for the same reason basicAuthenticator's does not:
+// the credential is static, so discarding it would only lose the one the
+// provider was configured with.
+func (a *bearerAuthenticator) invalidate() {}
+
 // clientCredentialsAuthenticator authenticates as a service account through
 // the OAuth 2.0 client credentials grant. Atlassian issues no refresh token,
 // so a new access token is obtained by repeating the exchange.

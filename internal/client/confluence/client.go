@@ -129,7 +129,7 @@ func (c *Client) Prefix(ctx context.Context) (*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
-	if c.mode == AuthServiceAccount {
+	if c.usesGateway() {
 		gateway, err := url.Parse(c.options.gateway)
 		if err != nil {
 			return nil, fmt.Errorf("parse gateway URL: %w", err)
@@ -139,6 +139,13 @@ func (c *Client) Prefix(ctx context.Context) (*url.URL, error) {
 	return prefix, nil
 }
 
+// usesGateway reports whether requests go through api.atlassian.com rather
+// than the site itself, which both service account credentials do and basic
+// auth does not. It decides the base URL and whether a cloud id is needed.
+func (c *Client) usesGateway() bool {
+	return c.mode == AuthServiceAccount || c.mode == AuthServiceAccountAPIToken
+}
+
 // resolvedCloudID returns the cloud id, discovering it on first use. Every
 // read of c.cloudID goes through here so that it is never read outside c.mu:
 // Terraform reads data sources concurrently, so several goroutines reach this
@@ -146,7 +153,7 @@ func (c *Client) Prefix(ctx context.Context) (*url.URL, error) {
 // serializes the concurrent callers onto a single lookup -- the intent -- at
 // the cost of blocking them while it runs.
 func (c *Client) resolvedCloudID(ctx context.Context) (string, error) {
-	if c.mode != AuthServiceAccount {
+	if !c.usesGateway() {
 		return "", nil
 	}
 	c.mu.Lock()
