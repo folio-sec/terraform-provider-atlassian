@@ -6,10 +6,98 @@ description: |-
 
 # Atlassian Provider
 
-Use the Atlassian provider to manage Atlassian Cloud resources.
+Use the Atlassian provider to manage Atlassian Cloud resources. The provider
+covers more than one Atlassian API family, and each family has its own
+credential. Configure only the families you use; a type whose family is not
+configured reports exactly which attribute to set.
 
-Organization resources authenticate with an Atlassian organization API key.
-Supply it as `admin_api_key` or, preferably, through the
+## Cloud Admin APIs
+
+Organization and Admin Control types authenticate with an Atlassian
+organization API key. Supply it as `admin_api_key` or, preferably, through the
 `ATLASSIAN_ADMIN_API_KEY` environment variable.
+
+## Confluence Cloud
+
+Confluence types authenticate against a site in one of two ways. Configure
+exactly one.
+
+**Service account (recommended for automation).** An OAuth 2.0 credential
+created for a service account in the admin console. Requests go through the
+`api.atlassian.com` gateway, so the site is identified by its cloud id, which
+the provider discovers from `site_url` when `cloud_id` is omitted.
+
+```hcl
+provider "atlassian" {
+  site_url = "https://example.atlassian.net"
+
+  service_account = {
+    client_id     = var.client_id      # or ATLASSIAN_CLIENT_ID
+    client_secret = var.client_secret  # or ATLASSIAN_CLIENT_SECRET
+  }
+}
+```
+
+The credential's scopes bound what the provider can do, and **a credential
+holds at most 50**. Each data source and resource page lists the scopes that
+type needs; grant the union of the ones your configuration uses. A scope is
+checked when an operation runs, so a type you only read from costs only its
+read scope.
+
+When one credential cannot hold every scope you need, configure several
+provider aliases, each with its own credential, and issue all of them from the
+**same service account**: the account that creates or updates a space is
+recorded on it, so credentials from different accounts would leave objects
+attributed to more than one identity.
+
+```hcl
+provider "atlassian" {
+  alias    = "spaces_readonly"
+  site_url = "https://example.atlassian.net"
+  service_account = {
+    client_id     = var.readonly_client_id
+    client_secret = var.readonly_client_secret
+  }
+}
+
+provider "atlassian" {
+  alias    = "spaces_admin"
+  site_url = "https://example.atlassian.net"
+  service_account = {
+    client_id     = var.admin_client_id
+    client_secret = var.admin_client_secret
+  }
+}
+
+data "atlassian_confluence_spaces" "all" {
+  provider = atlassian.spaces_readonly
+}
+
+resource "atlassian_confluence_space" "docs" {
+  provider = atlassian.spaces_admin
+  key      = "DOCS"
+  name     = "Documentation"
+}
+```
+
+**Atlassian account with an API token.** HTTP basic auth as a user, with an API
+token created at https://id.atlassian.com/manage/api-tokens. Authorization
+follows that user's own permissions.
+
+```hcl
+provider "atlassian" {
+  site_url = "https://example.atlassian.net"
+
+  basic_auth = {
+    email     = var.email      # or ATLASSIAN_EMAIL
+    api_token = var.api_token  # or ATLASSIAN_API_TOKEN
+  }
+}
+```
+
+Every credential attribute falls back to an environment variable, so a block
+may be omitted entirely when its variables are set. Because the variable
+names are shared with other Atlassian tooling, a configuration error about
+conflicting credentials states where each value came from.
 
 {{ .SchemaMarkdown | trimspace }}
