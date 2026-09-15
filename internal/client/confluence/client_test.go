@@ -71,6 +71,13 @@ func (f *fakeAtlassian) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "/oauth/token":
 		n := f.tokenExchanges.Add(1)
 		if f.tokenStatus != http.StatusOK {
+			// auth.atlassian.com answers a rejected exchange with
+			// Content-Type: application/json and the RFC 6749 error fields
+			// (observed 2026-09-15: 401 {"error":"access_denied",
+			// "error_description":"Unauthorized"}). The header is part of the
+			// contract here, not decoration: it is what makes those fields
+			// readable instead of the raw body being carried into the error.
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(f.tokenStatus)
 			_, _ = w.Write([]byte(f.tokenBody))
 			return
@@ -126,7 +133,6 @@ func testOptions(server *httptest.Server) options {
 		tokenURL:     server.URL + "/oauth/token",
 		retryWaitMin: time.Millisecond,
 		retryWaitMax: 5 * time.Millisecond,
-		now:          time.Now,
 	}
 }
 

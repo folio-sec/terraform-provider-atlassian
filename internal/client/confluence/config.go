@@ -11,6 +11,8 @@ import (
 	v1gen "github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence/v1/generated"
 	v2gen "github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence/v2/generated"
 	"github.com/hashicorp/go-retryablehttp"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 // AuthMode selects how the Confluence transport authenticates and, because
@@ -103,7 +105,6 @@ type options struct {
 	tokenURL     string
 	retryWaitMin time.Duration
 	retryWaitMax time.Duration
-	now          func() time.Time
 }
 
 func defaultOptions() options {
@@ -112,7 +113,6 @@ func defaultOptions() options {
 		tokenURL:     defaultOAuthEndpoint,
 		retryWaitMin: time.Second,
 		retryWaitMax: 30 * time.Second,
-		now:          time.Now,
 	}
 }
 
@@ -178,16 +178,19 @@ func newClient(config Config, opts options) (*Client, error) {
 	case AuthBasic:
 		c.auth = &basicAuthenticator{email: c.email, apiToken: c.apiToken}
 	case AuthServiceAccount:
-		tokenURL, err := url.Parse(opts.tokenURL)
-		if err != nil {
+		// clientcredentials.Config takes TokenURL as a string; this parse only
+		// rejects a malformed endpoint here rather than at the first exchange.
+		if _, err := url.Parse(opts.tokenURL); err != nil {
 			return nil, fmt.Errorf("parse OAuth token endpoint: %w", err)
 		}
 		c.auth = &clientCredentialsAuthenticator{
-			clientID:     c.clientID,
-			clientSecret: c.clientSecret,
-			tokenURL:     tokenURL,
-			httpClient:   c.helperClient.StandardClient(),
-			now:          opts.now,
+			config: clientcredentials.Config{
+				ClientID:     c.clientID,
+				ClientSecret: c.clientSecret,
+				TokenURL:     opts.tokenURL,
+				AuthStyle:    oauth2.AuthStyleInParams,
+			},
+			httpClient: c.helperClient.StandardClient(),
 		}
 	}
 	return c, nil
