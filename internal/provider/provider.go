@@ -235,6 +235,7 @@ func (p *AtlassianProvider) Resources(_ context.Context) []func() resource.Resou
 		organizationservice.NewGroupRoleAssignmentResource,
 		organizationservice.NewUserOrganizationRoleAssignmentResource,
 		organizationservice.NewUserRoleAssignmentResource,
+		spaceservice.NewSpaceResource,
 	}
 }
 

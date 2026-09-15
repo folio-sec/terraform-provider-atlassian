@@ -434,8 +434,8 @@ func TestProviderRegistersOrganizationTypes(t *testing.T) {
 	if got := len(p.DataSources(context.Background())); got != 9 {
 		t.Fatalf("DataSources() length = %d, want 9", got)
 	}
-	if got := len(p.Resources(context.Background())); got != 7 {
-		t.Fatalf("Resources() length = %d, want 7", got)
+	if got := len(p.Resources(context.Background())); got != 8 {
+		t.Fatalf("Resources() length = %d, want 8", got)
 	}
 	resourceNames := map[string]bool{}
 	for _, constructor := range p.Resources(context.Background()) {
@@ -457,6 +457,9 @@ func TestProviderRegistersOrganizationTypes(t *testing.T) {
 	}
 	if !resourceNames["atlassian_data_security_policy"] {
 		t.Error("data security policy resource is not registered")
+	}
+	if !resourceNames["atlassian_confluence_space"] {
+		t.Error("confluence space resource is not registered")
 	}
 	dataSourceNames := map[string]bool{}
 	for _, constructor := range p.DataSources(context.Background()) {
