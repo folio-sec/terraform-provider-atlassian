@@ -29,6 +29,16 @@ jobs:
             specification_url: https://dac-static.atlassian.com/cloud/admin/control/swagger.v3.json
             specification_path: api/admin/control/upstream.json
             generate_target: generate/api-client/control
+          - name: Confluence v2
+            slug: confluence-v2
+            specification_url: https://dac-static.atlassian.com/cloud/confluence/openapi-v2.v3.json
+            specification_path: api/confluence/v2/upstream.json
+            generate_target: generate/api-client/confluence-v2
+          - name: Confluence v1
+            slug: confluence-v1
+            specification_url: https://dac-static.atlassian.com/cloud/confluence/swagger.v3.json
+            specification_path: api/confluence/v1/upstream.json
+            generate_target: generate/api-client/confluence-v1
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0

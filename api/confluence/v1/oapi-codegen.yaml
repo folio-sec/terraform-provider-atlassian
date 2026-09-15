@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/v2.8.0/configuration-schema.json
+package: generated
+output: internal/client/confluence/v1/generated/client.gen.go
+generate:
+  models: true
+  client: true
+output-options:
+  include-operation-ids:
+    - updateSpace
+    - deleteSpace
+    - getTask
+  nullable-type: true
+  overlay:
+    path: api/confluence/v1/overlay.yaml
+    strict: true

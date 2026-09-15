@@ -48,6 +48,11 @@ code. Update it when the same implementation or review mistake recurs.
   or set for every cardinality, including zero or one result. Use a set when
   ordering has no semantic meaning, and follow API pagination internally unless
   pagination itself is part of the Terraform use case.
+- When a create succeeds but a follow-up call fails, write the identifier to
+  state before returning the error diagnostic. Terraform persists state
+  alongside an error precisely so a half-finished resource is not orphaned, so
+  a bare error leaves a real object outside Terraform's knowledge and forces a
+  manual import.
 - Validate import identity values with the same rules as resource
   configuration. Keep string-ID import for `terraform import` CLI compatibility
   even though Terraform 1.12+ resource identity is preferred.
@@ -58,6 +63,47 @@ code. Update it when the same implementation or review mistake recurs.
   only the `data` blocks its arguments actually reference. Leave out `output`,
   `variable`, `provider`, and `terraform` blocks; `examples/provider` is the
   only place provider configuration belongs.
+
+## Reasoning about outcomes the API does not state
+
+These rules come from a review round where each mistake was a plausible-looking
+inference standing in for evidence. They generalise beyond the case that
+produced them.
+
+- Do not let an inference about server behavior license a destructive or
+  non-idempotent action. "This status means the request was not applied",
+  "this timestamp means we created it", "this key is unique so there is one
+  result" are hypotheses. Where being wrong would duplicate, adopt, or delete a
+  real object, require evidence instead: a read that confirms, an identifier
+  the server returned, or an explicit operator action such as import.
+- Distinguish a failure to reach a service from an answer that service gave.
+  A gateway, proxy, or transport that never delivered the request says nothing
+  about whether the object exists, and treating those alike lets a
+  misconfiguration silently rewrite state. Where a status code alone cannot
+  separate them, carry the distinction on the error rather than recovering it
+  at each call site.
+- Classify a failure by where it happened, not only by its type. A request the
+  client rejected before sending is settled; one that reached the server and
+  returned a server-side error is not. Encode that difference where it is
+  known, because a caller cannot recover it afterwards from the error alone.
+- Before designing around an API behavior, check whether the repository already
+  records it. When behavior is genuinely unverified, say so in the comment and
+  choose the option that is correct under either answer, rather than the one
+  that is correct under the assumption.
+
+## Consistency with existing surfaces
+
+- Read the sibling implementation before writing a new API family, and follow
+  its established policy unless there is a stated reason not to. Retry and
+  idempotency policy in particular is easy to reinvent: a second surface that
+  quietly adopts different rules is harder to review than one that departs
+  explicitly.
+- Describe a new surface as matching an existing one only for the parts that
+  actually match. Claiming equivalence in a comment or commit message hides
+  the parts that differ, which is worse than declaring the difference.
+- Keep comments, doc strings, and commit messages describing what the code
+  does now. A stale promise about behavior that was removed is worse than no
+  comment, because callers rely on it.
 
 ## Organization API behavior
 

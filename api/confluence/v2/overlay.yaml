@@ -1,0 +1,50 @@
+overlay: 1.0.0
+x-speakeasy-jsonpath: rfc9535
+info:
+  title: Confluence Cloud REST API v2 corrections
+  version: 1.0.0
+actions:
+  # Every space id the API returns is a string (SpaceBulk.id, SpaceSingle.id),
+  # but the getSpaceById path parameter is typed as int64. Retyping the
+  # parameter keeps the identifier a string end to end, so the Terraform model,
+  # the import identity, and the v1 spaceKey paths never round-trip an id
+  # through an integer. Numeric-string validation stays in the service layer.
+  #
+  # Target the parameter by name, not by position. `strict: true` fails only
+  # on a no-match, never on a wrong match, so a positional target would
+  # silently retype whichever parameter happened to be first if a future
+  # upstream pull reordered the array -- and the weekly update workflow
+  # regenerates this client unattended.
+  - target: "$.paths['/spaces/{id}'].get.parameters[?(@.name=='id')].schema"
+    description: Treat the space id as the string the API actually returns.
+    update:
+      type: string
+  # getSpaces?ids= filters on the same string identifier as the id path
+  # parameter above. The published schema types the ids query parameter's
+  # items as integer; retyping them to string keeps space ids opaque strings
+  # end to end instead of round-tripping through int64 only at this one
+  # filter boundary.
+  - target: "$.paths['/spaces'].get.parameters[?(@.name=='ids')].schema.items"
+    description: Treat space ids in the ids filter as strings, matching the id path parameter.
+    update:
+      type: string
+  # currentActiveAlias is absent from SpaceSingle in the published document,
+  # but getSpaceById was observed to return it anyway (plans/confluence-space.md,
+  # gate 4: the create response and the read both carried it even though only
+  # SpaceBulk declares the field). Declaring it here lets the generated
+  # GetSpaceByIdResponse carry it directly instead of the service layer
+  # parsing it out of the raw response body by hand.
+  - target: "$.components.schemas.SpaceSingle.properties"
+    description: Add currentActiveAlias, which getSpaceById returns despite the schema omitting it.
+    update:
+      currentActiveAlias:
+        type: string
+        description: Currently active alias for a Confluence space.
+  # The service layer supplies the base URL from provider configuration,
+  # because it differs per authentication mode: the site domain for basic auth
+  # and https://api.atlassian.com/ex/confluence/{cloudId} for a service
+  # account token. Removing the templated server keeps the generated client
+  # from carrying a default that is wrong in one of the two modes.
+  - target: "$['servers']"
+    description: Drop the templated server; the base URL is supplied at runtime.
+    remove: true

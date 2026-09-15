@@ -1,0 +1,12 @@
+overlay: 1.0.0
+info:
+  title: Confluence Cloud REST API v1 corrections
+  version: 1.0.0
+actions:
+  # The published server is the scheme-relative "//your-domain.atlassian.net",
+  # which is not a usable base URL. As with v2, the service layer supplies the
+  # base URL from provider configuration because it differs per authentication
+  # mode, so the server entry is removed rather than corrected.
+  - target: "$['servers']"
+    description: Drop the scheme-relative server; the base URL is supplied at runtime.
+    remove: true
