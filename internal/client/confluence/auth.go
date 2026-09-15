@@ -60,15 +60,12 @@ type clientCredentialsAuthenticator struct {
 	mu        sync.Mutex
 	token     string
 	expiresAt time.Time
-	scopes    []string
-	exchanges int
 }
 
 type tokenResponse struct {
 	AccessToken string `json:"access_token"`
 	TokenType   string `json:"token_type"`
 	ExpiresIn   int64  `json:"expires_in"`
-	Scope       string `json:"scope"`
 }
 
 type tokenErrorResponse struct {
@@ -140,7 +137,6 @@ func (a *clientCredentialsAuthenticator) exchangeLocked(ctx context.Context) (st
 	if err != nil {
 		return "", fmt.Errorf("read token response: %w", err)
 	}
-	a.exchanges++
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		var problem tokenErrorResponse
@@ -161,26 +157,5 @@ func (a *clientCredentialsAuthenticator) exchangeLocked(ctx context.Context) (st
 	}
 	a.token = token.AccessToken
 	a.expiresAt = a.now().Add(time.Duration(token.ExpiresIn) * time.Second)
-	a.scopes = nil
-	if token.Scope != "" {
-		a.scopes = strings.Fields(token.Scope)
-	}
 	return a.token, nil
-}
-
-// GrantedScopes returns the scopes the token endpoint reported for the
-// service account credential, or nil when none is known: before the first
-// exchange, under basic auth, or when the endpoint omitted the field. It is
-// advisory only; nothing in the transport depends on it.
-func (c *Client) GrantedScopes() []string {
-	a, ok := c.auth.(*clientCredentialsAuthenticator)
-	if !ok {
-		return nil
-	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	if a.scopes == nil {
-		return nil
-	}
-	return append([]string(nil), a.scopes...)
 }

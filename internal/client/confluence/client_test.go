@@ -185,9 +185,6 @@ func TestBasicAuthSendsHeaderToSitePath(t *testing.T) {
 	if fake.tokenExchanges.Load() != 0 || fake.tenantInfoCalls.Load() != 0 {
 		t.Error("basic auth must not exchange tokens or discover a cloud id")
 	}
-	if c.GrantedScopes() != nil {
-		t.Error("GrantedScopes must be nil under basic auth")
-	}
 }
 
 func TestServiceAccountUsesGatewayPathsAndCachesToken(t *testing.T) {
@@ -227,9 +224,6 @@ func TestServiceAccountUsesGatewayPathsAndCachesToken(t *testing.T) {
 	}
 	if fake.tenantInfoCalls.Load() != 0 {
 		t.Error("cloud id was given explicitly; discovery must not run")
-	}
-	if got := c.GrantedScopes(); len(got) != 2 || got[0] != "read:space:confluence" {
-		t.Errorf("GrantedScopes = %v", got)
 	}
 }
 
@@ -486,8 +480,8 @@ func TestCheckResponseShapes(t *testing.T) {
 			if wantNotFound != IsNotFound(err) {
 				t.Errorf("IsNotFound = %v for status %d, want %v", IsNotFound(err), tt.status, wantNotFound)
 			}
-			if got := IsGatewayRouting(err); got != strings.Contains(tt.body, `"path"`) {
-				t.Errorf("IsGatewayRouting = %v for %q", got, tt.body)
+			if httpErr.GatewayRouting != strings.Contains(tt.body, `"path"`) {
+				t.Errorf("GatewayRouting = %v for %q", httpErr.GatewayRouting, tt.body)
 			}
 		})
 	}
@@ -605,13 +599,15 @@ func TestGatewayRoutingIsNotResourceAbsence(t *testing.T) {
 	if IsNotFound(gateway) {
 		t.Error("a gateway routing 404 must not read as resource absence")
 	}
-	if !IsGatewayRouting(gateway) {
+	var gatewayErr *HTTPError
+	if !errors.As(gateway, &gatewayErr) || !gatewayErr.GatewayRouting {
 		t.Error("a gateway routing 404 must be identifiable as such")
 	}
 	if !IsNotFound(confluence) {
 		t.Error("a Confluence 404 must read as resource absence")
 	}
-	if IsGatewayRouting(confluence) {
+	var confluenceErr *HTTPError
+	if !errors.As(confluence, &confluenceErr) || confluenceErr.GatewayRouting {
 		t.Error("a Confluence 404 is not a routing failure")
 	}
 }

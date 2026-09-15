@@ -173,7 +173,8 @@ func TestRateLimitSharedAcrossRetriesAndNewRequests(t *testing.T) {
 		}
 		done := make(chan error, 2)
 		go func() {
-			done <- client.DoWithoutRetry(context.Background(), http.MethodPost, "memberships", nil, nil, nil)
+			_, err := send(t, client, WithoutRetry(context.Background()), http.MethodPost, "memberships")
+			done <- err
 		}()
 		synctest.Wait()
 		go func() {
@@ -210,12 +211,13 @@ func TestRateLimitFinalResponseStillPausesOtherRequests(t *testing.T) {
 			t.Fatal(err)
 		}
 		client.httpClient.RetryMax = 0
-		if err := client.Do(context.Background(), http.MethodGet, "users", nil, nil, nil); err == nil {
-			t.Fatal("expected 429")
+		resp, err := send(t, client, context.Background(), http.MethodGet, "users")
+		if err != nil || resp.StatusCode != http.StatusTooManyRequests {
+			t.Fatalf("response = %v, error = %v, want 429", resp, err)
 		}
 		client.httpClient.RetryMax = 4
 		start := time.Now()
-		err = client.Do(context.Background(), http.MethodGet, "users", nil, nil, nil)
+		_, err = send(t, client, context.Background(), http.MethodGet, "users")
 		if !errors.Is(err, errRateLimitWait) {
 			t.Fatalf("error = %v", err)
 		}

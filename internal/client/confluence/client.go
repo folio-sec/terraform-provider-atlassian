@@ -62,14 +62,16 @@ func newRetryClient(opts options, httpClient *http.Client, policy retryablehttp.
 	return retryClient
 }
 
-// checkRetry mirrors the Admin transport's policy. A WithoutRetry request is
-// sent once, apart from a 429, which the server rejects before applying
-// anything. There is deliberately no carve-out for 401: the token is refreshed
-// before every request that is within expiryMargin of expiry, so a 401 from
-// expiry needs the token to lapse in the moment between that check and the
-// server's, and a 401 from any other cause is not fixed by resending. What a
-// 401 does do is discard the cached token, so the next attempt fetches a new
-// one -- see checkResponse.
+// checkRetry follows the Admin transport's WithoutRetry policy. It is not the
+// same function: Admin also has to recognize its own errRateLimitWait, which
+// comes from the pacing transport this package deliberately does not have.
+// A WithoutRetry request is sent once, apart from a 429, which the server
+// rejects before applying anything. There is deliberately no carve-out for
+// 401: the token is refreshed before every request that is within
+// expiryMargin of expiry, so a 401 from expiry needs the token to lapse in
+// the moment between that check and the server's, and a 401 from any other
+// cause is not fixed by resending. What a 401 does do is discard the cached
+// token, so the next attempt fetches a new one -- see checkResponse.
 func (c *Client) checkRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
 	if resp != nil && resp.StatusCode == http.StatusUnauthorized {
 		// A token the server rejects must not be reused, even when this
