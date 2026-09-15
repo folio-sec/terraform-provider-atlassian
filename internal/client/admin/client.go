@@ -2,10 +2,8 @@ package admin
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -105,18 +103,6 @@ func NewWithBaseURL(baseURL *url.URL, apiKey string, httpClient *http.Client) (*
 	return &Client{baseURL: &baseURLCopy, apiKey: apiKey, httpClient: retryClient}, nil
 }
 
-// Do sends an authenticated JSON request and decodes a successful response.
-func (c *Client) Do(ctx context.Context, method, path string, query url.Values, requestBody, responseBody any) error {
-	return c.do(ctx, method, path, query, requestBody, responseBody)
-}
-
-// DoWithoutRetry sends a request exactly once. It is intended for mutations
-// whose result can be ambiguous if a response is lost after the server applies
-// the change.
-func (c *Client) DoWithoutRetry(ctx context.Context, method, path string, query url.Values, requestBody, responseBody any) error {
-	return c.do(WithoutRetry(ctx), method, path, query, requestBody, responseBody)
-}
-
 // HTTPClient returns a standard net/http facade backed by the shared
 // retryable transport. Generated API clients use this without taking ownership
 // of authentication or retry policy.
@@ -136,58 +122,5 @@ func (c *Client) BaseURL(path string) string {
 func (c *Client) EditRequest(_ context.Context, req *http.Request) error {
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Accept", "application/json")
-	return nil
-}
-
-func (c *Client) do(ctx context.Context, method, path string, query url.Values, requestBody, responseBody any) error {
-	var body []byte
-	if requestBody != nil {
-		encoded, err := json.Marshal(requestBody)
-		if err != nil {
-			return fmt.Errorf("encode request body: %w", err)
-		}
-		body = encoded
-	}
-
-	requestURL := *c.baseURL
-	requestURL.Path = strings.TrimRight(c.baseURL.Path, "/") + "/" + strings.TrimLeft(path, "/")
-	requestURL.RawQuery = query.Encode()
-	req, err := retryablehttp.NewRequestWithContext(ctx, method, requestURL.String(), body)
-	if err != nil {
-		return fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-	req.Header.Set("Accept", "application/json")
-	if requestBody != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("send request: %w", err)
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		errorBody, readErr := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-		if readErr != nil {
-			return fmt.Errorf("read error response: %w", readErr)
-		}
-		return &HTTPError{
-			StatusCode: resp.StatusCode,
-			Method:     method,
-			URL:        requestURL.String(),
-			Body:       strings.TrimSpace(string(errorBody)),
-		}
-	}
-
-	if responseBody == nil || resp.StatusCode == http.StatusNoContent {
-		return nil
-	}
-	if err := json.NewDecoder(resp.Body).Decode(responseBody); err != nil {
-		return fmt.Errorf("decode response body: %w", err)
-	}
 	return nil
 }

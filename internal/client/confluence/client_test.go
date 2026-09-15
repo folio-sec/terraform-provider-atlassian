@@ -20,6 +20,9 @@ const (
 	testEmail   = "user@example.com"
 	testToken   = "api-token"
 	testSecret  = "very-secret-value"
+	// The service account's own API token, distinct from testToken so a test
+	// cannot pass by sending basic auth's credential.
+	testServiceAccountToken = "service-account-api-token"
 )
 
 // fakeAtlassian stands in for the site, the gateway and the token endpoint at
@@ -71,6 +74,13 @@ func (f *fakeAtlassian) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "/oauth/token":
 		n := f.tokenExchanges.Add(1)
 		if f.tokenStatus != http.StatusOK {
+			// auth.atlassian.com answers a rejected exchange with
+			// Content-Type: application/json and the RFC 6749 error fields
+			// (observed 2026-09-15: 401 {"error":"access_denied",
+			// "error_description":"Unauthorized"}). The header is part of the
+			// contract here, not decoration: it is what makes those fields
+			// readable instead of the raw body being carried into the error.
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(f.tokenStatus)
 			_, _ = w.Write([]byte(f.tokenBody))
 			return
@@ -126,7 +136,6 @@ func testOptions(server *httptest.Server) options {
 		tokenURL:     server.URL + "/oauth/token",
 		retryWaitMin: time.Millisecond,
 		retryWaitMax: 5 * time.Millisecond,
-		now:          time.Now,
 	}
 }
 
@@ -143,6 +152,17 @@ func newServiceAccountClient(t *testing.T, server *httptest.Server, cloudID stri
 	t.Helper()
 	c, err := newClient(Config{
 		Mode: AuthServiceAccount, SiteURL: server.URL, ClientID: "client", ClientSecret: testSecret, CloudID: cloudID,
+	}, testOptions(server))
+	if err != nil {
+		t.Fatalf("newClient() error = %v", err)
+	}
+	return c
+}
+
+func newServiceAccountAPITokenClient(t *testing.T, server *httptest.Server, cloudID string) *Client {
+	t.Helper()
+	c, err := newClient(Config{
+		Mode: AuthServiceAccountAPIToken, SiteURL: server.URL, ServiceAccountAPIToken: testServiceAccountToken, CloudID: cloudID,
 	}, testOptions(server))
 	if err != nil {
 		t.Fatalf("newClient() error = %v", err)
@@ -185,9 +205,6 @@ func TestBasicAuthSendsHeaderToSitePath(t *testing.T) {
 	if fake.tokenExchanges.Load() != 0 || fake.tenantInfoCalls.Load() != 0 {
 		t.Error("basic auth must not exchange tokens or discover a cloud id")
 	}
-	if c.GrantedScopes() != nil {
-		t.Error("GrantedScopes must be nil under basic auth")
-	}
 }
 
 func TestServiceAccountUsesGatewayPathsAndCachesToken(t *testing.T) {
@@ -227,9 +244,6 @@ func TestServiceAccountUsesGatewayPathsAndCachesToken(t *testing.T) {
 	}
 	if fake.tenantInfoCalls.Load() != 0 {
 		t.Error("cloud id was given explicitly; discovery must not run")
-	}
-	if got := c.GrantedScopes(); len(got) != 2 || got[0] != "read:space:confluence" {
-		t.Errorf("GrantedScopes = %v", got)
 	}
 }
 
@@ -486,8 +500,8 @@ func TestCheckResponseShapes(t *testing.T) {
 			if wantNotFound != IsNotFound(err) {
 				t.Errorf("IsNotFound = %v for status %d, want %v", IsNotFound(err), tt.status, wantNotFound)
 			}
-			if got := IsGatewayRouting(err); got != strings.Contains(tt.body, `"path"`) {
-				t.Errorf("IsGatewayRouting = %v for %q", got, tt.body)
+			if httpErr.GatewayRouting != strings.Contains(tt.body, `"path"`) {
+				t.Errorf("GatewayRouting = %v for %q", httpErr.GatewayRouting, tt.body)
 			}
 		})
 	}
@@ -605,13 +619,105 @@ func TestGatewayRoutingIsNotResourceAbsence(t *testing.T) {
 	if IsNotFound(gateway) {
 		t.Error("a gateway routing 404 must not read as resource absence")
 	}
-	if !IsGatewayRouting(gateway) {
+	var gatewayErr *HTTPError
+	if !errors.As(gateway, &gatewayErr) || !gatewayErr.GatewayRouting {
 		t.Error("a gateway routing 404 must be identifiable as such")
 	}
 	if !IsNotFound(confluence) {
 		t.Error("a Confluence 404 must read as resource absence")
 	}
-	if IsGatewayRouting(confluence) {
+	var confluenceErr *HTTPError
+	if !errors.As(confluence, &confluenceErr) || confluenceErr.GatewayRouting {
 		t.Error("a Confluence 404 is not a routing failure")
+	}
+}
+
+// TestServiceAccountAPITokenUsesGatewayWithoutExchange covers the mode's whole
+// contract: the configured token is sent as it is, to the gateway route the
+// client credentials mode uses, and no token endpoint is involved at all.
+func TestServiceAccountAPITokenUsesGatewayWithoutExchange(t *testing.T) {
+	t.Parallel()
+	fake, server := newFakeAtlassian(t)
+	c := newServiceAccountAPITokenClient(t, server, testCloudID)
+	ctx := context.Background()
+
+	if _, err := getSpaces(t, c, ctx); err != nil {
+		t.Fatalf("GetSpaces error = %v", err)
+	}
+	v1, err := c.V1(ctx)
+	if err != nil {
+		t.Fatalf("V1() error = %v", err)
+	}
+	if _, err := v1.GetTaskWithResponse(ctx, "1"); err != nil {
+		t.Fatalf("GetTask error = %v", err)
+	}
+
+	reqs := fake.apiRequests()
+	if len(reqs) != 2 {
+		t.Fatalf("api requests = %d, want 2", len(reqs))
+	}
+	if want := "/ex/confluence/" + testCloudID + "/wiki/api/v2/spaces"; reqs[0].path != want {
+		t.Errorf("v2 path = %q, want %q", reqs[0].path, want)
+	}
+	if want := "/ex/confluence/" + testCloudID + "/wiki/rest/api/longtask/1"; reqs[1].path != want {
+		t.Errorf("v1 path = %q, want %q", reqs[1].path, want)
+	}
+	for _, r := range reqs {
+		if r.authorization != "Bearer "+testServiceAccountToken {
+			t.Errorf("Authorization = %q, want the configured token as a bearer", r.authorization)
+		}
+	}
+	if fake.tokenExchanges.Load() != 0 {
+		t.Error("an API token must not be exchanged for another token")
+	}
+	if fake.tenantInfoCalls.Load() != 0 {
+		t.Error("cloud id was given explicitly; discovery must not run")
+	}
+}
+
+// TestServiceAccountAPITokenDiscoversCloudID checks the half of the gateway
+// behavior the token itself cannot provide: /oauth/token/accessible-resources
+// refuses an API token, so the site's own tenant_info stays the only source.
+func TestServiceAccountAPITokenDiscoversCloudID(t *testing.T) {
+	t.Parallel()
+	fake, server := newFakeAtlassian(t)
+	c := newServiceAccountAPITokenClient(t, server, "")
+
+	if _, err := getSpaces(t, c, context.Background()); err != nil {
+		t.Fatalf("GetSpaces error = %v", err)
+	}
+	if got := fake.tenantInfoCalls.Load(); got != 1 {
+		t.Errorf("tenant_info calls = %d, want 1", got)
+	}
+	if got := c.CloudID(); got != testCloudID {
+		t.Errorf("CloudID() = %q, want %q", got, testCloudID)
+	}
+	if got := fake.apiRequests()[0].path; got != "/ex/confluence/"+testCloudID+"/wiki/api/v2/spaces" {
+		t.Errorf("path = %q, want the discovered cloud id in the gateway route", got)
+	}
+}
+
+// TestServiceAccountAPITokenKeepsItsCredentialAfter401 states that invalidate
+// is a no-op here for the same reason it is under basic auth: the token is the
+// one the provider was configured with, so discarding it would leave nothing
+// to authenticate with.
+func TestServiceAccountAPITokenKeepsItsCredentialAfter401(t *testing.T) {
+	t.Parallel()
+	fake, server := newFakeAtlassian(t)
+	c := newServiceAccountAPITokenClient(t, server, testCloudID)
+
+	fake.apiResponses = []apiResponse{{status: http.StatusUnauthorized}}
+	if _, err := getSpaces(t, c, context.Background()); err == nil {
+		t.Fatal("expected the 401 to surface")
+	}
+	if _, err := getSpaces(t, c, context.Background()); err != nil {
+		t.Fatalf("the credential must survive a 401: %v", err)
+	}
+	reqs := fake.apiRequests()
+	if len(reqs) != 2 || reqs[0].authorization != reqs[1].authorization {
+		t.Errorf("a static credential must survive a 401: %+v", reqs)
+	}
+	if fake.tokenExchanges.Load() != 0 {
+		t.Error("a 401 must not trigger a token exchange in this mode")
 	}
 }

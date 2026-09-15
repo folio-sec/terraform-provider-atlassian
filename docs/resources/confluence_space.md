@@ -21,6 +21,17 @@ When the provider authenticates as a service account, its credential must carry 
 
 Managing a space through its whole lifecycle therefore needs all six. Creating one also requires a tenant with Role-Based Access Control enabled, which is what the v2 createSpace operation is gated behind.
 
+Those six are the granular scope names, and they are all a client credentials credential needs. A service account API token needs more: update, delete and the delete completion check run against the v1 REST API, which an API token reaches only when it also carries the classic scope names. Its scopes are fixed when it is created, so grant the whole set then:
+
+- `read:space:confluence`
+- `write:space:confluence`
+- `delete:space:confluence`
+- `read:space-details:confluence`
+- `write:space.permission:confluence`
+- `read:content.metadata:confluence`
+- `write:confluence-space` (classic, for v1 update and delete)
+- `read:confluence-space.summary` (classic, for the v1 delete completion check)
+
 > **Deletion is permanent**
 > Deleting this resource deletes the space outright; it does not pass through the trash and cannot be undone.
 

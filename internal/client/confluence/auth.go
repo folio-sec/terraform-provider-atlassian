@@ -1,16 +1,16 @@
 package confluence
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 // defaultOAuthEndpoint is where the client credentials grant is exchanged.
@@ -48,32 +48,50 @@ func (a *basicAuthenticator) authorize(_ context.Context, req *http.Request) err
 // only lose the credential the provider was configured with.
 func (a *basicAuthenticator) invalidate() {}
 
+// bearerAuthenticator authenticates with a token the provider was configured
+// with, rather than one this client obtained. A service account API token is
+// such a credential: it is sent as a bearer token to the gateway and carries
+// the scopes chosen when it was created.
+type bearerAuthenticator struct {
+	token string
+}
+
+func (a *bearerAuthenticator) authorize(_ context.Context, req *http.Request) error {
+	req.Header.Set("Authorization", "Bearer "+a.token)
+	return nil
+}
+
+// invalidate does nothing, for the same reason basicAuthenticator's does not:
+// the credential is static, so discarding it would only lose the one the
+// provider was configured with.
+func (a *bearerAuthenticator) invalidate() {}
+
 // clientCredentialsAuthenticator authenticates as a service account through
 // the OAuth 2.0 client credentials grant. Atlassian issues no refresh token,
 // so a new access token is obtained by repeating the exchange.
+//
+// The client credentials grant itself is golang.org/x/oauth2/clientcredentials;
+// only the caching around it is local, because this client must be able to
+// discard a token the server has rejected. That is what invalidate does and
+// what checkRetry calls on a 401; no oauth2.TokenSource exposes it, and
+// oauth2.ReuseTokenSource decides by expiry alone, so a credential revoked in
+// the admin console would keep being replayed until its hour was up. Caching
+// here also keeps the request's context on the exchange, which
+// Config.TokenSource(ctx) would fix at construction instead.
+//
+// AuthStyleInParams sends the credentials in the request body, which is what
+// this provider has always done. Measured against auth.atlassian.com on
+// 2026-09-15 with a real service account credential: a form-encoded body, a
+// JSON body, and form plus HTTP Basic client authentication all returned 200
+// with token_type=Bearer and expires_in=3600. The endpoint accepts all three,
+// so the library's encoding is not a departure from what was verified.
 type clientCredentialsAuthenticator struct {
-	clientID, clientSecret string
-	tokenURL               *url.URL
-	httpClient             *http.Client
-	now                    func() time.Time
+	config     clientcredentials.Config
+	httpClient *http.Client
 
 	mu        sync.Mutex
 	token     string
 	expiresAt time.Time
-	scopes    []string
-	exchanges int
-}
-
-type tokenResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int64  `json:"expires_in"`
-	Scope       string `json:"scope"`
-}
-
-type tokenErrorResponse struct {
-	Error       string `json:"error"`
-	Description string `json:"error_description"`
 }
 
 func (a *clientCredentialsAuthenticator) authorize(ctx context.Context, req *http.Request) error {
@@ -90,7 +108,7 @@ func (a *clientCredentialsAuthenticator) authorize(ctx context.Context, req *htt
 func (a *clientCredentialsAuthenticator) current(ctx context.Context) (string, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if a.token != "" && a.now().Add(expiryMargin).Before(a.expiresAt) {
+	if a.token != "" && time.Now().Add(expiryMargin).Before(a.expiresAt) {
 		return a.token, nil
 	}
 	return a.exchangeLocked(ctx)
@@ -108,79 +126,49 @@ func (a *clientCredentialsAuthenticator) invalidate() {
 }
 
 // exchangeLocked performs the client credentials grant. The caller holds mu.
-// The client secret never appears in a returned error, and the endpoint's
-// response body is reduced to its documented error fields before it does.
+// The client secret never appears in a returned error: a token endpoint error
+// is reported through its documented RFC 6749 fields, and any other failure is
+// reported without the response body, which oauth2.RetrieveError would
+// otherwise include verbatim.
 func (a *clientCredentialsAuthenticator) exchangeLocked(ctx context.Context) (string, error) {
-	body, err := json.Marshal(map[string]string{
-		"grant_type":    "client_credentials",
-		"client_id":     a.clientID,
-		"client_secret": a.clientSecret,
-	})
-	if err != nil {
-		return "", fmt.Errorf("encode token request: %w", err)
-	}
 	// httpClient here is the helper client: it always applies the default
 	// retry policy, so the exchange still retries a transient failure even
 	// when the caller's context marks a mutation WithoutRetry, and it never
 	// reaches the policy that invalidates this authenticator -- which would
 	// deadlock against the lock held here.
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.tokenURL.String(), bytes.NewReader(body))
+	token, err := a.config.Token(context.WithValue(ctx, oauth2.HTTPClient, a.httpClient))
 	if err != nil {
-		return "", fmt.Errorf("create token request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := a.httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("request service account token: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return "", fmt.Errorf("read token response: %w", err)
-	}
-	a.exchanges++
-
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		var problem tokenErrorResponse
-		_ = json.Unmarshal(raw, &problem)
-		detail := strings.TrimSpace(strings.Join([]string{problem.Error, problem.Description}, ": "))
-		if detail == ":" {
-			detail = "no error details returned"
-		}
-		return "", fmt.Errorf("service account token request returned %s: %s", http.StatusText(resp.StatusCode), strings.Trim(detail, ": "))
-	}
-
-	var token tokenResponse
-	if err := json.Unmarshal(raw, &token); err != nil {
-		return "", fmt.Errorf("decode token response: %w", err)
+		return "", exchangeError(err)
 	}
 	if token.AccessToken == "" {
 		return "", fmt.Errorf("token response did not include an access token")
 	}
 	a.token = token.AccessToken
-	a.expiresAt = a.now().Add(time.Duration(token.ExpiresIn) * time.Second)
-	a.scopes = nil
-	if token.Scope != "" {
-		a.scopes = strings.Fields(token.Scope)
-	}
+	// A zero Expiry means oauth2 saw no expires_in. oauth2 reads that as a
+	// token that never expires; the check in current reads it as one that is
+	// already past its margin, so the next request exchanges again. Erring
+	// towards an extra exchange is the safe direction, and the endpoint has
+	// always returned expires_in=3600 in practice.
+	a.expiresAt = token.Expiry
 	return a.token, nil
 }
 
-// GrantedScopes returns the scopes the token endpoint reported for the
-// service account credential, or nil when none is known: before the first
-// exchange, under basic auth, or when the endpoint omitted the field. It is
-// advisory only; nothing in the transport depends on it.
-func (c *Client) GrantedScopes() []string {
-	a, ok := c.auth.(*clientCredentialsAuthenticator)
-	if !ok {
-		return nil
+// exchangeError reduces a failed exchange to what is safe to surface. An
+// endpoint that answered in the RFC 6749 error shape is reported by its error
+// code and description; anything else keeps its status and drops its body,
+// because a body this client did not parse may contain the request it echoed.
+func exchangeError(err error) error {
+	var retrieveErr *oauth2.RetrieveError
+	if !errors.As(err, &retrieveErr) {
+		return fmt.Errorf("request service account token: %w", err)
 	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	if a.scopes == nil {
-		return nil
+	status := ""
+	if retrieveErr.Response != nil {
+		status = http.StatusText(retrieveErr.Response.StatusCode)
 	}
-	return append([]string(nil), a.scopes...)
+	detail := strings.TrimSpace(strings.Trim(retrieveErr.ErrorCode+": "+retrieveErr.ErrorDescription, ": "))
+	if detail == "" {
+		detail = "no error details returned"
+	}
+	return fmt.Errorf("service account token request returned %s: %s", status, detail)
 }

@@ -11,6 +11,8 @@ import (
 	v1gen "github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence/v1/generated"
 	v2gen "github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence/v2/generated"
 	"github.com/hashicorp/go-retryablehttp"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 // AuthMode selects how the Confluence transport authenticates and, because
@@ -24,6 +26,11 @@ const (
 	// AuthServiceAccount authenticates as a service account with OAuth 2.0
 	// client credentials against the api.atlassian.com gateway.
 	AuthServiceAccount
+	// AuthServiceAccountAPIToken authenticates as a service account with an
+	// API token issued to it, sent as a bearer token against the same gateway.
+	// The token is static: there is no exchange, no expiry to track, and
+	// nothing to discard when the server rejects it.
+	AuthServiceAccountAPIToken
 )
 
 func (m AuthMode) String() string {
@@ -32,6 +39,8 @@ func (m AuthMode) String() string {
 		return "basic_auth"
 	case AuthServiceAccount:
 		return "service_account"
+	case AuthServiceAccountAPIToken:
+		return "service_account_api_token"
 	default:
 		return fmt.Sprintf("AuthMode(%d)", int(m))
 	}
@@ -58,6 +67,12 @@ type Config struct {
 	// AuthServiceAccount credentials.
 	ClientID     string
 	ClientSecret string
+	// ServiceAccountAPIToken is the AuthServiceAccountAPIToken credential. It
+	// is separate from APIToken because the two are different credentials for
+	// different principals: APIToken belongs to the account named by Email and
+	// authenticates against the site, this one belongs to a service account
+	// and only works through the gateway.
+	ServiceAccountAPIToken string
 	// CloudID is the site's cloud id. Optional for AuthServiceAccount: when
 	// empty it is discovered from SiteURL on first use.
 	CloudID string
@@ -77,6 +92,7 @@ type Client struct {
 
 	email, apiToken        string
 	clientID, clientSecret string
+	serviceAccountAPIToken string
 
 	options options
 	// httpClient serves the API calls and honours WithoutRetry. helperClient
@@ -103,7 +119,6 @@ type options struct {
 	tokenURL     string
 	retryWaitMin time.Duration
 	retryWaitMax time.Duration
-	now          func() time.Time
 }
 
 func defaultOptions() options {
@@ -112,7 +127,6 @@ func defaultOptions() options {
 		tokenURL:     defaultOAuthEndpoint,
 		retryWaitMin: time.Second,
 		retryWaitMax: 30 * time.Second,
-		now:          time.Now,
 	}
 }
 
@@ -136,13 +150,14 @@ func NewForTest(config Config, baseURL string) (*Client, error) {
 
 func newClient(config Config, opts options) (*Client, error) {
 	c := &Client{
-		mode:         config.Mode,
-		cloudID:      strings.TrimSpace(config.CloudID),
-		email:        strings.TrimSpace(config.Email),
-		apiToken:     strings.TrimSpace(config.APIToken),
-		clientID:     strings.TrimSpace(config.ClientID),
-		clientSecret: strings.TrimSpace(config.ClientSecret),
-		options:      opts,
+		mode:                   config.Mode,
+		cloudID:                strings.TrimSpace(config.CloudID),
+		email:                  strings.TrimSpace(config.Email),
+		apiToken:               strings.TrimSpace(config.APIToken),
+		clientID:               strings.TrimSpace(config.ClientID),
+		clientSecret:           strings.TrimSpace(config.ClientSecret),
+		serviceAccountAPIToken: strings.TrimSpace(config.ServiceAccountAPIToken),
+		options:                opts,
 	}
 
 	if site := strings.TrimSpace(config.SiteURL); site != "" {
@@ -168,6 +183,13 @@ func newClient(config Config, opts options) (*Client, error) {
 		if c.cloudID == "" && c.site == nil {
 			return nil, fmt.Errorf("service_account requires cloud_id, or site_url to discover it from")
 		}
+	case AuthServiceAccountAPIToken:
+		if c.serviceAccountAPIToken == "" {
+			return nil, fmt.Errorf("service_account requires api_token")
+		}
+		if c.cloudID == "" && c.site == nil {
+			return nil, fmt.Errorf("service_account requires cloud_id, or site_url to discover it from")
+		}
 	default:
 		return nil, fmt.Errorf("confluence authentication mode is not set")
 	}
@@ -177,17 +199,22 @@ func newClient(config Config, opts options) (*Client, error) {
 	switch c.mode {
 	case AuthBasic:
 		c.auth = &basicAuthenticator{email: c.email, apiToken: c.apiToken}
+	case AuthServiceAccountAPIToken:
+		c.auth = &bearerAuthenticator{token: c.serviceAccountAPIToken}
 	case AuthServiceAccount:
-		tokenURL, err := url.Parse(opts.tokenURL)
-		if err != nil {
+		// clientcredentials.Config takes TokenURL as a string; this parse only
+		// rejects a malformed endpoint here rather than at the first exchange.
+		if _, err := url.Parse(opts.tokenURL); err != nil {
 			return nil, fmt.Errorf("parse OAuth token endpoint: %w", err)
 		}
 		c.auth = &clientCredentialsAuthenticator{
-			clientID:     c.clientID,
-			clientSecret: c.clientSecret,
-			tokenURL:     tokenURL,
-			httpClient:   c.helperClient.StandardClient(),
-			now:          opts.now,
+			config: clientcredentials.Config{
+				ClientID:     c.clientID,
+				ClientSecret: c.clientSecret,
+				TokenURL:     opts.tokenURL,
+				AuthStyle:    oauth2.AuthStyleInParams,
+			},
+			httpClient: c.helperClient.StandardClient(),
 		}
 	}
 	return c, nil
@@ -262,7 +289,7 @@ func Prefix(mode AuthMode, site *url.URL, cloudID string) (*url.URL, error) {
 		copied := *site
 		copied.Path = ""
 		return &copied, nil
-	case AuthServiceAccount:
+	case AuthServiceAccount, AuthServiceAccountAPIToken:
 		if cloudID == "" {
 			return nil, fmt.Errorf("service_account prefix requires a cloud id")
 		}

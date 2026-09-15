@@ -47,14 +47,6 @@ func IsNotFound(err error) bool {
 	return errors.As(err, &httpErr) && httpErr.StatusCode == http.StatusNotFound && !httpErr.GatewayRouting
 }
 
-// IsGatewayRouting reports whether the api.atlassian.com gateway refused to
-// route the request, which in practice means cloud_id does not identify the
-// site.
-func IsGatewayRouting(err error) bool {
-	var httpErr *HTTPError
-	return errors.As(err, &httpErr) && httpErr.GatewayRouting
-}
-
 // CheckResponse converts a non-2xx response into an HTTPError, or returns nil
 // for a successful status. Three error body shapes are recognized, because a
 // service account request crosses the api.atlassian.com gateway before it

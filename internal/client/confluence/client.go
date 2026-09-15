@@ -62,14 +62,16 @@ func newRetryClient(opts options, httpClient *http.Client, policy retryablehttp.
 	return retryClient
 }
 
-// checkRetry mirrors the Admin transport's policy. A WithoutRetry request is
-// sent once, apart from a 429, which the server rejects before applying
-// anything. There is deliberately no carve-out for 401: the token is refreshed
-// before every request that is within expiryMargin of expiry, so a 401 from
-// expiry needs the token to lapse in the moment between that check and the
-// server's, and a 401 from any other cause is not fixed by resending. What a
-// 401 does do is discard the cached token, so the next attempt fetches a new
-// one -- see checkResponse.
+// checkRetry follows the Admin transport's WithoutRetry policy. It is not the
+// same function: Admin also has to recognize its own errRateLimitWait, which
+// comes from the pacing transport this package deliberately does not have.
+// A WithoutRetry request is sent once, apart from a 429, which the server
+// rejects before applying anything. There is deliberately no carve-out for
+// 401: the token is refreshed before every request that is within
+// expiryMargin of expiry, so a 401 from expiry needs the token to lapse in
+// the moment between that check and the server's, and a 401 from any other
+// cause is not fixed by resending. What a 401 does do is discard the cached
+// token, so the next attempt fetches a new one -- see checkResponse.
 func (c *Client) checkRetry(ctx context.Context, resp *http.Response, err error) (bool, error) {
 	if resp != nil && resp.StatusCode == http.StatusUnauthorized {
 		// A token the server rejects must not be reused, even when this
@@ -127,7 +129,7 @@ func (c *Client) Prefix(ctx context.Context) (*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
-	if c.mode == AuthServiceAccount {
+	if c.usesGateway() {
 		gateway, err := url.Parse(c.options.gateway)
 		if err != nil {
 			return nil, fmt.Errorf("parse gateway URL: %w", err)
@@ -137,6 +139,13 @@ func (c *Client) Prefix(ctx context.Context) (*url.URL, error) {
 	return prefix, nil
 }
 
+// usesGateway reports whether requests go through api.atlassian.com rather
+// than the site itself, which both service account credentials do and basic
+// auth does not. It decides the base URL and whether a cloud id is needed.
+func (c *Client) usesGateway() bool {
+	return c.mode == AuthServiceAccount || c.mode == AuthServiceAccountAPIToken
+}
+
 // resolvedCloudID returns the cloud id, discovering it on first use. Every
 // read of c.cloudID goes through here so that it is never read outside c.mu:
 // Terraform reads data sources concurrently, so several goroutines reach this
@@ -144,7 +153,7 @@ func (c *Client) Prefix(ctx context.Context) (*url.URL, error) {
 // serializes the concurrent callers onto a single lookup -- the intent -- at
 // the cost of blocking them while it runs.
 func (c *Client) resolvedCloudID(ctx context.Context) (string, error) {
-	if c.mode != AuthServiceAccount {
+	if !c.usesGateway() {
 		return "", nil
 	}
 	c.mu.Lock()

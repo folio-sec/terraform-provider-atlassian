@@ -310,6 +310,28 @@ func TestProviderConfigureCombinations(t *testing.T) {
 			wantAdmin:      true,
 			wantConfluence: true,
 		},
+		"service account api token with cloud id": {
+			values:         map[string]any{"service_account": map[string]any{"api_token": "t", "cloud_id": "a7c408f1-ec5f-410e-8f27-62dbefebe6b6"}},
+			wantConfluence: true,
+		},
+		"service account api token from its own environment variable": {
+			env:            map[string]string{envSiteURL: site, envServiceAccountAPIToken: "t"},
+			wantConfluence: true,
+		},
+		// basic_auth's variable must not reach the service account block: the
+		// two are different credentials for different principals.
+		"basic auth variable does not configure a service account": {
+			env:       map[string]string{envSiteURL: site, envAPIToken: "t"},
+			wantError: []string{"basic_auth.email is not", envEmail},
+		},
+		"service account api token alongside client credentials": {
+			values:    map[string]any{"site_url": site, "service_account": map[string]any{"api_token": "t", "client_id": "i", "client_secret": "s"}},
+			wantError: []string{"Conflicting service_account credentials", "service_account.api_token came from configuration"},
+		},
+		"service account api token without site identity": {
+			values:    map[string]any{"service_account": map[string]any{"api_token": "t"}},
+			wantError: []string{"Missing site identity"},
+		},
 		"nothing configured is not an error": {},
 		"both credential types, with sources named": {
 			values:    map[string]any{"site_url": site, "service_account": map[string]any{"client_id": "i", "client_secret": "s"}},

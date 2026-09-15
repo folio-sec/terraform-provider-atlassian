@@ -31,6 +31,21 @@ code. Update it when the same implementation or review mistake recurs.
   pagination, Terraform-facing models, retry decisions, and lifecycle behavior
   in the handwritten service layer.
 
+## Scope and dependencies
+
+- Solve the problem at the size this provider needs. Do not add configuration
+  options, abstraction layers, or interfaces for a second implementation that
+  does not exist yet; one concrete type per API surface is the default, and a
+  caller with a single use case gets a single code path.
+- Do not hand-write behavior a maintained library already provides. This is
+  strongest for security-sensitive work such as authentication, token
+  handling, request signing, TLS, and cryptographic or random primitives:
+  reach for the Terraform Plugin Framework, the generated OpenAPI clients, the
+  standard library, and established Go libraries such as
+  `github.com/hashicorp/go-retryablehttp` first, and follow the dependency
+  rules under "Generated files and verification". A local implementation of
+  such behavior needs a stated reason in a comment next to it.
+
 ## Terraform modeling
 
 - Stay faithful to the API by default. Data sources and resources should mirror
