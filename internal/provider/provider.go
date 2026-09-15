@@ -12,6 +12,7 @@ import (
 	datasecuritypolicyservice "github.com/folio-sec/terraform-provider-atlassian/internal/services/admin/control/data_security_policy"
 	organizationservice "github.com/folio-sec/terraform-provider-atlassian/internal/services/admin/organization"
 	organizationpolicyservice "github.com/folio-sec/terraform-provider-atlassian/internal/services/admin/organization/policy"
+	spaceservice "github.com/folio-sec/terraform-provider-atlassian/internal/services/confluence/space"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -246,6 +247,8 @@ func (p *AtlassianProvider) DataSources(_ context.Context) []func() datasource.D
 		organizationservice.NewUserDataSource,
 		organizationservice.NewUsersDataSource,
 		organizationservice.NewWorkspacesDataSource,
+		spaceservice.NewSpaceDataSource,
+		spaceservice.NewSpacesDataSource,
 	}
 }
 

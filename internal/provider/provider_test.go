@@ -431,8 +431,8 @@ func TestProviderRegistersOrganizationTypes(t *testing.T) {
 	t.Parallel()
 
 	p := New("test")()
-	if got := len(p.DataSources(context.Background())); got != 7 {
-		t.Fatalf("DataSources() length = %d, want 7", got)
+	if got := len(p.DataSources(context.Background())); got != 9 {
+		t.Fatalf("DataSources() length = %d, want 9", got)
 	}
 	if got := len(p.Resources(context.Background())); got != 7 {
 		t.Fatalf("Resources() length = %d, want 7", got)
@@ -464,7 +464,7 @@ func TestProviderRegistersOrganizationTypes(t *testing.T) {
 		constructor().Metadata(context.Background(), datasource.MetadataRequest{ProviderTypeName: "atlassian"}, &response)
 		dataSourceNames[response.TypeName] = true
 	}
-	for _, name := range []string{"atlassian_organization_policy", "atlassian_organization_policies", "atlassian_organization_group", "atlassian_organization_groups", "atlassian_organization_user", "atlassian_organization_users", "atlassian_organization_workspaces"} {
+	for _, name := range []string{"atlassian_organization_policy", "atlassian_organization_policies", "atlassian_organization_group", "atlassian_organization_groups", "atlassian_organization_user", "atlassian_organization_users", "atlassian_organization_workspaces", "atlassian_confluence_space", "atlassian_confluence_spaces"} {
 		if !dataSourceNames[name] {
 			t.Errorf("data source %q is not registered", name)
 		}
