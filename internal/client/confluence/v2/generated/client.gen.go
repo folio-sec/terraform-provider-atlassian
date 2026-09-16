@@ -38,6 +38,24 @@ func (e PrincipalType) Valid() bool {
 	}
 }
 
+// Defines values for RoleType.
+const (
+	CUSTOM RoleType = "CUSTOM"
+	SYSTEM RoleType = "SYSTEM"
+)
+
+// Valid indicates whether the value is a known member of the RoleType enum.
+func (e RoleType) Valid() bool {
+	switch e {
+	case CUSTOM:
+		return true
+	case SYSTEM:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SpaceDescriptionBodyRepresentation.
 const (
 	Plain SpaceDescriptionBodyRepresentation = "plain"
@@ -58,21 +76,31 @@ func (e SpaceDescriptionBodyRepresentation) Valid() bool {
 
 // Defines values for SpacePermissionAssignmentOperationKey.
 const (
-	Administer      SpacePermissionAssignmentOperationKey = "administer"
-	Archive         SpacePermissionAssignmentOperationKey = "archive"
-	Copy            SpacePermissionAssignmentOperationKey = "copy"
-	Create          SpacePermissionAssignmentOperationKey = "create"
-	CreateSpace     SpacePermissionAssignmentOperationKey = "create_space"
-	Delete          SpacePermissionAssignmentOperationKey = "delete"
-	Export          SpacePermissionAssignmentOperationKey = "export"
-	Move            SpacePermissionAssignmentOperationKey = "move"
-	Purge           SpacePermissionAssignmentOperationKey = "purge"
-	PurgeVersion    SpacePermissionAssignmentOperationKey = "purge_version"
-	Read            SpacePermissionAssignmentOperationKey = "read"
-	Restore         SpacePermissionAssignmentOperationKey = "restore"
-	RestrictContent SpacePermissionAssignmentOperationKey = "restrict_content"
-	Update          SpacePermissionAssignmentOperationKey = "update"
-	Use             SpacePermissionAssignmentOperationKey = "use"
+	Administer             SpacePermissionAssignmentOperationKey = "administer"
+	Archive                SpacePermissionAssignmentOperationKey = "archive"
+	ArchiveSpace           SpacePermissionAssignmentOperationKey = "archive_space"
+	Copy                   SpacePermissionAssignmentOperationKey = "copy"
+	Create                 SpacePermissionAssignmentOperationKey = "create"
+	CreateSpace            SpacePermissionAssignmentOperationKey = "create_space"
+	Delete                 SpacePermissionAssignmentOperationKey = "delete"
+	DeleteSpace            SpacePermissionAssignmentOperationKey = "delete_space"
+	Export                 SpacePermissionAssignmentOperationKey = "export"
+	ExportContent          SpacePermissionAssignmentOperationKey = "export_content"
+	ManageContent          SpacePermissionAssignmentOperationKey = "manage_content"
+	ManageGuestUsers       SpacePermissionAssignmentOperationKey = "manage_guest_users"
+	ManageLookAndFeel      SpacePermissionAssignmentOperationKey = "manage_look_and_feel"
+	ManageNonlicensedUsers SpacePermissionAssignmentOperationKey = "manage_nonlicensed_users"
+	ManagePublicLinks      SpacePermissionAssignmentOperationKey = "manage_public_links"
+	ManageTemplates        SpacePermissionAssignmentOperationKey = "manage_templates"
+	ManageUsers            SpacePermissionAssignmentOperationKey = "manage_users"
+	Move                   SpacePermissionAssignmentOperationKey = "move"
+	Purge                  SpacePermissionAssignmentOperationKey = "purge"
+	PurgeVersion           SpacePermissionAssignmentOperationKey = "purge_version"
+	Read                   SpacePermissionAssignmentOperationKey = "read"
+	Restore                SpacePermissionAssignmentOperationKey = "restore"
+	RestrictContent        SpacePermissionAssignmentOperationKey = "restrict_content"
+	Update                 SpacePermissionAssignmentOperationKey = "update"
+	Use                    SpacePermissionAssignmentOperationKey = "use"
 )
 
 // Valid indicates whether the value is a known member of the SpacePermissionAssignmentOperationKey enum.
@@ -82,6 +110,8 @@ func (e SpacePermissionAssignmentOperationKey) Valid() bool {
 		return true
 	case Archive:
 		return true
+	case ArchiveSpace:
+		return true
 	case Copy:
 		return true
 	case Create:
@@ -90,7 +120,25 @@ func (e SpacePermissionAssignmentOperationKey) Valid() bool {
 		return true
 	case Delete:
 		return true
+	case DeleteSpace:
+		return true
 	case Export:
+		return true
+	case ExportContent:
+		return true
+	case ManageContent:
+		return true
+	case ManageGuestUsers:
+		return true
+	case ManageLookAndFeel:
+		return true
+	case ManageNonlicensedUsers:
+		return true
+	case ManagePublicLinks:
+		return true
+	case ManageTemplates:
+		return true
+	case ManageUsers:
 		return true
 	case Move:
 		return true
@@ -160,14 +208,17 @@ func (e SpacePermissionAssignmentOperationTargetType) Valid() bool {
 
 // Defines values for SpacePermissionAssignmentPrincipalType.
 const (
-	Group SpacePermissionAssignmentPrincipalType = "group"
-	Role  SpacePermissionAssignmentPrincipalType = "role"
-	User  SpacePermissionAssignmentPrincipalType = "user"
+	AccessClass SpacePermissionAssignmentPrincipalType = "access-class"
+	Group       SpacePermissionAssignmentPrincipalType = "group"
+	Role        SpacePermissionAssignmentPrincipalType = "role"
+	User        SpacePermissionAssignmentPrincipalType = "user"
 )
 
 // Valid indicates whether the value is a known member of the SpacePermissionAssignmentPrincipalType enum.
 func (e SpacePermissionAssignmentPrincipalType) Valid() bool {
 	switch e {
+	case AccessClass:
+		return true
 	case Group:
 		return true
 	case Role:
@@ -384,6 +435,9 @@ type Principal struct {
 // PrincipalType The principal type.
 type PrincipalType string
 
+// RoleType The role type.
+type RoleType string
+
 // SpaceBulk defines model for SpaceBulk.
 type SpaceBulk struct {
 	UnderscoreLinks *SpaceLinks `json:"_links,omitempty"`
@@ -514,6 +568,33 @@ type SpaceProperty struct {
 	} `json:"version,omitempty"`
 }
 
+// SpaceRole defines model for SpaceRole.
+type SpaceRole struct {
+	// Description The description for the space role’s usage.
+	Description *string `json:"description,omitempty"`
+
+	// Id The identifier for the space role.
+	Id *string `json:"id,omitempty"`
+
+	// Name The name for the space role.
+	Name *string `json:"name,omitempty"`
+
+	// SpacePermissions The space permissions the space role is comprised of.
+	SpacePermissions *[]string `json:"spacePermissions,omitempty"`
+
+	// Type The role type.
+	Type *RoleType `json:"type,omitempty"`
+}
+
+// SpaceRoleAssignment defines model for SpaceRoleAssignment.
+type SpaceRoleAssignment struct {
+	// Principal The principal of the role assignment.
+	Principal *Principal `json:"principal,omitempty"`
+
+	// RoleId The role to which the principal is assigned.
+	RoleId *string `json:"roleId,omitempty"`
+}
+
 // SpaceSingle defines model for SpaceSingle.
 type SpaceSingle struct {
 	UnderscoreLinks *SpaceLinks `json:"_links,omitempty"`
@@ -584,6 +665,15 @@ type SpaceStatus string
 // SpaceType The type of space.
 type SpaceType string
 
+// SetSpaceRoleAssignmentRequest defines model for SetSpaceRoleAssignmentRequest.
+type SetSpaceRoleAssignmentRequest = []struct {
+	// Principal The principal of the role assignment.
+	Principal Principal `json:"principal"`
+
+	// RoleId The role to which the principal is assigned.
+	RoleId *string `json:"roleId,omitempty"`
+}
+
 // SpaceCreateRequest defines model for SpaceCreateRequest.
 type SpaceCreateRequest struct {
 	// Alias This field will be used as the new identifier for the space in confluence page URLs. If the alias property is not provided, the key property is required to be used instead. Maximum 255 alphanumeric characters in length.
@@ -619,6 +709,27 @@ type SpaceCreateRequest struct {
 
 	// TemplateKey The key of the template to use.
 	TemplateKey *string `json:"templateKey,omitempty"`
+}
+
+// GetAvailableSpaceRolesParams defines parameters for GetAvailableSpaceRoles.
+type GetAvailableSpaceRolesParams struct {
+	// SpaceId The space ID for which to filter available space roles; if empty, return all available space roles for the tenant.
+	SpaceId *string `form:"space-id,omitempty" json:"space-id,omitempty"`
+
+	// RoleType The space role type to filter results by.
+	RoleType *string `form:"role-type,omitempty" json:"role-type,omitempty"`
+
+	// PrincipalId The principal ID to filter results by. If specified, a principal-type must also be specified. Paired with a `principal-type` of `ACCESS_CLASS`, valid values include [`anonymous-users`, `jsm-project-admins`, `authenticated-users`, `all-licensed-users`, `all-product-admins`]
+	PrincipalId *string `form:"principal-id,omitempty" json:"principal-id,omitempty"`
+
+	// PrincipalType The principal type to filter results by. If specified, a principal-id must also be specified.
+	PrincipalType *PrincipalType `form:"principal-type,omitempty" json:"principal-type,omitempty"`
+
+	// Cursor Used for pagination, this opaque cursor will be returned in the `next` URL in the `Link` response header. Use the relative URL in the `Link` header to retrieve the `next` set of results.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Maximum number of space roles to return. If more results exist, use the `Link` response header to retrieve a relative URL that will return the next set of results.
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // GetSpacesParams defines parameters for GetSpaces.
@@ -737,8 +848,50 @@ type GetSpaceByIdParams struct {
 	IncludeLabels *bool `form:"include-labels,omitempty" json:"include-labels,omitempty"`
 }
 
+// GetSpacePermissionsAssignmentsParams defines parameters for GetSpacePermissionsAssignments.
+type GetSpacePermissionsAssignmentsParams struct {
+	// Cursor Used for pagination, this opaque cursor will be returned in the `next` URL in the `Link` response header. Use the relative URL in the `Link` header to retrieve the `next` set of results.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Maximum number of assignments to return. If more results exist, use the `Link` response header to retrieve a relative URL that will return the next set of results.
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetSpaceRoleAssignmentsParams defines parameters for GetSpaceRoleAssignments.
+type GetSpaceRoleAssignmentsParams struct {
+	// RoleId Filters the returned role assignments to the provided role ID.
+	RoleId *string `form:"role-id,omitempty" json:"role-id,omitempty"`
+
+	// RoleType Filters the returned role assignments to the provided role type.
+	RoleType *string `form:"role-type,omitempty" json:"role-type,omitempty"`
+
+	// PrincipalId Filters the returned role assignments to the provided principal id. If specified, a principal-type must also be specified. Paired with a `principal-type` of `ACCESS_CLASS`, valid values include [`anonymous-users`, `jsm-project-admins`, `authenticated-users`, `all-licensed-users`, `all-product-admins`]
+	PrincipalId *string `form:"principal-id,omitempty" json:"principal-id,omitempty"`
+
+	// PrincipalType Filters the returned role assignments to the provided principal type. If specified, a principal-id must also be specified.
+	PrincipalType *PrincipalType `form:"principal-type,omitempty" json:"principal-type,omitempty"`
+
+	// Cursor Used for pagination, this opaque cursor will be returned in the `next` URL in the `Link` response header. Use the relative URL in the `Link` header to retrieve the `next` set of results.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Maximum number of space roles to return. If more results exist, use the `Link` response header to retrieve a relative URL that will return the next set of results.
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// SetSpaceRoleAssignmentsJSONBody defines parameters for SetSpaceRoleAssignments.
+type SetSpaceRoleAssignmentsJSONBody = []struct {
+	// Principal The principal of the role assignment.
+	Principal Principal `json:"principal"`
+
+	// RoleId The role to which the principal is assigned.
+	RoleId *string `json:"roleId,omitempty"`
+}
+
 // CreateSpaceJSONRequestBody defines body for CreateSpace for application/json ContentType.
 type CreateSpaceJSONRequestBody CreateSpaceJSONBody
+
+// SetSpaceRoleAssignmentsJSONRequestBody defines body for SetSpaceRoleAssignments for application/json ContentType.
+type SetSpaceRoleAssignmentsJSONRequestBody = SetSpaceRoleAssignmentsJSONBody
 
 // RequestEditorFn is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -814,6 +967,18 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 
+	// GetAvailableSpaceRoles Get available space roles
+	//
+	// Retrieves the available space roles.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// Permission to access the Confluence site; if requesting a certain space's roles, permission to view the space.
+	//
+	// Corresponds with GET /space-roles (the `GetAvailableSpaceRoles` operationId).
+	GetAvailableSpaceRoles(ctx context.Context, params *GetAvailableSpaceRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetSpaces Get spaces
 	//
 	// Returns all spaces. The results will be sorted by id ascending. The number of results is limited by the `limit` parameter and
@@ -863,6 +1028,80 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /spaces/{id} (the `GetSpaceById` operationId).
 	GetSpaceById(ctx context.Context, id string, params *GetSpaceByIdParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSpacePermissionsAssignments Get space permissions assignments
+	//
+	// Returns space permission assignments for a specific space.
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// Permission to view the space.
+	//
+	// Corresponds with GET /spaces/{id}/permissions (the `GetSpacePermissionsAssignments` operationId).
+	GetSpacePermissionsAssignments(ctx context.Context, id string, params *GetSpacePermissionsAssignmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSpaceRoleAssignments Get space role assignments
+	//
+	// Retrieves the space role assignments.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// Permission to view the space.
+	//
+	// Corresponds with GET /spaces/{id}/role-assignments (the `GetSpaceRoleAssignments` operationId).
+	GetSpaceRoleAssignments(ctx context.Context, id string, params *GetSpaceRoleAssignmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetSpaceRoleAssignmentsWithBody Set space role assignments
+	//
+	// Sets space role assignments as specified in the payload. For each entry, if `roleId` is provided
+	// the principal is assigned to that role. If `roleId` is omitted, the role assignment for that principal is removed, if it exists.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// Permission to manage roles in the space.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /spaces/{id}/role-assignments (the `SetSpaceRoleAssignments` operationId).
+	SetSpaceRoleAssignmentsWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SetSpaceRoleAssignments Set space role assignments
+	//
+	// Sets space role assignments as specified in the payload. For each entry, if `roleId` is provided
+	// the principal is assigned to that role. If `roleId` is omitted, the role assignment for that principal is removed, if it exists.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// Permission to manage roles in the space.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /spaces/{id}/role-assignments (the `SetSpaceRoleAssignments` operationId).
+	SetSpaceRoleAssignments(ctx context.Context, id string, body SetSpaceRoleAssignmentsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+// GetAvailableSpaceRoles Get available space roles
+//
+// Retrieves the available space roles.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// Permission to access the Confluence site; if requesting a certain space's roles, permission to view the space.
+//
+// Corresponds with GET /space-roles (the `GetAvailableSpaceRoles` operationId).
+func (c *Client) GetAvailableSpaceRoles(ctx context.Context, params *GetAvailableSpaceRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAvailableSpaceRolesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 // GetSpaces Get spaces
@@ -953,6 +1192,212 @@ func (c *Client) GetSpaceById(ctx context.Context, id string, params *GetSpaceBy
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// GetSpacePermissionsAssignments Get space permissions assignments
+//
+// Returns space permission assignments for a specific space.
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// Permission to view the space.
+//
+// Corresponds with GET /spaces/{id}/permissions (the `GetSpacePermissionsAssignments` operationId).
+func (c *Client) GetSpacePermissionsAssignments(ctx context.Context, id string, params *GetSpacePermissionsAssignmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSpacePermissionsAssignmentsRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSpaceRoleAssignments Get space role assignments
+//
+// Retrieves the space role assignments.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// Permission to view the space.
+//
+// Corresponds with GET /spaces/{id}/role-assignments (the `GetSpaceRoleAssignments` operationId).
+func (c *Client) GetSpaceRoleAssignments(ctx context.Context, id string, params *GetSpaceRoleAssignmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSpaceRoleAssignmentsRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetSpaceRoleAssignmentsWithBody Set space role assignments
+//
+// Sets space role assignments as specified in the payload. For each entry, if `roleId` is provided
+// the principal is assigned to that role. If `roleId` is omitted, the role assignment for that principal is removed, if it exists.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// Permission to manage roles in the space.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /spaces/{id}/role-assignments (the `SetSpaceRoleAssignments` operationId).
+func (c *Client) SetSpaceRoleAssignmentsWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetSpaceRoleAssignmentsRequestWithBody(c.Server, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SetSpaceRoleAssignments Set space role assignments
+//
+// Sets space role assignments as specified in the payload. For each entry, if `roleId` is provided
+// the principal is assigned to that role. If `roleId` is omitted, the role assignment for that principal is removed, if it exists.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// Permission to manage roles in the space.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /spaces/{id}/role-assignments (the `SetSpaceRoleAssignments` operationId).
+func (c *Client) SetSpaceRoleAssignments(ctx context.Context, id string, body SetSpaceRoleAssignmentsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSetSpaceRoleAssignmentsRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// NewGetAvailableSpaceRolesRequest constructs an http.Request for the GetAvailableSpaceRoles method
+func NewGetAvailableSpaceRolesRequest(server string, params *GetAvailableSpaceRolesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/space-roles")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.SpaceId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "space-id", *params.SpaceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.RoleType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "role-type", *params.RoleType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PrincipalId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "principal-id", *params.PrincipalId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PrincipalType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "principal-type", *params.PrincipalType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewGetSpacesRequest constructs an http.Request for the GetSpaces method
@@ -1314,6 +1759,247 @@ func NewGetSpaceByIdRequest(server string, id string, params *GetSpaceByIdParams
 	return req, nil
 }
 
+// NewGetSpacePermissionsAssignmentsRequest constructs an http.Request for the GetSpacePermissionsAssignments method
+func NewGetSpacePermissionsAssignmentsRequest(server string, id string, params *GetSpacePermissionsAssignmentsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "int64"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/spaces/%s/permissions", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetSpaceRoleAssignmentsRequest constructs an http.Request for the GetSpaceRoleAssignments method
+func NewGetSpaceRoleAssignmentsRequest(server string, id string, params *GetSpaceRoleAssignmentsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/spaces/%s/role-assignments", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.RoleId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "role-id", *params.RoleId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.RoleType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "role-type", *params.RoleType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PrincipalId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "principal-id", *params.PrincipalId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PrincipalType != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "principal-type", *params.PrincipalType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewSetSpaceRoleAssignmentsRequest calls the generic SetSpaceRoleAssignments builder with application/json body
+func NewSetSpaceRoleAssignmentsRequest(server string, id string, body SetSpaceRoleAssignmentsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSetSpaceRoleAssignmentsRequestWithBody(server, id, "application/json", bodyReader)
+}
+
+// NewSetSpaceRoleAssignmentsRequestWithBody constructs an http.Request for the SetSpaceRoleAssignments method, with any body, and a specified content type
+func NewSetSpaceRoleAssignmentsRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/spaces/%s/role-assignments", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -1357,6 +2043,20 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+
+	// GetAvailableSpaceRolesWithResponse Get available space roles
+	//
+	// Retrieves the available space roles.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// Permission to access the Confluence site; if requesting a certain space's roles, permission to view the space.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /space-roles (the `GetAvailableSpaceRoles` operationId).
+	GetAvailableSpaceRolesWithResponse(ctx context.Context, params *GetAvailableSpaceRolesParams, reqEditors ...RequestEditorFn) (*GetAvailableSpaceRolesResponse, error)
 
 	// GetSpacesWithResponse Get spaces
 	//
@@ -1411,6 +2111,109 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /spaces/{id} (the `GetSpaceById` operationId).
 	GetSpaceByIdWithResponse(ctx context.Context, id string, params *GetSpaceByIdParams, reqEditors ...RequestEditorFn) (*GetSpaceByIdResponse, error)
+
+	// GetSpacePermissionsAssignmentsWithResponse Get space permissions assignments
+	//
+	// Returns space permission assignments for a specific space.
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// Permission to view the space.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /spaces/{id}/permissions (the `GetSpacePermissionsAssignments` operationId).
+	GetSpacePermissionsAssignmentsWithResponse(ctx context.Context, id string, params *GetSpacePermissionsAssignmentsParams, reqEditors ...RequestEditorFn) (*GetSpacePermissionsAssignmentsResponse, error)
+
+	// GetSpaceRoleAssignmentsWithResponse Get space role assignments
+	//
+	// Retrieves the space role assignments.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// Permission to view the space.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /spaces/{id}/role-assignments (the `GetSpaceRoleAssignments` operationId).
+	GetSpaceRoleAssignmentsWithResponse(ctx context.Context, id string, params *GetSpaceRoleAssignmentsParams, reqEditors ...RequestEditorFn) (*GetSpaceRoleAssignmentsResponse, error)
+
+	// SetSpaceRoleAssignmentsWithBodyWithResponse Set space role assignments
+	//
+	// Sets space role assignments as specified in the payload. For each entry, if `roleId` is provided
+	// the principal is assigned to that role. If `roleId` is omitted, the role assignment for that principal is removed, if it exists.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// Permission to manage roles in the space.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /spaces/{id}/role-assignments (the `SetSpaceRoleAssignments` operationId).
+	SetSpaceRoleAssignmentsWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetSpaceRoleAssignmentsResponse, error)
+
+	// SetSpaceRoleAssignmentsWithResponse Set space role assignments
+	//
+	// Sets space role assignments as specified in the payload. For each entry, if `roleId` is provided
+	// the principal is assigned to that role. If `roleId` is omitted, the role assignment for that principal is removed, if it exists.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// Permission to manage roles in the space.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /spaces/{id}/role-assignments (the `SetSpaceRoleAssignments` operationId).
+	SetSpaceRoleAssignmentsWithResponse(ctx context.Context, id string, body SetSpaceRoleAssignmentsJSONRequestBody, reqEditors ...RequestEditorFn) (*SetSpaceRoleAssignmentsResponse, error)
+}
+
+type GetAvailableSpaceRolesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *struct {
+		UnderscoreLinks *MultiEntityLinks `json:"_links,omitempty"`
+		Results         *[]SpaceRole      `json:"results,omitempty"`
+	}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetAvailableSpaceRolesResponse) GetJSON200() *struct {
+	UnderscoreLinks *MultiEntityLinks `json:"_links,omitempty"`
+	Results         *[]SpaceRole      `json:"results,omitempty"`
+} {
+	return r.JSON200
+}
+
+// GetBody returns the raw response body bytes
+func (r GetAvailableSpaceRolesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetAvailableSpaceRolesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetAvailableSpaceRolesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetAvailableSpaceRolesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
 }
 
 // GetSpacesResponse200Headers the declared response headers of an HTTP 200 response for GetSpaces
@@ -1753,6 +2556,167 @@ func (r GetSpaceByIdResponse) ContentType() string {
 	return ""
 }
 
+type GetSpacePermissionsAssignmentsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *struct {
+		UnderscoreLinks *MultiEntityLinks            `json:"_links,omitempty"`
+		Results         *[]SpacePermissionAssignment `json:"results,omitempty"`
+	}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSpacePermissionsAssignmentsResponse) GetJSON200() *struct {
+	UnderscoreLinks *MultiEntityLinks            `json:"_links,omitempty"`
+	Results         *[]SpacePermissionAssignment `json:"results,omitempty"`
+} {
+	return r.JSON200
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSpacePermissionsAssignmentsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSpacePermissionsAssignmentsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSpacePermissionsAssignmentsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSpacePermissionsAssignmentsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSpaceRoleAssignmentsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *struct {
+		UnderscoreLinks *MultiEntityLinks      `json:"_links,omitempty"`
+		Results         *[]SpaceRoleAssignment `json:"results,omitempty"`
+	}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSpaceRoleAssignmentsResponse) GetJSON200() *struct {
+	UnderscoreLinks *MultiEntityLinks      `json:"_links,omitempty"`
+	Results         *[]SpaceRoleAssignment `json:"results,omitempty"`
+} {
+	return r.JSON200
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSpaceRoleAssignmentsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSpaceRoleAssignmentsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSpaceRoleAssignmentsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSpaceRoleAssignmentsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SetSpaceRoleAssignmentsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *struct {
+		UnderscoreLinks *MultiEntityLinks      `json:"_links,omitempty"`
+		Results         *[]SpaceRoleAssignment `json:"results,omitempty"`
+	}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SetSpaceRoleAssignmentsResponse) GetJSON200() *struct {
+	UnderscoreLinks *MultiEntityLinks      `json:"_links,omitempty"`
+	Results         *[]SpaceRoleAssignment `json:"results,omitempty"`
+} {
+	return r.JSON200
+}
+
+// GetBody returns the raw response body bytes
+func (r SetSpaceRoleAssignmentsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SetSpaceRoleAssignmentsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SetSpaceRoleAssignmentsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SetSpaceRoleAssignmentsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+// GetAvailableSpaceRolesWithResponse Get available space roles
+//
+// Retrieves the available space roles.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// Permission to access the Confluence site; if requesting a certain space's roles, permission to view the space.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /space-roles (the `GetAvailableSpaceRoles` operationId).
+func (c *ClientWithResponses) GetAvailableSpaceRolesWithResponse(ctx context.Context, params *GetAvailableSpaceRolesParams, reqEditors ...RequestEditorFn) (*GetAvailableSpaceRolesResponse, error) {
+	rsp, err := c.GetAvailableSpaceRoles(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetAvailableSpaceRolesResponse(rsp)
+}
+
 // GetSpacesWithResponse Get spaces
 //
 // Returns all spaces. The results will be sorted by id ascending. The number of results is limited by the `limit` parameter and
@@ -1829,6 +2793,124 @@ func (c *ClientWithResponses) GetSpaceByIdWithResponse(ctx context.Context, id s
 		return nil, err
 	}
 	return ParseGetSpaceByIdResponse(rsp)
+}
+
+// GetSpacePermissionsAssignmentsWithResponse Get space permissions assignments
+//
+// Returns space permission assignments for a specific space.
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// Permission to view the space.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /spaces/{id}/permissions (the `GetSpacePermissionsAssignments` operationId).
+func (c *ClientWithResponses) GetSpacePermissionsAssignmentsWithResponse(ctx context.Context, id string, params *GetSpacePermissionsAssignmentsParams, reqEditors ...RequestEditorFn) (*GetSpacePermissionsAssignmentsResponse, error) {
+	rsp, err := c.GetSpacePermissionsAssignments(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSpacePermissionsAssignmentsResponse(rsp)
+}
+
+// GetSpaceRoleAssignmentsWithResponse Get space role assignments
+//
+// Retrieves the space role assignments.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// Permission to view the space.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /spaces/{id}/role-assignments (the `GetSpaceRoleAssignments` operationId).
+func (c *ClientWithResponses) GetSpaceRoleAssignmentsWithResponse(ctx context.Context, id string, params *GetSpaceRoleAssignmentsParams, reqEditors ...RequestEditorFn) (*GetSpaceRoleAssignmentsResponse, error) {
+	rsp, err := c.GetSpaceRoleAssignments(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSpaceRoleAssignmentsResponse(rsp)
+}
+
+// SetSpaceRoleAssignmentsWithBodyWithResponse Set space role assignments
+//
+// Sets space role assignments as specified in the payload. For each entry, if `roleId` is provided
+// the principal is assigned to that role. If `roleId` is omitted, the role assignment for that principal is removed, if it exists.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// Permission to manage roles in the space.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /spaces/{id}/role-assignments (the `SetSpaceRoleAssignments` operationId).
+func (c *ClientWithResponses) SetSpaceRoleAssignmentsWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SetSpaceRoleAssignmentsResponse, error) {
+	rsp, err := c.SetSpaceRoleAssignmentsWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetSpaceRoleAssignmentsResponse(rsp)
+}
+
+// SetSpaceRoleAssignmentsWithResponse Set space role assignments
+//
+// Sets space role assignments as specified in the payload. For each entry, if `roleId` is provided
+// the principal is assigned to that role. If `roleId` is omitted, the role assignment for that principal is removed, if it exists.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// Permission to manage roles in the space.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /spaces/{id}/role-assignments (the `SetSpaceRoleAssignments` operationId).
+func (c *ClientWithResponses) SetSpaceRoleAssignmentsWithResponse(ctx context.Context, id string, body SetSpaceRoleAssignmentsJSONRequestBody, reqEditors ...RequestEditorFn) (*SetSpaceRoleAssignmentsResponse, error) {
+	rsp, err := c.SetSpaceRoleAssignments(ctx, id, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSetSpaceRoleAssignmentsResponse(rsp)
+}
+
+// ParseGetAvailableSpaceRolesResponse parses an HTTP response from a GetAvailableSpaceRolesWithResponse call
+func ParseGetAvailableSpaceRolesResponse(rsp *http.Response) (*GetAvailableSpaceRolesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetAvailableSpaceRolesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			UnderscoreLinks *MultiEntityLinks `json:"_links,omitempty"`
+			Results         *[]SpaceRole      `json:"results,omitempty"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
+
+	case rsp.StatusCode == 401:
+		break // No content-type
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
+	}
+
+	return response, nil
 }
 
 // ParseGetSpacesResponse parses an HTTP response from a GetSpacesWithResponse call
@@ -2047,6 +3129,123 @@ func ParseGetSpaceByIdResponse(rsp *http.Response) (*GetSpaceByIdResponse, error
 		break // No content-type
 
 	case rsp.StatusCode == 404:
+		break // No content-type
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSpacePermissionsAssignmentsResponse parses an HTTP response from a GetSpacePermissionsAssignmentsWithResponse call
+func ParseGetSpacePermissionsAssignmentsResponse(rsp *http.Response) (*GetSpacePermissionsAssignmentsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSpacePermissionsAssignmentsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			UnderscoreLinks *MultiEntityLinks            `json:"_links,omitempty"`
+			Results         *[]SpacePermissionAssignment `json:"results,omitempty"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
+
+	case rsp.StatusCode == 401:
+		break // No content-type
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSpaceRoleAssignmentsResponse parses an HTTP response from a GetSpaceRoleAssignmentsWithResponse call
+func ParseGetSpaceRoleAssignmentsResponse(rsp *http.Response) (*GetSpaceRoleAssignmentsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSpaceRoleAssignmentsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			UnderscoreLinks *MultiEntityLinks      `json:"_links,omitempty"`
+			Results         *[]SpaceRoleAssignment `json:"results,omitempty"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
+
+	case rsp.StatusCode == 401:
+		break // No content-type
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
+	}
+
+	return response, nil
+}
+
+// ParseSetSpaceRoleAssignmentsResponse parses an HTTP response from a SetSpaceRoleAssignmentsWithResponse call
+func ParseSetSpaceRoleAssignmentsResponse(rsp *http.Response) (*SetSpaceRoleAssignmentsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SetSpaceRoleAssignmentsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			UnderscoreLinks *MultiEntityLinks      `json:"_links,omitempty"`
+			Results         *[]SpaceRoleAssignment `json:"results,omitempty"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
+
+	case rsp.StatusCode == 401:
+		break // No content-type
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
+	case rsp.StatusCode == 413:
 		break // No content-type
 
 	}

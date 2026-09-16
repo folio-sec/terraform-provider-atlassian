@@ -8,12 +8,10 @@ https://dac-static.atlassian.com/cloud/confluence/swagger.v3.json
 Do not edit generated clients directly. Update the vendored specification or
 Overlay, then run `make generate/api-client/confluence-v1`.
 
-This client exists only to cover the space lifecycle operations that v2 does
-not expose. v2 has `createSpace`, `getSpaces` and `getSpaceById` but no update
-and no delete; v1 has `updateSpace` and `deleteSpace` but no space read at all.
-A managed space resource therefore has to span both versions. Keep
-`include-operation-ids` limited to `updateSpace`, `deleteSpace` and `getTask`
-so the generated surface stays small, and keep every read on v2.
+This client covers operations v2 does not expose. A managed space uses v2 for
+create and read, and v1 for update and delete. Custom space access uses v2 to
+read assignments and v1 `addPermissionToSpace` / `removePermission` to write
+them. Keep `include-operation-ids` limited to operations the provider calls.
 
 The two versions share a host and credentials but nothing else: v1 is keyed by
 `spaceKey` while v2 is keyed by the numeric string space id, and the request

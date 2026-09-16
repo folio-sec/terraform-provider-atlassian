@@ -78,6 +78,12 @@ code. Update it when the same implementation or review mistake recurs.
   only the `data` blocks its arguments actually reference. Leave out `output`,
   `variable`, `provider`, and `terraform` blocks; `examples/provider` is the
   only place provider configuration belongs.
+- When the API declares OAuth scopes, list the complete set required by each
+  data source or resource under `## Required OAuth scopes` in its schema
+  description so the generated Registry documentation includes it. Derive the
+  list from every operation the type calls, including refresh, ownership-guard,
+  verification, and cleanup reads. List the scope names without commentary
+  about authentication modes.
 
 ## Reasoning about outcomes the API does not state
 

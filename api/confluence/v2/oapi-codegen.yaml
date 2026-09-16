@@ -9,6 +9,10 @@ output-options:
     - getSpaces
     - getSpaceById
     - createSpace
+    - getSpacePermissionsAssignments
+    - getAvailableSpaceRoles
+    - getSpaceRoleAssignments
+    - setSpaceRoleAssignments
   nullable-type: true
   overlay:
     path: api/confluence/v2/overlay.yaml

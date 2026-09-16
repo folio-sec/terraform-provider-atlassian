@@ -16,8 +16,9 @@ account's OAuth 2.0 client credentials (a bearer token, against
 differs between those two modes, the Overlay removes the document's templated
 `servers` entry and the handwritten client supplies the base URL instead.
 
-The generator includes only the space operations the provider uses. Space
-update and delete do not exist in v2 and are taken from v1; see
+The generator includes only the space, permission-read, role-catalogue, and
+role-assignment operations the provider uses. Space update and delete and
+permission writes do not exist in v2 and are taken from v1; see
 `api/confluence/v1/README.md`.
 
 Verified API behavior that this document gets wrong, with the requests that

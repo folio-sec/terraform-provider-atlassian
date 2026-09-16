@@ -87,28 +87,15 @@ func (r *spaceResource) Metadata(_ context.Context, req resource.MetadataRequest
 // lives outside Schema so the schema itself stays readable.
 const spaceResourceDescription = "Manages a Confluence Cloud space.\n\n" +
 	"## Required OAuth scopes\n\n" +
-	"When the provider authenticates as a service account, its credential must carry the scopes for the " +
-	"operations this resource actually performs. A scope is checked when an operation runs, so a resource " +
+	"The API checks scopes when each operation runs, so a resource " +
 	"that is only ever read needs the first bullet alone.\n\n" +
 	"- Read: `read:space:confluence`\n" +
 	"- Create: `write:space:confluence`\n" +
-	"- Update: `read:space-details:confluence`, `write:space:confluence`, `write:space.permission:confluence`\n" +
-	"- Delete: `delete:space:confluence`, `read:content.metadata:confluence`\n\n" +
-	"Managing a space through its whole lifecycle therefore needs all six. Creating one also requires a " +
+	"- Update: `read:space-details:confluence`, `write:space:confluence`, `write:space.permission:confluence`, `write:confluence-space`\n" +
+	"- Delete: `delete:space:confluence`, `read:content.metadata:confluence`, `read:confluence-space.summary`\n\n" +
+	"Managing a space through its whole lifecycle therefore needs all eight. Creating one also requires a " +
 	"tenant with Role-Based Access Control enabled, which is what the v2 createSpace operation is gated " +
 	"behind.\n\n" +
-	"Those six are the granular scope names, and they are all a client credentials credential needs. A " +
-	"service account API token needs more: update, delete and the delete completion check run against the " +
-	"v1 REST API, which an API token reaches only when it also carries the classic scope names. Its scopes " +
-	"are fixed when it is created, so grant the whole set then:\n\n" +
-	"- `read:space:confluence`\n" +
-	"- `write:space:confluence`\n" +
-	"- `delete:space:confluence`\n" +
-	"- `read:space-details:confluence`\n" +
-	"- `write:space.permission:confluence`\n" +
-	"- `read:content.metadata:confluence`\n" +
-	"- `write:confluence-space` (classic, for v1 update and delete)\n" +
-	"- `read:confluence-space.summary` (classic, for the v1 delete completion check)\n\n" +
 	"> **Deletion is permanent**\n" +
 	"> Deleting this resource deletes the space outright; it does not pass through the trash and cannot be undone.\n\n" +
 	"> **Write-only at create**\n" +

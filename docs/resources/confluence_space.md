@@ -12,25 +12,14 @@ Manages a Confluence Cloud space.
 
 ## Required OAuth scopes
 
-When the provider authenticates as a service account, its credential must carry the scopes for the operations this resource actually performs. A scope is checked when an operation runs, so a resource that is only ever read needs the first bullet alone.
+The API checks scopes when each operation runs, so a resource that is only ever read needs the first bullet alone.
 
 - Read: `read:space:confluence`
 - Create: `write:space:confluence`
-- Update: `read:space-details:confluence`, `write:space:confluence`, `write:space.permission:confluence`
-- Delete: `delete:space:confluence`, `read:content.metadata:confluence`
+- Update: `read:space-details:confluence`, `write:space:confluence`, `write:space.permission:confluence`, `write:confluence-space`
+- Delete: `delete:space:confluence`, `read:content.metadata:confluence`, `read:confluence-space.summary`
 
-Managing a space through its whole lifecycle therefore needs all six. Creating one also requires a tenant with Role-Based Access Control enabled, which is what the v2 createSpace operation is gated behind.
-
-Those six are the granular scope names, and they are all a client credentials credential needs. A service account API token needs more: update, delete and the delete completion check run against the v1 REST API, which an API token reaches only when it also carries the classic scope names. Its scopes are fixed when it is created, so grant the whole set then:
-
-- `read:space:confluence`
-- `write:space:confluence`
-- `delete:space:confluence`
-- `read:space-details:confluence`
-- `write:space.permission:confluence`
-- `read:content.metadata:confluence`
-- `write:confluence-space` (classic, for v1 update and delete)
-- `read:confluence-space.summary` (classic, for the v1 delete completion check)
+Managing a space through its whole lifecycle therefore needs all eight. Creating one also requires a tenant with Role-Based Access Control enabled, which is what the v2 createSpace operation is gated behind.
 
 > **Deletion is permanent**
 > Deleting this resource deletes the space outright; it does not pass through the trash and cannot be undone.

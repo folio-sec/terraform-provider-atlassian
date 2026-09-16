@@ -225,6 +225,24 @@ func (e OperationCheckResultOperation) Valid() bool {
 	}
 }
 
+// Defines values for PermissionSubjectType.
+const (
+	PermissionSubjectTypeGroup PermissionSubjectType = "group"
+	PermissionSubjectTypeUser  PermissionSubjectType = "user"
+)
+
+// Valid indicates whether the value is a known member of the PermissionSubjectType enum.
+func (e PermissionSubjectType) Valid() bool {
+	switch e {
+	case PermissionSubjectTypeGroup:
+		return true
+	case PermissionSubjectTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SpaceDescriptionRepresentation.
 const (
 	SpaceDescriptionRepresentationPlain SpaceDescriptionRepresentation = "plain"
@@ -237,6 +255,228 @@ func (e SpaceDescriptionRepresentation) Valid() bool {
 	case SpaceDescriptionRepresentationPlain:
 		return true
 	case SpaceDescriptionRepresentationView:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SpacePermissionRequestOperationKey.
+const (
+	SpacePermissionRequestOperationKeyAdminister             SpacePermissionRequestOperationKey = "administer"
+	SpacePermissionRequestOperationKeyArchive                SpacePermissionRequestOperationKey = "archive"
+	SpacePermissionRequestOperationKeyArchiveSpace           SpacePermissionRequestOperationKey = "archive_space"
+	SpacePermissionRequestOperationKeyCopy                   SpacePermissionRequestOperationKey = "copy"
+	SpacePermissionRequestOperationKeyCreate                 SpacePermissionRequestOperationKey = "create"
+	SpacePermissionRequestOperationKeyDelete                 SpacePermissionRequestOperationKey = "delete"
+	SpacePermissionRequestOperationKeyDeleteSpace            SpacePermissionRequestOperationKey = "delete_space"
+	SpacePermissionRequestOperationKeyExport                 SpacePermissionRequestOperationKey = "export"
+	SpacePermissionRequestOperationKeyExportContent          SpacePermissionRequestOperationKey = "export_content"
+	SpacePermissionRequestOperationKeyManageContent          SpacePermissionRequestOperationKey = "manage_content"
+	SpacePermissionRequestOperationKeyManageGuestUsers       SpacePermissionRequestOperationKey = "manage_guest_users"
+	SpacePermissionRequestOperationKeyManageLookAndFeel      SpacePermissionRequestOperationKey = "manage_look_and_feel"
+	SpacePermissionRequestOperationKeyManageNonlicensedUsers SpacePermissionRequestOperationKey = "manage_nonlicensed_users"
+	SpacePermissionRequestOperationKeyManagePublicLinks      SpacePermissionRequestOperationKey = "manage_public_links"
+	SpacePermissionRequestOperationKeyManageTemplates        SpacePermissionRequestOperationKey = "manage_templates"
+	SpacePermissionRequestOperationKeyManageUsers            SpacePermissionRequestOperationKey = "manage_users"
+	SpacePermissionRequestOperationKeyMove                   SpacePermissionRequestOperationKey = "move"
+	SpacePermissionRequestOperationKeyPurge                  SpacePermissionRequestOperationKey = "purge"
+	SpacePermissionRequestOperationKeyPurgeVersion           SpacePermissionRequestOperationKey = "purge_version"
+	SpacePermissionRequestOperationKeyRead                   SpacePermissionRequestOperationKey = "read"
+	SpacePermissionRequestOperationKeyRestore                SpacePermissionRequestOperationKey = "restore"
+	SpacePermissionRequestOperationKeyRestrictContent        SpacePermissionRequestOperationKey = "restrict_content"
+	SpacePermissionRequestOperationKeyUpdate                 SpacePermissionRequestOperationKey = "update"
+	SpacePermissionRequestOperationKeyUse                    SpacePermissionRequestOperationKey = "use"
+)
+
+// Valid indicates whether the value is a known member of the SpacePermissionRequestOperationKey enum.
+func (e SpacePermissionRequestOperationKey) Valid() bool {
+	switch e {
+	case SpacePermissionRequestOperationKeyAdminister:
+		return true
+	case SpacePermissionRequestOperationKeyArchive:
+		return true
+	case SpacePermissionRequestOperationKeyArchiveSpace:
+		return true
+	case SpacePermissionRequestOperationKeyCopy:
+		return true
+	case SpacePermissionRequestOperationKeyCreate:
+		return true
+	case SpacePermissionRequestOperationKeyDelete:
+		return true
+	case SpacePermissionRequestOperationKeyDeleteSpace:
+		return true
+	case SpacePermissionRequestOperationKeyExport:
+		return true
+	case SpacePermissionRequestOperationKeyExportContent:
+		return true
+	case SpacePermissionRequestOperationKeyManageContent:
+		return true
+	case SpacePermissionRequestOperationKeyManageGuestUsers:
+		return true
+	case SpacePermissionRequestOperationKeyManageLookAndFeel:
+		return true
+	case SpacePermissionRequestOperationKeyManageNonlicensedUsers:
+		return true
+	case SpacePermissionRequestOperationKeyManagePublicLinks:
+		return true
+	case SpacePermissionRequestOperationKeyManageTemplates:
+		return true
+	case SpacePermissionRequestOperationKeyManageUsers:
+		return true
+	case SpacePermissionRequestOperationKeyMove:
+		return true
+	case SpacePermissionRequestOperationKeyPurge:
+		return true
+	case SpacePermissionRequestOperationKeyPurgeVersion:
+		return true
+	case SpacePermissionRequestOperationKeyRead:
+		return true
+	case SpacePermissionRequestOperationKeyRestore:
+		return true
+	case SpacePermissionRequestOperationKeyRestrictContent:
+		return true
+	case SpacePermissionRequestOperationKeyUpdate:
+		return true
+	case SpacePermissionRequestOperationKeyUse:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SpacePermissionRequestOperationTarget.
+const (
+	SpacePermissionRequestOperationTargetAttachment SpacePermissionRequestOperationTarget = "attachment"
+	SpacePermissionRequestOperationTargetBlogpost   SpacePermissionRequestOperationTarget = "blogpost"
+	SpacePermissionRequestOperationTargetComment    SpacePermissionRequestOperationTarget = "comment"
+	SpacePermissionRequestOperationTargetPage       SpacePermissionRequestOperationTarget = "page"
+	SpacePermissionRequestOperationTargetSpace      SpacePermissionRequestOperationTarget = "space"
+)
+
+// Valid indicates whether the value is a known member of the SpacePermissionRequestOperationTarget enum.
+func (e SpacePermissionRequestOperationTarget) Valid() bool {
+	switch e {
+	case SpacePermissionRequestOperationTargetAttachment:
+		return true
+	case SpacePermissionRequestOperationTargetBlogpost:
+		return true
+	case SpacePermissionRequestOperationTargetComment:
+		return true
+	case SpacePermissionRequestOperationTargetPage:
+		return true
+	case SpacePermissionRequestOperationTargetSpace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SpacePermissionV2OperationKey.
+const (
+	SpacePermissionV2OperationKeyAdminister             SpacePermissionV2OperationKey = "administer"
+	SpacePermissionV2OperationKeyArchive                SpacePermissionV2OperationKey = "archive"
+	SpacePermissionV2OperationKeyArchiveSpace           SpacePermissionV2OperationKey = "archive_space"
+	SpacePermissionV2OperationKeyCopy                   SpacePermissionV2OperationKey = "copy"
+	SpacePermissionV2OperationKeyCreate                 SpacePermissionV2OperationKey = "create"
+	SpacePermissionV2OperationKeyDelete                 SpacePermissionV2OperationKey = "delete"
+	SpacePermissionV2OperationKeyDeleteSpace            SpacePermissionV2OperationKey = "delete_space"
+	SpacePermissionV2OperationKeyExport                 SpacePermissionV2OperationKey = "export"
+	SpacePermissionV2OperationKeyExportContent          SpacePermissionV2OperationKey = "export_content"
+	SpacePermissionV2OperationKeyManageContent          SpacePermissionV2OperationKey = "manage_content"
+	SpacePermissionV2OperationKeyManageGuestUsers       SpacePermissionV2OperationKey = "manage_guest_users"
+	SpacePermissionV2OperationKeyManageLookAndFeel      SpacePermissionV2OperationKey = "manage_look_and_feel"
+	SpacePermissionV2OperationKeyManageNonlicensedUsers SpacePermissionV2OperationKey = "manage_nonlicensed_users"
+	SpacePermissionV2OperationKeyManagePublicLinks      SpacePermissionV2OperationKey = "manage_public_links"
+	SpacePermissionV2OperationKeyManageTemplates        SpacePermissionV2OperationKey = "manage_templates"
+	SpacePermissionV2OperationKeyManageUsers            SpacePermissionV2OperationKey = "manage_users"
+	SpacePermissionV2OperationKeyMove                   SpacePermissionV2OperationKey = "move"
+	SpacePermissionV2OperationKeyPurge                  SpacePermissionV2OperationKey = "purge"
+	SpacePermissionV2OperationKeyPurgeVersion           SpacePermissionV2OperationKey = "purge_version"
+	SpacePermissionV2OperationKeyRead                   SpacePermissionV2OperationKey = "read"
+	SpacePermissionV2OperationKeyRestore                SpacePermissionV2OperationKey = "restore"
+	SpacePermissionV2OperationKeyRestrictContent        SpacePermissionV2OperationKey = "restrict_content"
+	SpacePermissionV2OperationKeyUpdate                 SpacePermissionV2OperationKey = "update"
+	SpacePermissionV2OperationKeyUse                    SpacePermissionV2OperationKey = "use"
+)
+
+// Valid indicates whether the value is a known member of the SpacePermissionV2OperationKey enum.
+func (e SpacePermissionV2OperationKey) Valid() bool {
+	switch e {
+	case SpacePermissionV2OperationKeyAdminister:
+		return true
+	case SpacePermissionV2OperationKeyArchive:
+		return true
+	case SpacePermissionV2OperationKeyArchiveSpace:
+		return true
+	case SpacePermissionV2OperationKeyCopy:
+		return true
+	case SpacePermissionV2OperationKeyCreate:
+		return true
+	case SpacePermissionV2OperationKeyDelete:
+		return true
+	case SpacePermissionV2OperationKeyDeleteSpace:
+		return true
+	case SpacePermissionV2OperationKeyExport:
+		return true
+	case SpacePermissionV2OperationKeyExportContent:
+		return true
+	case SpacePermissionV2OperationKeyManageContent:
+		return true
+	case SpacePermissionV2OperationKeyManageGuestUsers:
+		return true
+	case SpacePermissionV2OperationKeyManageLookAndFeel:
+		return true
+	case SpacePermissionV2OperationKeyManageNonlicensedUsers:
+		return true
+	case SpacePermissionV2OperationKeyManagePublicLinks:
+		return true
+	case SpacePermissionV2OperationKeyManageTemplates:
+		return true
+	case SpacePermissionV2OperationKeyManageUsers:
+		return true
+	case SpacePermissionV2OperationKeyMove:
+		return true
+	case SpacePermissionV2OperationKeyPurge:
+		return true
+	case SpacePermissionV2OperationKeyPurgeVersion:
+		return true
+	case SpacePermissionV2OperationKeyRead:
+		return true
+	case SpacePermissionV2OperationKeyRestore:
+		return true
+	case SpacePermissionV2OperationKeyRestrictContent:
+		return true
+	case SpacePermissionV2OperationKeyUpdate:
+		return true
+	case SpacePermissionV2OperationKeyUse:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SpacePermissionV2OperationTarget.
+const (
+	SpacePermissionV2OperationTargetAttachment SpacePermissionV2OperationTarget = "attachment"
+	SpacePermissionV2OperationTargetBlogpost   SpacePermissionV2OperationTarget = "blogpost"
+	SpacePermissionV2OperationTargetComment    SpacePermissionV2OperationTarget = "comment"
+	SpacePermissionV2OperationTargetPage       SpacePermissionV2OperationTarget = "page"
+	SpacePermissionV2OperationTargetSpace      SpacePermissionV2OperationTarget = "space"
+)
+
+// Valid indicates whether the value is a known member of the SpacePermissionV2OperationTarget enum.
+func (e SpacePermissionV2OperationTarget) Valid() bool {
+	switch e {
+	case SpacePermissionV2OperationTargetAttachment:
+		return true
+	case SpacePermissionV2OperationTargetBlogpost:
+		return true
+	case SpacePermissionV2OperationTargetComment:
+		return true
+	case SpacePermissionV2OperationTargetPage:
+		return true
+	case SpacePermissionV2OperationTargetSpace:
 		return true
 	default:
 		return false
@@ -858,6 +1098,18 @@ type OperationCheckResult struct {
 // OperationCheckResultOperation The operation itself.
 type OperationCheckResultOperation string
 
+// PermissionSubject The user or group that the permission applies to.
+type PermissionSubject struct {
+	// Identifier for `type=user`, identifier should be user's accountId or `anonymous` for anonymous users
+	//
+	// for `type=group`, identifier should be the groupId.
+	Identifier string                `json:"identifier"`
+	Type       PermissionSubjectType `json:"type"`
+}
+
+// PermissionSubjectType defines model for PermissionSubject.Type.
+type PermissionSubjectType string
+
 // ScreenLookAndFeel defines model for ScreenLookAndFeel.
 type ScreenLookAndFeel struct {
 	Background           string                    `json:"background"`
@@ -1007,6 +1259,112 @@ type SpacePermission struct {
 	// with the 'read space' operation.
 	UnlicensedAccess bool `json:"unlicensedAccess"`
 }
+
+// SpacePermissionRequest This object represents the request for the single space permission. Permissions consist of
+// one operation object with an accompanying subjects object.
+//
+// The following combinations of `operation.key` and `operation.target` values are
+// valid for the `operation` object:
+// ``` bash
+// 'create': 'page', 'blogpost', 'comment', 'attachment'
+// 'read': 'space'
+// 'delete': 'page', 'blogpost', 'comment', 'attachment', 'space'
+// 'export': 'space'
+// 'administer': 'space'
+// 'archive': 'page'
+// 'restrict_content': 'space'
+// ```
+//
+// For example, to enable Delete Own permission, set the `operation` object to the following:
+// ```
+//
+//	"operation": {
+//	    "key": "delete",
+//	    "target": "space"
+//	}
+//
+// ```
+// To enable Add/Delete Restrictions permissions, set the `operation` object to the following:
+// ```
+//
+//	"operation": {
+//	    "key": "restrict_content",
+//	    "target": "space"
+//	}
+//
+// ```
+type SpacePermissionRequest struct {
+	UnderscoreLinks *GenericLinks `json:"_links,omitempty"`
+	Operation       struct {
+		Key SpacePermissionRequestOperationKey `json:"key"`
+
+		// Target The space or content type that the operation applies to.
+		Target SpacePermissionRequestOperationTarget `json:"target"`
+	} `json:"operation"`
+
+	// Subject The user or group that the permission applies to.
+	Subject              PermissionSubject      `json:"subject"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// SpacePermissionRequestOperationKey defines model for SpacePermissionRequest.Operation.Key.
+type SpacePermissionRequestOperationKey string
+
+// SpacePermissionRequestOperationTarget The space or content type that the operation applies to.
+type SpacePermissionRequestOperationTarget string
+
+// SpacePermissionV2 This object represents a single space permission. Permissions consist of
+// at least one operation object with an accompanying subjects object.
+//
+// The following combinations of `operation.key` and `operation.target` values are
+// valid for the `operation` object:
+// ``` bash
+// 'create': 'page', 'blogpost', 'comment', 'attachment'
+// 'read': 'space'
+// 'delete': 'page', 'blogpost', 'comment', 'attachment', 'space'
+// 'export': 'space'
+// 'administer': 'space'
+// 'archive': 'page'
+// 'restrict_content': 'space'
+// ```
+//
+// For example, to enable Delete Own permission, set the `operation` object to the following:
+// ```
+//
+//	"operation": {
+//	    "key": "delete",
+//	    "target": "space"
+//	}
+//
+// ```
+// To enable Add/Delete Restrictions permissions, set the `operation` object to the following:
+// ```
+//
+//	"operation": {
+//	    "key": "restrict_content",
+//	    "target": "space"
+//	}
+//
+// ```
+type SpacePermissionV2 struct {
+	UnderscoreLinks *GenericLinks `json:"_links,omitempty"`
+	Id              int64         `json:"id"`
+	Operation       struct {
+		Key SpacePermissionV2OperationKey `json:"key"`
+
+		// Target The space or content type that the operation applies to.
+		Target SpacePermissionV2OperationTarget `json:"target"`
+	} `json:"operation"`
+
+	// Subject The user or group that the permission applies to.
+	Subject PermissionSubject `json:"subject"`
+}
+
+// SpacePermissionV2OperationKey defines model for SpacePermissionV2.Operation.Key.
+type SpacePermissionV2OperationKey string
+
+// SpacePermissionV2OperationTarget The space or content type that the operation applies to.
+type SpacePermissionV2OperationTarget string
 
 // SpaceSettings defines model for SpaceSettings.
 type SpaceSettings struct {
@@ -1393,6 +1751,9 @@ type WebResourceDependencies_Uris_Js struct {
 
 // UpdateSpaceJSONRequestBody defines body for UpdateSpace for application/json ContentType.
 type UpdateSpaceJSONRequestBody = SpaceUpdate
+
+// AddPermissionToSpaceJSONRequestBody defines body for AddPermissionToSpace for application/json ContentType.
+type AddPermissionToSpaceJSONRequestBody = SpacePermissionRequest
 
 // Getter for additional properties for Content. Returns the specified
 // element and whether it was found
@@ -2730,6 +3091,100 @@ func (a SpaceDescriptionCreate_Plain) MarshalJSON() ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'value': %w", err)
 		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for SpacePermissionRequest. Returns the specified
+// element and whether it was found
+func (a SpacePermissionRequest) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for SpacePermissionRequest
+func (a *SpacePermissionRequest) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for SpacePermissionRequest to handle AdditionalProperties
+func (a *SpacePermissionRequest) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["_links"]; found {
+		err = json.Unmarshal(raw, &a.UnderscoreLinks)
+		if err != nil {
+			return fmt.Errorf("error reading '_links': %w", err)
+		}
+		delete(object, "_links")
+	}
+
+	if raw, found := object["operation"]; found {
+		err = json.Unmarshal(raw, &a.Operation)
+		if err != nil {
+			return fmt.Errorf("error reading 'operation': %w", err)
+		}
+		delete(object, "operation")
+	}
+
+	if raw, found := object["subject"]; found {
+		err = json.Unmarshal(raw, &a.Subject)
+		if err != nil {
+			return fmt.Errorf("error reading 'subject': %w", err)
+		}
+		delete(object, "subject")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for SpacePermissionRequest to handle AdditionalProperties
+func (a SpacePermissionRequest) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.UnderscoreLinks != nil {
+		object["_links"], err = json.Marshal(a.UnderscoreLinks)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '_links': %w", err)
+		}
+	}
+
+	object["operation"], err = json.Marshal(a.Operation)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'operation': %w", err)
+	}
+
+	object["subject"], err = json.Marshal(a.Subject)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'subject': %w", err)
 	}
 
 	for fieldName, field := range a.AdditionalProperties {
@@ -4570,6 +5025,53 @@ type ClientInterface interface {
 	//
 	// Corresponds with PUT /wiki/rest/api/space/{spaceKey} (the `UpdateSpace` operationId).
 	UpdateSpace(ctx context.Context, spaceKey string, body UpdateSpaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AddPermissionToSpaceWithBody Add new permission to space
+	//
+	// Adds new permission to space.
+	//
+	// If the permission to be added is a group permission, the group can be identified
+	// by its group name or group id.
+	//
+	// Note: Apps cannot access this REST resource - including when utilizing user impersonation.
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// 'Admin' permission for the space.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /wiki/rest/api/space/{spaceKey}/permission (the `AddPermissionToSpace` operationId).
+	AddPermissionToSpaceWithBody(ctx context.Context, spaceKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AddPermissionToSpace Add new permission to space
+	//
+	// Adds new permission to space.
+	//
+	// If the permission to be added is a group permission, the group can be identified
+	// by its group name or group id.
+	//
+	// Note: Apps cannot access this REST resource - including when utilizing user impersonation.
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// 'Admin' permission for the space.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /wiki/rest/api/space/{spaceKey}/permission (the `AddPermissionToSpace` operationId).
+	AddPermissionToSpace(ctx context.Context, spaceKey string, body AddPermissionToSpaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RemovePermission Remove a space permission
+	//
+	// Removes a space permission. Note that removing Read Space permission for a user or group will remove all
+	// the space permissions for that user or group.
+	//
+	// Note: Apps cannot access this REST resource - including when utilizing user impersonation.
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// 'Admin' permission for the space.
+	//
+	// Corresponds with DELETE /wiki/rest/api/space/{spaceKey}/permission/{id} (the `RemovePermission` operationId).
+	RemovePermission(ctx context.Context, spaceKey string, id int, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 // GetTask Get long-running task
@@ -4659,6 +5161,83 @@ func (c *Client) UpdateSpaceWithBody(ctx context.Context, spaceKey string, conte
 // Corresponds with PUT /wiki/rest/api/space/{spaceKey} (the `UpdateSpace` operationId).
 func (c *Client) UpdateSpace(ctx context.Context, spaceKey string, body UpdateSpaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUpdateSpaceRequest(c.Server, spaceKey, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AddPermissionToSpaceWithBody Add new permission to space
+//
+// Adds new permission to space.
+//
+// If the permission to be added is a group permission, the group can be identified
+// by its group name or group id.
+//
+// Note: Apps cannot access this REST resource - including when utilizing user impersonation.
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// 'Admin' permission for the space.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /wiki/rest/api/space/{spaceKey}/permission (the `AddPermissionToSpace` operationId).
+func (c *Client) AddPermissionToSpaceWithBody(ctx context.Context, spaceKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAddPermissionToSpaceRequestWithBody(c.Server, spaceKey, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// AddPermissionToSpace Add new permission to space
+//
+// Adds new permission to space.
+//
+// If the permission to be added is a group permission, the group can be identified
+// by its group name or group id.
+//
+// Note: Apps cannot access this REST resource - including when utilizing user impersonation.
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// 'Admin' permission for the space.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /wiki/rest/api/space/{spaceKey}/permission (the `AddPermissionToSpace` operationId).
+func (c *Client) AddPermissionToSpace(ctx context.Context, spaceKey string, body AddPermissionToSpaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAddPermissionToSpaceRequest(c.Server, spaceKey, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RemovePermission Remove a space permission
+//
+// Removes a space permission. Note that removing Read Space permission for a user or group will remove all
+// the space permissions for that user or group.
+//
+// Note: Apps cannot access this REST resource - including when utilizing user impersonation.
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// 'Admin' permission for the space.
+//
+// Corresponds with DELETE /wiki/rest/api/space/{spaceKey}/permission/{id} (the `RemovePermission` operationId).
+func (c *Client) RemovePermission(ctx context.Context, spaceKey string, id int, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRemovePermissionRequest(c.Server, spaceKey, id)
 	if err != nil {
 		return nil, err
 	}
@@ -4784,6 +5363,94 @@ func NewUpdateSpaceRequestWithBody(server string, spaceKey string, contentType s
 	return req, nil
 }
 
+// NewAddPermissionToSpaceRequest calls the generic AddPermissionToSpace builder with application/json body
+func NewAddPermissionToSpaceRequest(server string, spaceKey string, body AddPermissionToSpaceJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAddPermissionToSpaceRequestWithBody(server, spaceKey, "application/json", bodyReader)
+}
+
+// NewAddPermissionToSpaceRequestWithBody constructs an http.Request for the AddPermissionToSpace method, with any body, and a specified content type
+func NewAddPermissionToSpaceRequestWithBody(server string, spaceKey string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "spaceKey", spaceKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/wiki/rest/api/space/%s/permission", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRemovePermissionRequest constructs an http.Request for the RemovePermission method
+func NewRemovePermissionRequest(server string, spaceKey string, id int) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "spaceKey", spaceKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "integer", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/wiki/rest/api/space/%s/permission/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -4888,6 +5555,55 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with PUT /wiki/rest/api/space/{spaceKey} (the `UpdateSpace` operationId).
 	UpdateSpaceWithResponse(ctx context.Context, spaceKey string, body UpdateSpaceJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSpaceResponse, error)
+
+	// AddPermissionToSpaceWithBodyWithResponse Add new permission to space
+	//
+	// Adds new permission to space.
+	//
+	// If the permission to be added is a group permission, the group can be identified
+	// by its group name or group id.
+	//
+	// Note: Apps cannot access this REST resource - including when utilizing user impersonation.
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// 'Admin' permission for the space.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /wiki/rest/api/space/{spaceKey}/permission (the `AddPermissionToSpace` operationId).
+	AddPermissionToSpaceWithBodyWithResponse(ctx context.Context, spaceKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddPermissionToSpaceResponse, error)
+
+	// AddPermissionToSpaceWithResponse Add new permission to space
+	//
+	// Adds new permission to space.
+	//
+	// If the permission to be added is a group permission, the group can be identified
+	// by its group name or group id.
+	//
+	// Note: Apps cannot access this REST resource - including when utilizing user impersonation.
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// 'Admin' permission for the space.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /wiki/rest/api/space/{spaceKey}/permission (the `AddPermissionToSpace` operationId).
+	AddPermissionToSpaceWithResponse(ctx context.Context, spaceKey string, body AddPermissionToSpaceJSONRequestBody, reqEditors ...RequestEditorFn) (*AddPermissionToSpaceResponse, error)
+
+	// RemovePermissionWithResponse Remove a space permission
+	//
+	// Removes a space permission. Note that removing Read Space permission for a user or group will remove all
+	// the space permissions for that user or group.
+	//
+	// Note: Apps cannot access this REST resource - including when utilizing user impersonation.
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// 'Admin' permission for the space.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /wiki/rest/api/space/{spaceKey}/permission/{id} (the `RemovePermission` operationId).
+	RemovePermissionWithResponse(ctx context.Context, spaceKey string, id int, reqEditors ...RequestEditorFn) (*RemovePermissionResponse, error)
 }
 
 type GetTaskResponse struct {
@@ -5013,6 +5729,81 @@ func (r UpdateSpaceResponse) ContentType() string {
 	return ""
 }
 
+type AddPermissionToSpaceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *SpacePermissionV2
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r AddPermissionToSpaceResponse) GetJSON200() *SpacePermissionV2 {
+	return r.JSON200
+}
+
+// GetBody returns the raw response body bytes
+func (r AddPermissionToSpaceResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r AddPermissionToSpaceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AddPermissionToSpaceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r AddPermissionToSpaceResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RemovePermissionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+}
+
+// GetBody returns the raw response body bytes
+func (r RemovePermissionResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RemovePermissionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RemovePermissionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RemovePermissionResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 // GetTaskWithResponse Get long-running task
 //
 // Returns information about an active long-running task (e.g. space export),
@@ -5096,6 +5887,73 @@ func (c *ClientWithResponses) UpdateSpaceWithResponse(ctx context.Context, space
 		return nil, err
 	}
 	return ParseUpdateSpaceResponse(rsp)
+}
+
+// AddPermissionToSpaceWithBodyWithResponse Add new permission to space
+//
+// Adds new permission to space.
+//
+// If the permission to be added is a group permission, the group can be identified
+// by its group name or group id.
+//
+// Note: Apps cannot access this REST resource - including when utilizing user impersonation.
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// 'Admin' permission for the space.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /wiki/rest/api/space/{spaceKey}/permission (the `AddPermissionToSpace` operationId).
+func (c *ClientWithResponses) AddPermissionToSpaceWithBodyWithResponse(ctx context.Context, spaceKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddPermissionToSpaceResponse, error) {
+	rsp, err := c.AddPermissionToSpaceWithBody(ctx, spaceKey, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAddPermissionToSpaceResponse(rsp)
+}
+
+// AddPermissionToSpaceWithResponse Add new permission to space
+//
+// Adds new permission to space.
+//
+// If the permission to be added is a group permission, the group can be identified
+// by its group name or group id.
+//
+// Note: Apps cannot access this REST resource - including when utilizing user impersonation.
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// 'Admin' permission for the space.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /wiki/rest/api/space/{spaceKey}/permission (the `AddPermissionToSpace` operationId).
+func (c *ClientWithResponses) AddPermissionToSpaceWithResponse(ctx context.Context, spaceKey string, body AddPermissionToSpaceJSONRequestBody, reqEditors ...RequestEditorFn) (*AddPermissionToSpaceResponse, error) {
+	rsp, err := c.AddPermissionToSpace(ctx, spaceKey, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAddPermissionToSpaceResponse(rsp)
+}
+
+// RemovePermissionWithResponse Remove a space permission
+//
+// Removes a space permission. Note that removing Read Space permission for a user or group will remove all
+// the space permissions for that user or group.
+//
+// Note: Apps cannot access this REST resource - including when utilizing user impersonation.
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// 'Admin' permission for the space.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /wiki/rest/api/space/{spaceKey}/permission/{id} (the `RemovePermission` operationId).
+func (c *ClientWithResponses) RemovePermissionWithResponse(ctx context.Context, spaceKey string, id int, reqEditors ...RequestEditorFn) (*RemovePermissionResponse, error) {
+	rsp, err := c.RemovePermission(ctx, spaceKey, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRemovePermissionResponse(rsp)
 }
 
 // ParseGetTaskResponse parses an HTTP response from a GetTaskWithResponse call
@@ -5189,6 +6047,60 @@ func ParseUpdateSpaceResponse(rsp *http.Response) (*UpdateSpaceResponse, error) 
 	case rsp.StatusCode == 404:
 		break // No content-type
 
+	}
+
+	return response, nil
+}
+
+// ParseAddPermissionToSpaceResponse parses an HTTP response from a AddPermissionToSpaceWithResponse call
+func ParseAddPermissionToSpaceResponse(rsp *http.Response) (*AddPermissionToSpaceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AddPermissionToSpaceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SpacePermissionV2
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
+
+	case rsp.StatusCode == 401:
+		break // No content-type
+
+	case rsp.StatusCode == 403:
+		break // No content-type
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
+	}
+
+	return response, nil
+}
+
+// ParseRemovePermissionResponse parses an HTTP response from a RemovePermissionWithResponse call
+func ParseRemovePermissionResponse(rsp *http.Response) (*RemovePermissionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RemovePermissionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
 
 	return response, nil
