@@ -118,7 +118,7 @@ func (r *spaceRoleResource) Create(ctx context.Context, req resource.CreateReque
 	// been created has no anonymous or guest assignments to migrate. Reject
 	// them rather than dropping them silently, because ValidateConfig cannot
 	// tell a create apart from an update.
-	if setNonBlank(plan.AnonymousReassignmentRoleID) || setNonBlank(plan.GuestReassignmentRoleID) {
+	if reassignmentRequested(plan) {
 		resp.Diagnostics.AddError(
 			"Confluence space role reassignment is update-only",
 			"anonymous_reassignment_role_id and guest_reassignment_role_id are accepted only by the Confluence space role update operation, so they cannot be set while the role is being created. Create the role without them, then add them in a later change.",
@@ -394,6 +394,12 @@ func roleMatches(role SpaceRole, want SpaceRoleWriteRequest) bool {
 		}
 	}
 	return true
+}
+
+// reassignmentRequested reports whether either update-only reassignment id
+// carries a value, which Create rejects.
+func reassignmentRequested(model spaceRoleResourceModel) bool {
+	return setNonBlank(model.AnonymousReassignmentRoleID) || setNonBlank(model.GuestReassignmentRoleID)
 }
 
 // spaceRoleWriteRequest builds the write body for model. A nil prior means a

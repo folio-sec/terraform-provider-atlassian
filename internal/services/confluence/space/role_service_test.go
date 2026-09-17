@@ -281,3 +281,28 @@ func TestSpaceRoleWriteRequestSendsReassignmentOnlyOnChange(t *testing.T) {
 		t.Fatal("a null reassignment id must not be sent")
 	}
 }
+
+func TestReassignmentRequested(t *testing.T) {
+	t.Parallel()
+	for _, testCase := range []struct {
+		name      string
+		anonymous types.String
+		guest     types.String
+		want      bool
+	}{
+		{name: "both null", anonymous: types.StringNull(), guest: types.StringNull()},
+		{name: "both blank", anonymous: types.StringValue("  "), guest: types.StringValue("")},
+		{name: "anonymous set", anonymous: types.StringValue("role-anonymous"), guest: types.StringNull(), want: true},
+		{name: "guest set", anonymous: types.StringNull(), guest: types.StringValue("role-guest"), want: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			got := reassignmentRequested(spaceRoleResourceModel{
+				AnonymousReassignmentRoleID: testCase.anonymous, GuestReassignmentRoleID: testCase.guest,
+			})
+			if got != testCase.want {
+				t.Fatalf("reassignmentRequested() = %t, want %t", got, testCase.want)
+			}
+		})
+	}
+}
