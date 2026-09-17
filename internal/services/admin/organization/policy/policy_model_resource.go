@@ -76,6 +76,13 @@ func policyPlanValues(ctx context.Context, model policyResourceModel, allowUnkno
 	return desired, diagnostics
 }
 
+// validatePolicyAttributes stays hand-written rather than moving to attribute
+// validators. Its rules are phase-dependent: allowUnknown is true while
+// validating configuration and false before a mutation, where a value that is
+// still unknown is an error. An attribute validator only ever sees
+// configuration and always skips an unknown value, so it cannot express the
+// second phase, and splitting the enum halves out would put one rule in two
+// places.
 func validatePolicyAttributes(attributes policyAttributesModel, allowUnknown bool) diag.Diagnostics {
 	var diagnostics diag.Diagnostics
 	if !attributes.Type.IsUnknown() && attributes.Type.ValueString() != managedPolicyType {

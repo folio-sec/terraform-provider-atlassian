@@ -142,7 +142,7 @@ func TestValidateUserOrganizationRoleAssignment(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			diagnostics := validateUserOrganizationRoleAssignment(test.organizationID, test.directoryID, test.accountID, test.role)
+			diagnostics := validateUserOrganizationRoleAssignment(context.Background(), test.organizationID, test.directoryID, test.accountID, test.role)
 			if diagnostics.HasError() != test.wantError {
 				t.Fatalf("HasError() = %t, want %t; diagnostics = %v", diagnostics.HasError(), test.wantError, diagnostics)
 			}

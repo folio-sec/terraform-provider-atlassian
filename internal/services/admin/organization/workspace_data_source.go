@@ -3,14 +3,15 @@ package organization
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -64,7 +65,7 @@ func (d *workspacesDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 	resp.Schema = schema.Schema{
 		Description: "Queries all pages of an Atlassian organization and returns every matching workspace. A workspace is a single app instance, and its ID is the resource ARI that role assignments refer to.",
 		Attributes: map[string]schema.Attribute{
-			"organization_id": schema.StringAttribute{Description: "Atlassian organization ID used in the Organization API path.", Required: true},
+			"organization_id": schema.StringAttribute{Description: "Atlassian organization ID used in the Organization API path.", Required: true, Validators: []validator.String{nonBlank}},
 			"query": schema.SingleNestedAttribute{
 				Description: "Filters narrowing which workspaces match. Configuring more than one filter returns only workspaces matching all of them.",
 				Optional:    true,
@@ -72,6 +73,7 @@ func (d *workspacesDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 					"search": schema.StringAttribute{
 						Description: "Free-text search matching part of a workspace name or URL.",
 						Optional:    true,
+						Validators:  []validator.String{nonBlank},
 					},
 					"features": schema.SetAttribute{
 						Description: "Feature keys the workspace must contain.",
@@ -85,11 +87,16 @@ func (d *workspacesDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 							"name": schema.StringAttribute{
 								Description: "Field name to match, such as attributes.type.",
 								Required:    true,
+								Validators:  []validator.String{nonBlank},
 							},
 							"values": schema.SetAttribute{
 								Description: "Values the field may hold. A workspace matches when the field holds any of them.",
 								Required:    true,
 								ElementType: types.StringType,
+								// An empty values list makes the operand a
+								// no-op server side, which silently widens the
+								// result set instead of narrowing it.
+								Validators: []validator.Set{setvalidator.SizeAtLeast(1)},
 							},
 						}},
 					},
@@ -132,38 +139,10 @@ func (d *workspacesDataSource) ValidateConfig(ctx context.Context, req datasourc
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	const summary = "Invalid organization workspace configuration"
-	resp.Diagnostics.Append(validateNonEmpty(summary, namedValue{"organization_id", config.OrganizationID})...)
-	if config.Query == nil {
-		return
-	}
-	resp.Diagnostics.Append(validateNonEmpty(summary, namedValue{"query.search", config.Query.Search})...)
-
-	models, diagnostics := workspaceQueryFieldModels(ctx, config.Query)
-	resp.Diagnostics.Append(diagnostics...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(validateWorkspaceQueryFields(summary, models)...)
-}
-
-// validateWorkspaceQueryFields rejects field operands the endpoint would treat
-// as a no-op. Values that are still unknown are left alone: they are checked
-// again in the service layer once they resolve, and failing them here would
-// reject a configuration that derives its filter from another object.
-func validateWorkspaceQueryFields(summary string, models []workspaceQueryFieldModel) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	for index, model := range models {
-		if knownString(model.Name) && strings.TrimSpace(model.Name.ValueString()) == "" {
-			diagnostics.AddError(summary, fmt.Sprintf("query.fields[%d].name must not be empty.", index))
-		}
-		// A values list with no entries makes the operand a no-op server side,
-		// which silently widens the result set instead of narrowing it.
-		if !model.Values.IsNull() && !model.Values.IsUnknown() && len(model.Values.Elements()) == 0 {
-			diagnostics.AddError(summary, fmt.Sprintf("query.fields[%d].values must not be empty.", index))
-		}
-	}
-	return diagnostics
+	// Every rule this data source applies is a validator on the attribute it
+	// constrains, including the field operands nested under query.fields.
+	// Unknown values are left alone by those validators, and the service layer
+	// checks them again once they resolve.
 }
 
 // workspaceQueryFieldModels reads the configured field operands, treating a
