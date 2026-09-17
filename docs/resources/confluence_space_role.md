@@ -3,18 +3,18 @@
 page_title: "atlassian_confluence_space_role Resource - atlassian"
 subcategory: "Confluence"
 description: |-
-  Manages a tenant-wide Confluence space role. Roles created through this resource have type CUSTOM. The role can then be assigned within a space using atlassian_confluence_space_role_assignment. Updates and deletes are asynchronous in Confluence; the provider waits until a role read confirms the requested result.
+  Manages a tenant-wide Confluence space role. Roles created through this resource have type CUSTOM. The role can then be assigned within a space using atlassian_confluence_space_role_assignment. Updates and deletes are asynchronous in Confluence; the provider tracks their tasks and verifies the observable final state before completing.
 ---
 
 # atlassian_confluence_space_role (Resource)
 
-Manages a tenant-wide Confluence space role. Roles created through this resource have type CUSTOM. The role can then be assigned within a space using `atlassian_confluence_space_role_assignment`. Updates and deletes are asynchronous in Confluence; the provider waits until a role read confirms the requested result.
+Manages a tenant-wide Confluence space role. Roles created through this resource have type CUSTOM. The role can then be assigned within a space using `atlassian_confluence_space_role_assignment`. Updates and deletes are asynchronous in Confluence; the provider tracks their tasks and verifies the observable final state before completing.
 
 ## Required OAuth scopes
 
 - Read: `read:space.permission:confluence`
-- Create and update: `write:configuration:confluence`
-- Delete: `write:configuration:confluence`, `read:space.permission:confluence`, `read:content.metadata:confluence`, `read:confluence-space.summary`
+- Create: `write:configuration:confluence`
+- Update and delete: `write:configuration:confluence`, `read:space.permission:confluence`, `read:content.metadata:confluence`, `read:confluence-space.summary`
 
 ## Example Usage
 
@@ -40,8 +40,8 @@ resource "atlassian_confluence_space_role" "example" {
 
 ### Optional
 
-- `anonymous_reassignment_role_id` (String) Update-only API field. When anonymous access uses this role, move those assignments to this role ID. Confluence does not return this value, so the provider preserves the configured value in state.
-- `guest_reassignment_role_id` (String) Update-only API field. When guest access uses this role, move those assignments to this role ID. Confluence does not return this value, so the provider preserves the configured value in state.
+- `anonymous_reassignment_role_id` (String) Update-only API field, so it cannot be set while the role is being created. When anonymous access uses this role, move those assignments to this role ID. Confluence does not return this value, so the provider preserves the configured value in state.
+- `guest_reassignment_role_id` (String) Update-only API field, so it cannot be set while the role is being created. When guest access uses this role, move those assignments to this role ID. Confluence does not return this value, so the provider preserves the configured value in state.
 
 ### Read-Only
 

@@ -114,7 +114,7 @@ func TestSpaceRoleServiceCRUD(t *testing.T) {
 
 	anonymous := "role-anonymous"
 	guest := "role-guest"
-	err = service.UpdateSpaceRole(context.Background(), "role-1", SpaceRoleWriteRequest{
+	updateTaskID, err := service.UpdateSpaceRole(context.Background(), "role-1", SpaceRoleWriteRequest{
 		Name: "Editors", Description: "Can edit", PermissionIDs: []string{"read/space"},
 		AnonymousReassignmentRoleID: &anonymous, GuestReassignmentRoleID: &guest,
 	})
@@ -125,6 +125,9 @@ func TestSpaceRoleServiceCRUD(t *testing.T) {
 		"name": "Editors", "description": "Can edit", "spacePermissions": []any{"read/space"},
 		"anonymousReassignmentRoleId": "role-anonymous", "guestReassignmentRoleId": "role-guest",
 	})
+	if updateTaskID != "task-1" {
+		t.Fatalf("UpdateSpaceRole() task id = %q, want task-1", updateTaskID)
+	}
 
 	taskID, err := service.DeleteSpaceRole(context.Background(), "role-1")
 	if err != nil {
@@ -136,6 +139,41 @@ func TestSpaceRoleServiceCRUD(t *testing.T) {
 	_, err = service.GetSpaceRoleByID(context.Background(), "role-1")
 	if !confluence.IsNotFound(err) {
 		t.Fatalf("GetSpaceRoleByID() after delete error = %v, want Confluence not found", err)
+	}
+}
+
+func TestCreateSpaceRoleReturnsPartialIdentityFromInvalidSuccessResponse(t *testing.T) {
+	t.Parallel()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"id":"role-partial","type":"CUSTOM"}`))
+	}))
+	t.Cleanup(server.Close)
+
+	created, err := NewService(newTestClient(t, server)).CreateSpaceRole(context.Background(), SpaceRoleWriteRequest{
+		Name: "Viewers", Description: "Can view", PermissionIDs: []string{"read/space"},
+	})
+	if err == nil {
+		t.Fatal("CreateSpaceRole() error = nil, want invalid success response")
+	}
+	if created.ID != "role-partial" || created.Type != "CUSTOM" {
+		t.Fatalf("CreateSpaceRole() partial result = %#v", created)
+	}
+}
+
+func TestDeleteSpaceRoleDoesNotTreatPermissionNotFoundAsAbsence(t *testing.T) {
+	t.Parallel()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"errors":[{"status":404,"code":"NOT_FOUND","title":"not permitted"}]}`))
+	}))
+	t.Cleanup(server.Close)
+
+	_, err := NewService(newTestClient(t, server)).DeleteSpaceRole(context.Background(), "role-1")
+	if !confluence.IsNotFound(err) {
+		t.Fatalf("DeleteSpaceRole() error = %v, want Confluence not found", err)
 	}
 }
 

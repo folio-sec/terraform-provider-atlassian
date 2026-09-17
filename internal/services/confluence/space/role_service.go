@@ -45,7 +45,14 @@ func (s *Service) CreateSpaceRole(ctx context.Context, req SpaceRoleWriteRequest
 	}
 	role, err := spaceRoleFromGenerated(*resp.JSON201)
 	if err != nil {
-		return SpaceRole{}, fmt.Errorf("%s: %w", operation, err)
+		partial := SpaceRole{}
+		if resp.JSON201.Id != nil {
+			partial.ID = *resp.JSON201.Id
+		}
+		if resp.JSON201.Type != nil {
+			partial.Type = string(*resp.JSON201.Type)
+		}
+		return partial, fmt.Errorf("%s: %w", operation, err)
 	}
 	return role, nil
 }
@@ -79,14 +86,13 @@ func (s *Service) GetSpaceRoleByID(ctx context.Context, id string) (SpaceRole, e
 }
 
 // UpdateSpaceRole replaces the writable definition of a tenant-wide role.
-// Atlassian applies the permission change asynchronously; the resource layer
-// confirms convergence by reading the role rather than interpreting task
-// status as proof of the desired state.
-func (s *Service) UpdateSpaceRole(ctx context.Context, id string, req SpaceRoleWriteRequest) error {
+// Atlassian applies the change asynchronously; the resource layer waits for
+// the returned task and then confirms the readable role definition.
+func (s *Service) UpdateSpaceRole(ctx context.Context, id string, req SpaceRoleWriteRequest) (string, error) {
 	const operation = "update space role"
 	v2, err := s.client.V2(ctx)
 	if err != nil {
-		return fmt.Errorf("%s: %w: %w", operation, ErrRequestNotSent, err)
+		return "", fmt.Errorf("%s: %w: %w", operation, ErrRequestNotSent, err)
 	}
 	body := v2gen.UpdateSpaceRoleJSONRequestBody{
 		Name: req.Name, Description: req.Description, SpacePermissions: req.PermissionIDs,
@@ -96,22 +102,26 @@ func (s *Service) UpdateSpaceRole(ctx context.Context, id string, req SpaceRoleW
 	resp, err := v2.UpdateSpaceRoleWithResponse(confluence.WithoutRetry(ctx), id, body)
 	if err != nil {
 		if resp == nil && errors.Is(err, confluence.ErrAuthorize) {
-			return fmt.Errorf("%s: %w: %w", operation, ErrRequestNotSent, err)
+			return "", fmt.Errorf("%s: %w: %w", operation, ErrRequestNotSent, err)
 		}
-		return fmt.Errorf("%s: %w", operation, err)
+		return "", fmt.Errorf("%s: %w", operation, err)
 	}
 	if err := confluence.CheckResponse(http.MethodPut, "/space-roles/"+id, resp.StatusCode(), resp.Body); err != nil {
-		return fmt.Errorf("%s: %w", operation, err)
+		return "", fmt.Errorf("%s: %w", operation, err)
 	}
 	if resp.JSON202 == nil {
-		return fmt.Errorf("%s: API returned an invalid success response", operation)
+		return "", fmt.Errorf("%s: API returned an invalid success response", operation)
 	}
-	return nil
+	if resp.JSON202.TaskId == nil || *resp.JSON202.TaskId == "" {
+		return "", fmt.Errorf("%s: API returned a success response without a task id", operation)
+	}
+	return *resp.JSON202.TaskId, nil
 }
 
 // DeleteSpaceRole requests deletion of a tenant-wide role and returns the
-// long-task id Confluence assigns to the asynchronous operation. A Confluence
-// 404 means it is already absent; a gateway-routing 404 remains an error.
+// long-task id Confluence assigns to the asynchronous operation. The caller
+// verifies a Confluence 404 against the complete role catalogue, because the
+// operation documents the same status for missing permission.
 func (s *Service) DeleteSpaceRole(ctx context.Context, id string) (string, error) {
 	const operation = "delete space role"
 	v2, err := s.client.V2(ctx)
@@ -125,11 +135,7 @@ func (s *Service) DeleteSpaceRole(ctx context.Context, id string) (string, error
 		}
 		return "", fmt.Errorf("%s: %w", operation, err)
 	}
-	responseErr := confluence.CheckResponse(http.MethodDelete, "/space-roles/"+id, resp.StatusCode(), resp.Body)
-	if confluence.IsNotFound(responseErr) {
-		return "", nil
-	}
-	if responseErr != nil {
+	if responseErr := confluence.CheckResponse(http.MethodDelete, "/space-roles/"+id, resp.StatusCode(), resp.Body); responseErr != nil {
 		return "", fmt.Errorf("%s: %w", operation, responseErr)
 	}
 	if resp.JSON202 == nil {

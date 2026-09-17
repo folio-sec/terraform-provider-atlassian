@@ -54,7 +54,7 @@ func (r *spaceRoleResource) Metadata(_ context.Context, req resource.MetadataReq
 func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	preserve := []planmodifier.String{stringplanmodifier.UseStateForUnknown()}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a tenant-wide Confluence space role. Roles created through this resource have type CUSTOM. The role can then be assigned within a space using `atlassian_confluence_space_role_assignment`. Updates and deletes are asynchronous in Confluence; the provider waits until a role read confirms the requested result.\n\n## Required OAuth scopes\n\n- Read: `read:space.permission:confluence`\n- Create and update: `write:configuration:confluence`\n- Delete: `write:configuration:confluence`, `read:space.permission:confluence`, `read:content.metadata:confluence`, `read:confluence-space.summary`\n",
+		MarkdownDescription: "Manages a tenant-wide Confluence space role. Roles created through this resource have type CUSTOM. The role can then be assigned within a space using `atlassian_confluence_space_role_assignment`. Updates and deletes are asynchronous in Confluence; the provider tracks their tasks and verifies the observable final state before completing.\n\n## Required OAuth scopes\n\n- Read: `read:space.permission:confluence`\n- Create: `write:configuration:confluence`\n- Update and delete: `write:configuration:confluence`, `read:space.permission:confluence`, `read:content.metadata:confluence`, `read:confluence-space.summary`\n",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Tenant-specific space role ID.", Computed: true,
@@ -72,11 +72,11 @@ func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Computed:    true, PlanModifiers: preserve,
 			},
 			"anonymous_reassignment_role_id": schema.StringAttribute{
-				Description: "Update-only API field. When anonymous access uses this role, move those assignments to this role ID. Confluence does not return this value, so the provider preserves the configured value in state.",
+				Description: "Update-only API field, so it cannot be set while the role is being created. When anonymous access uses this role, move those assignments to this role ID. Confluence does not return this value, so the provider preserves the configured value in state.",
 				Optional:    true,
 			},
 			"guest_reassignment_role_id": schema.StringAttribute{
-				Description: "Update-only API field. When guest access uses this role, move those assignments to this role ID. Confluence does not return this value, so the provider preserves the configured value in state.",
+				Description: "Update-only API field, so it cannot be set while the role is being created. When guest access uses this role, move those assignments to this role ID. Confluence does not return this value, so the provider preserves the configured value in state.",
 				Optional:    true,
 			},
 		},
@@ -120,16 +120,45 @@ func (r *spaceRoleResource) Create(ctx context.Context, req resource.CreateReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// createSpaceRole accepts only name, description, and spacePermissions;
+	// the reassignment ids belong to updateSpaceRole, and a role that has just
+	// been created has no anonymous or guest assignments to migrate. Reject
+	// them rather than dropping them silently, because ValidateConfig cannot
+	// tell a create apart from an update.
+	if setNonBlank(plan.AnonymousReassignmentRoleID) || setNonBlank(plan.GuestReassignmentRoleID) {
+		resp.Diagnostics.AddError(
+			"Confluence space role reassignment is update-only",
+			"anonymous_reassignment_role_id and guest_reassignment_role_id are accepted only by the Confluence space role update operation, so they cannot be set while the role is being created. Create the role without them, then add them in a later change.",
+		)
+		return
+	}
 	write, diagnostics := spaceRoleWriteRequest(ctx, plan, false)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	recordCreatedIdentity := func(role SpaceRole) {
+		partial := plan
+		partial.ID = types.StringValue(role.ID)
+		if role.Type != "" {
+			partial.Type = types.StringValue(role.Type)
+		} else if partial.Type.IsUnknown() {
+			partial.Type = types.StringNull()
+		}
+		resp.Diagnostics.Append(resp.State.Set(ctx, &partial)...)
+		resp.Diagnostics.Append(resp.Identity.Set(ctx, &spaceRoleIdentity{ID: partial.ID})...)
+	}
 	created, err := r.client.CreateSpaceRole(ctx, write)
 	if err != nil {
+		if created.ID != "" {
+			recordCreatedIdentity(created)
+		}
 		summary := "Unable to create Confluence space role"
 		detail := err.Error()
-		if mutationOutcomeMayBeAmbiguous(err) {
+		if created.ID != "" {
+			summary = "Unable to read created Confluence space role"
+			detail += ". Terraform recorded the role ID returned by Confluence in state so the role is not orphaned."
+		} else if mutationOutcomeMayBeAmbiguous(err) {
 			summary = "Unable to confirm Confluence space role creation"
 			detail += ". The role may or may not have been created. If it exists, import it by its role ID; a name lookup is not safe evidence of ownership."
 		}
@@ -139,11 +168,7 @@ func (r *spaceRoleResource) Create(ctx context.Context, req resource.CreateReque
 	state, diagnostics := spaceRoleState(ctx, plan, created)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
-		partial := plan
-		partial.ID = types.StringValue(created.ID)
-		partial.Type = types.StringValue(created.Type)
-		resp.Diagnostics.Append(resp.State.Set(ctx, &partial)...)
-		resp.Diagnostics.Append(resp.Identity.Set(ctx, &spaceRoleIdentity{ID: partial.ID})...)
+		recordCreatedIdentity(created)
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -172,6 +197,21 @@ func (r *spaceRoleResource) Read(ctx context.Context, req resource.ReadRequest, 
 		resp.Diagnostics.AddError("Unable to read Confluence space role", err.Error())
 		return
 	}
+	// A deleted role was observed to remain temporarily readable by id as a
+	// 200 response with an empty permission set after the complete catalogue
+	// stopped returning it. Confirm that tombstone before removing state; a
+	// normal non-empty role still needs only the by-id read.
+	if len(current.PermissionIDs) == 0 {
+		absent, verifyErr := r.spaceRoleAbsent(ctx, state.ID.ValueString())
+		if verifyErr != nil {
+			resp.Diagnostics.AddError("Unable to verify Confluence space role absence", verifyErr.Error())
+			return
+		}
+		if absent {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+	}
 	updated, diagnostics := spaceRoleState(ctx, state, current)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -194,10 +234,23 @@ func (r *spaceRoleResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 	id := state.ID.ValueString()
-	mutationErr := r.client.UpdateSpaceRole(ctx, id, write)
+	taskID, mutationErr := r.client.UpdateSpaceRole(ctx, id, write)
 	if mutationErr != nil && !mutationOutcomeMayBeAmbiguous(mutationErr) {
 		resp.Diagnostics.AddError("Unable to update Confluence space role", mutationErr.Error())
 		return
+	}
+	if mutationErr != nil && (write.AnonymousReassignmentRoleID != nil || write.GuestReassignmentRoleID != nil) {
+		resp.Diagnostics.AddError(
+			"Unable to confirm Confluence space role reassignment",
+			fmt.Sprintf("The mutation response was ambiguous (%s), and Confluence does not expose the reassignment result through a role read.", mutationErr),
+		)
+		return
+	}
+	if taskID != "" {
+		if err := r.client.waitForTask(ctx, taskID); err != nil {
+			resp.Diagnostics.AddError("Unable to confirm Confluence space role update", err.Error())
+			return
+		}
 	}
 	current, err := r.waitForSpaceRole(ctx, id, &write)
 	if err != nil {
@@ -225,6 +278,16 @@ func (r *spaceRoleResource) Delete(ctx context.Context, req resource.DeleteReque
 	}
 	id := state.ID.ValueString()
 	taskID, mutationErr := r.client.DeleteSpaceRole(ctx, id)
+	if confluence.IsNotFound(mutationErr) {
+		absent, verifyErr := r.spaceRoleAbsent(ctx, id)
+		if verifyErr != nil {
+			resp.Diagnostics.AddError("Unable to verify Confluence space role absence", verifyErr.Error())
+			return
+		}
+		if absent {
+			return
+		}
+	}
 	if mutationErr != nil && !mutationOutcomeMayBeAmbiguous(mutationErr) {
 		resp.Diagnostics.AddError("Unable to delete Confluence space role", mutationErr.Error())
 		return
