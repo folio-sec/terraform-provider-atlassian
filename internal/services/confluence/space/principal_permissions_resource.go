@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
@@ -51,11 +50,6 @@ type principalPermissionsState struct {
 	SpaceKey   types.String `tfsdk:"space_key"`
 	Principal  types.Object `tfsdk:"principal"`
 	Operations types.Set    `tfsdk:"operations"`
-}
-
-type customPrincipalModel struct {
-	Type types.String `tfsdk:"type"`
-	ID   types.String `tfsdk:"id"`
 }
 
 type principalPermissionsIdentity struct {
@@ -601,7 +595,7 @@ func (r *principalPermissionsResource) setObservedCreateState(ctx context.Contex
 
 func permissionsIdentityFromState(ctx context.Context, state principalPermissionsState) (principalPermissionsIdentity, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
-	var principal customPrincipalModel
+	var principal accessPrincipalModel
 	if !state.Principal.IsNull() && !state.Principal.IsUnknown() {
 		diagnostics.Append(state.Principal.As(ctx, &principal, basetypes.ObjectAsOptions{})...)
 	}
@@ -659,11 +653,7 @@ func operationSetValue(ctx context.Context, current map[string]PermissionAssignm
 }
 
 func customPrincipalValue(ctx context.Context, principal Principal) (types.Object, diag.Diagnostics) {
-	return types.ObjectValueFrom(ctx, customPrincipalAttributeTypes(), customPrincipalModel{Type: types.StringValue(principal.Type), ID: types.StringValue(principal.ID)})
-}
-
-func customPrincipalAttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{"type": types.StringType, "id": types.StringType}
+	return types.ObjectValueFrom(ctx, accessPrincipalAttributeTypes(), accessPrincipalModel{Type: types.StringValue(principal.Type), ID: types.StringValue(principal.ID)})
 }
 
 func permissionMapFor(rows []PermissionAssignment, principal Principal) map[string]PermissionAssignment {

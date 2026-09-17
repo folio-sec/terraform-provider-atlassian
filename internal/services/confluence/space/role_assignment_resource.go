@@ -2,14 +2,10 @@ package space
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
-	"github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
@@ -25,13 +21,7 @@ var _ resource.ResourceWithIdentity = &roleAssignmentResource{}
 var _ resource.ResourceWithImportState = &roleAssignmentResource{}
 var _ resource.ResourceWithValidateConfig = &roleAssignmentResource{}
 
-type roleAssignmentService interface {
-	GetSpacePermissionsAssignments(context.Context, string) ([]PermissionAssignment, error)
-	GetSpaceRoleAssignments(context.Context, string, *Principal) ([]SpaceRoleAssignment, error)
-	SetSpaceRoleAssignment(context.Context, string, Principal, *string) error
-}
-
-type roleAssignmentResource struct{ client roleAssignmentService }
+type roleAssignmentResource struct{ client *Service }
 
 type roleAssignmentState struct {
 	ID        types.String `tfsdk:"id"`
@@ -157,7 +147,7 @@ func (r *roleAssignmentResource) Create(ctx context.Context, req resource.Create
 	plan.ID = types.StringValue(roleAssignmentID(identity))
 	roleID := plan.RoleID.ValueString()
 	mutationErr := r.client.SetSpaceRoleAssignment(ctx, identity.SpaceID.ValueString(), principal, &roleID)
-	if mutationErr != nil && !mutationMayBeAmbiguous(mutationErr) {
+	if mutationErr != nil && !mutationOutcomeMayBeAmbiguous(mutationErr) {
 		resp.Diagnostics.AddError("Unable to create Confluence space role assignment", mutationErr.Error())
 		return
 	}
@@ -250,7 +240,7 @@ func (r *roleAssignmentResource) Update(ctx context.Context, req resource.Update
 	}
 	roleID := plan.RoleID.ValueString()
 	err = r.client.SetSpaceRoleAssignment(ctx, identity.SpaceID.ValueString(), principal, &roleID)
-	if err != nil && !mutationMayBeAmbiguous(err) {
+	if err != nil && !mutationOutcomeMayBeAmbiguous(err) {
 		resp.Diagnostics.AddError("Unable to update Confluence space role assignment", err.Error())
 		return
 	}
@@ -283,7 +273,7 @@ func (r *roleAssignmentResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 	err := r.client.SetSpaceRoleAssignment(ctx, identity.SpaceID.ValueString(), identityPrincipal(identity), nil)
-	if err != nil && !mutationMayBeAmbiguous(err) {
+	if err != nil && !mutationOutcomeMayBeAmbiguous(err) {
 		resp.Diagnostics.AddError("Unable to delete Confluence space role assignment", err.Error())
 		return
 	}
@@ -384,22 +374,7 @@ func identityPrincipal(identity roleAssignmentIdentity) Principal {
 }
 
 func principalValue(ctx context.Context, principal Principal) (types.Object, diag.Diagnostics) {
-	return types.ObjectValueFrom(ctx, principalResourceAttributeTypes(), principalResourceModel{
+	return types.ObjectValueFrom(ctx, principalAttributeTypes(), principalResourceModel{
 		PrincipalType: types.StringValue(principal.Type), PrincipalID: types.StringValue(principal.ID),
 	})
-}
-
-func principalResourceAttributeTypes() map[string]attr.Type {
-	return map[string]attr.Type{"principal_type": types.StringType, "principal_id": types.StringType}
-}
-
-func mutationMayBeAmbiguous(err error) bool {
-	if errors.Is(err, ErrRequestNotSent) {
-		return false
-	}
-	var httpErr *confluence.HTTPError
-	if !errors.As(err, &httpErr) {
-		return true
-	}
-	return httpErr.StatusCode >= http.StatusInternalServerError || httpErr.GatewayRouting
 }

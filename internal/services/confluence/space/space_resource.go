@@ -2,9 +2,7 @@ package space
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strings"
 
@@ -353,35 +351,6 @@ func validateSpaceConfigRoleAssignments(ctx context.Context, config spaceResourc
 	return diagnostics
 }
 
-// isAmbiguousCreateFailure reports whether createSpace's failure leaves it
-// unknown whether the space was created. The answer only changes how the
-// failure is reported -- nothing is looked up or adopted either way -- but an
-// operator told "this may have been created" checks, and one told it failed
-// does not, so the classification has to be right:
-//
-//   - A definite HTTP status: the API told us what happened.
-//   - ErrRequestNotSent: the request never left the client, so nothing can
-//     have been created. A local conversion failure such as an unparseable
-//     copy_space_access_configuration lands here; without this check a plain
-//     configuration typo would send the resource hunting for a space to adopt.
-//
-// What remains is a transport-level failure that never resolved to a status.
-func isAmbiguousCreateFailure(err error) bool {
-	if errors.Is(err, ErrRequestNotSent) {
-		return false
-	}
-	var httpErr *confluence.HTTPError
-	if !errors.As(err, &httpErr) {
-		// No status at all: the request may have been applied before the
-		// transport failed.
-		return true
-	}
-	// A 4xx is Atlassian declining the request, so nothing was created. A 5xx
-	// or a gateway failure can arrive after Confluence has already committed
-	// the space, so the outcome is not settled by the status alone.
-	return httpErr.StatusCode >= http.StatusInternalServerError || httpErr.GatewayRouting
-}
-
 func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan spaceResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -415,7 +384,7 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	if err != nil {
 		summary := "Unable to create Confluence space"
 		detail := err.Error()
-		if isAmbiguousCreateFailure(err) {
+		if mutationOutcomeMayBeAmbiguous(err) {
 			// The request may or may not have reached Atlassian, and without
 			// an id there is nothing to record. Deliberately no lookup-and-
 			// adopt: a space carrying this key proves only that the key is
