@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 type fakeSpaceRoles struct {
@@ -238,5 +240,44 @@ func TestWaitForSpaceRoleDeleteAcceptsCatalogueAbsenceWithStaleByIDRead(t *testi
 
 	if _, err := resource.waitForSpaceRole(context.Background(), "role-1", nil); err != nil {
 		t.Fatalf("waitForSpaceRole() error = %v", err)
+	}
+}
+
+func TestSpaceRoleWriteRequestSendsReassignmentOnlyOnChange(t *testing.T) {
+	t.Parallel()
+	model := spaceRoleResourceModel{
+		Name: types.StringValue("Editors"), Description: types.StringValue("Can edit"),
+		SpacePermissions:            types.SetValueMust(types.StringType, []attr.Value{types.StringValue("read/space")}),
+		AnonymousReassignmentRoleID: types.StringValue("role-anonymous"),
+		GuestReassignmentRoleID:     types.StringNull(),
+	}
+
+	created, diagnostics := spaceRoleWriteRequest(context.Background(), model, nil)
+	if diagnostics.HasError() {
+		t.Fatalf("spaceRoleWriteRequest() diagnostics = %v", diagnostics)
+	}
+	if created.AnonymousReassignmentRoleID != nil || created.GuestReassignmentRoleID != nil {
+		t.Fatal("a create must omit the update-only reassignment ids")
+	}
+
+	unchanged, diagnostics := spaceRoleWriteRequest(context.Background(), model, &model)
+	if diagnostics.HasError() {
+		t.Fatalf("spaceRoleWriteRequest() diagnostics = %v", diagnostics)
+	}
+	if unchanged.AnonymousReassignmentRoleID != nil {
+		t.Fatalf("an unchanged reassignment id must not be re-sent, got %q", *unchanged.AnonymousReassignmentRoleID)
+	}
+
+	prior := model
+	prior.AnonymousReassignmentRoleID = types.StringNull()
+	changed, diagnostics := spaceRoleWriteRequest(context.Background(), model, &prior)
+	if diagnostics.HasError() {
+		t.Fatalf("spaceRoleWriteRequest() diagnostics = %v", diagnostics)
+	}
+	if changed.AnonymousReassignmentRoleID == nil || *changed.AnonymousReassignmentRoleID != "role-anonymous" {
+		t.Fatalf("a newly configured reassignment id must be sent, got %#v", changed.AnonymousReassignmentRoleID)
+	}
+	if changed.GuestReassignmentRoleID != nil {
+		t.Fatal("a null reassignment id must not be sent")
 	}
 }

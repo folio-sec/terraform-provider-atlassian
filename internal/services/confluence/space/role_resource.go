@@ -13,14 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-)
-
-const (
-	spaceRolePollInterval = 2 * time.Second
-	spaceRolePollTimeout  = 5 * time.Minute
 )
 
 var _ resource.Resource = &spaceRoleResource{}
@@ -65,18 +59,17 @@ func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"space_permissions": schema.SetAttribute{
 				Description: "IDs of the space permissions included in the role, such as `read/space`.",
 				Required:    true, ElementType: types.StringType,
-				PlanModifiers: []planmodifier.Set{setplanmodifier.UseStateForUnknown()},
 			},
 			"type": schema.StringAttribute{
 				Description: "Role type returned by Confluence. Roles created through this resource are CUSTOM.",
 				Computed:    true, PlanModifiers: preserve,
 			},
 			"anonymous_reassignment_role_id": schema.StringAttribute{
-				Description: "Update-only API field, so it cannot be set while the role is being created. When anonymous access uses this role, move those assignments to this role ID. Confluence does not return this value, so the provider preserves the configured value in state.",
+				Description: "Update-only API field, so it cannot be set while the role is being created. When anonymous access uses this role, move those assignments to this role ID. Confluence applies the migration whenever principals hold the role, not only when an update removes their access, so the provider sends this value only on the apply that changes it. Confluence does not return the value, so the provider preserves the configured one in state.",
 				Optional:    true,
 			},
 			"guest_reassignment_role_id": schema.StringAttribute{
-				Description: "Update-only API field, so it cannot be set while the role is being created. When guest access uses this role, move those assignments to this role ID. Confluence does not return this value, so the provider preserves the configured value in state.",
+				Description: "Update-only API field, so it cannot be set while the role is being created. When guest access uses this role, move those assignments to this role ID. Confluence applies the migration whenever principals hold the role, not only when an update removes their access, so the provider sends this value only on the apply that changes it. Confluence does not return the value, so the provider preserves the configured one in state.",
 				Optional:    true,
 			},
 		},
@@ -111,7 +104,7 @@ func (r *spaceRoleResource) ValidateConfig(ctx context.Context, req resource.Val
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(validateNonEmpty("Invalid Confluence space role", namedValue{"name", config.Name}, namedValue{"anonymous_reassignment_role_id", config.AnonymousReassignmentRoleID}, namedValue{"guest_reassignment_role_id", config.GuestReassignmentRoleID})...)
+	resp.Diagnostics.Append(validateNonEmpty("Invalid Confluence space role", namedValue{"name", config.Name}, namedValue{"description", config.Description}, namedValue{"anonymous_reassignment_role_id", config.AnonymousReassignmentRoleID}, namedValue{"guest_reassignment_role_id", config.GuestReassignmentRoleID})...)
 }
 
 func (r *spaceRoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -132,7 +125,7 @@ func (r *spaceRoleResource) Create(ctx context.Context, req resource.CreateReque
 		)
 		return
 	}
-	write, diagnostics := spaceRoleWriteRequest(ctx, plan, false)
+	write, diagnostics := spaceRoleWriteRequest(ctx, plan, nil)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -197,10 +190,14 @@ func (r *spaceRoleResource) Read(ctx context.Context, req resource.ReadRequest, 
 		resp.Diagnostics.AddError("Unable to read Confluence space role", err.Error())
 		return
 	}
-	// A deleted role was observed to remain temporarily readable by id as a
-	// 200 response with an empty permission set after the complete catalogue
-	// stopped returning it. Confirm that tombstone before removing state; a
-	// normal non-empty role still needs only the by-id read.
+	// A deleted role was seen once during live testing to remain readable by
+	// id as a 200 response with an empty permission set after the complete
+	// catalogue had stopped returning it. That observation is not recorded in
+	// a committed artefact, so treat it as unverified. Requiring both an empty
+	// permission set and catalogue absence is correct either way: if the
+	// tombstone is real, refresh detects the deletion; if it is not, a role
+	// that genuinely holds no permissions stays in state because the
+	// catalogue still lists it.
 	if len(current.PermissionIDs) == 0 {
 		absent, verifyErr := r.spaceRoleAbsent(ctx, state.ID.ValueString())
 		if verifyErr != nil {
@@ -228,7 +225,7 @@ func (r *spaceRoleResource) Update(ctx context.Context, req resource.UpdateReque
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	write, diagnostics := spaceRoleWriteRequest(ctx, plan, true)
+	write, diagnostics := spaceRoleWriteRequest(ctx, plan, &state)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -309,16 +306,17 @@ func (r *spaceRoleResource) Delete(ctx context.Context, req resource.DeleteReque
 }
 
 func (r *spaceRoleResource) waitForSpaceRole(ctx context.Context, id string, want *SpaceRoleWriteRequest) (SpaceRole, error) {
-	pollCtx, cancel := context.WithTimeout(ctx, spaceRolePollTimeout)
+	pollCtx, cancel := context.WithTimeout(ctx, taskPollTimeout)
 	defer cancel()
-	ticker := time.NewTicker(spaceRolePollInterval)
+	ticker := time.NewTicker(taskPollInterval)
 	defer ticker.Stop()
+	var unreadable error
 	for {
-		// After a delete request, the catalogue can stop returning the role
-		// while the by-id endpoint still serves a stale 200 response with an
-		// empty permission set. Absence from the complete catalogue is the
-		// final-state evidence needed for deletion in that case.
 		if want == nil {
+			// Absence from the complete catalogue is the only evidence that
+			// settles deletion, because the by-id endpoint can still answer
+			// for a role the catalogue has dropped. Polling it as well could
+			// not confirm anything the catalogue has not already confirmed.
 			absent, err := r.spaceRoleAbsent(pollCtx, id)
 			if err != nil {
 				return SpaceRole{}, err
@@ -326,32 +324,40 @@ func (r *spaceRoleResource) waitForSpaceRole(ctx context.Context, id string, wan
 			if absent {
 				return SpaceRole{}, nil
 			}
-		}
-		current, err := r.client.GetSpaceRoleByID(pollCtx, id)
-		if confluence.IsNotFound(err) {
-			absent, verifyErr := r.spaceRoleAbsent(pollCtx, id)
-			if verifyErr != nil {
-				return SpaceRole{}, verifyErr
-			}
-			if absent {
-				if want == nil {
-					return SpaceRole{}, nil
+		} else {
+			current, err := r.client.GetSpaceRoleByID(pollCtx, id)
+			switch {
+			case err == nil:
+				if roleMatches(current, *want) {
+					return current, nil
 				}
-				return SpaceRole{}, fmt.Errorf("space role %s no longer exists", id)
+			case confluence.IsNotFound(err):
+				absent, verifyErr := r.spaceRoleAbsent(pollCtx, id)
+				if verifyErr != nil {
+					return SpaceRole{}, verifyErr
+				}
+				if absent {
+					return SpaceRole{}, fmt.Errorf("space role %s no longer exists", id)
+				}
+				// The catalogue still lists the role, so getSpaceRolesById
+				// returned its documented "no permission to view" 404 rather
+				// than absence. Keep polling in case the update instead left
+				// a transient state, but carry the error so a timeout reports
+				// it instead of looking like slow convergence.
+				unreadable = err
+			default:
+				return SpaceRole{}, err
 			}
-		}
-		if err == nil && want != nil && roleMatches(current, *want) {
-			return current, nil
-		}
-		if err != nil && !confluence.IsNotFound(err) {
-			return SpaceRole{}, err
 		}
 		select {
 		case <-pollCtx.Done():
 			if want == nil {
-				return SpaceRole{}, fmt.Errorf("timed out after %s waiting for role %s to be deleted", spaceRolePollTimeout, id)
+				return SpaceRole{}, fmt.Errorf("timed out after %s waiting for role %s to be deleted", taskPollTimeout, id)
 			}
-			return SpaceRole{}, fmt.Errorf("timed out after %s waiting for role %s to match the requested definition", spaceRolePollTimeout, id)
+			if unreadable != nil {
+				return SpaceRole{}, fmt.Errorf("timed out after %s waiting for role %s to match the requested definition; the role remained in the catalogue but was not readable: %w", taskPollTimeout, id, unreadable)
+			}
+			return SpaceRole{}, fmt.Errorf("timed out after %s waiting for role %s to match the requested definition", taskPollTimeout, id)
 		case <-ticker.C:
 		}
 	}
@@ -390,22 +396,35 @@ func roleMatches(role SpaceRole, want SpaceRoleWriteRequest) bool {
 	return true
 }
 
-func spaceRoleWriteRequest(ctx context.Context, model spaceRoleResourceModel, includeReassignments bool) (SpaceRoleWriteRequest, diag.Diagnostics) {
+// spaceRoleWriteRequest builds the write body for model. A nil prior means a
+// create, which omits the update-only reassignment ids; otherwise prior is the
+// current state.
+//
+// The reassignment ids are sent only when the configured value differs from
+// state. updateSpaceRole conditions the migration on principals being assigned
+// to the role being modified, not on the edit removing their access, so
+// re-sending an unchanged id would migrate whoever holds the role at that
+// moment. Whether a repeat is a no-op is unverified: Confluence never returns
+// these fields, so neither a read nor roleMatches can observe the result.
+// Sending only on change is correct under either answer, and it still applies
+// the directive on the apply where the operator writes the value.
+func spaceRoleWriteRequest(ctx context.Context, model spaceRoleResourceModel, prior *spaceRoleResourceModel) (SpaceRoleWriteRequest, diag.Diagnostics) {
 	var permissionIDs []string
 	diagnostics := model.SpacePermissions.ElementsAs(ctx, &permissionIDs, false)
 	if diagnostics.HasError() {
 		return SpaceRoleWriteRequest{}, diagnostics
 	}
 	result := SpaceRoleWriteRequest{Name: model.Name.ValueString(), Description: model.Description.ValueString(), PermissionIDs: permissionIDs}
-	if includeReassignments {
-		if setNonBlank(model.AnonymousReassignmentRoleID) {
-			value := model.AnonymousReassignmentRoleID.ValueString()
-			result.AnonymousReassignmentRoleID = &value
-		}
-		if setNonBlank(model.GuestReassignmentRoleID) {
-			value := model.GuestReassignmentRoleID.ValueString()
-			result.GuestReassignmentRoleID = &value
-		}
+	if prior == nil {
+		return result, nil
+	}
+	if setNonBlank(model.AnonymousReassignmentRoleID) && !model.AnonymousReassignmentRoleID.Equal(prior.AnonymousReassignmentRoleID) {
+		value := model.AnonymousReassignmentRoleID.ValueString()
+		result.AnonymousReassignmentRoleID = &value
+	}
+	if setNonBlank(model.GuestReassignmentRoleID) && !model.GuestReassignmentRoleID.Equal(prior.GuestReassignmentRoleID) {
+		value := model.GuestReassignmentRoleID.ValueString()
+		result.GuestReassignmentRoleID = &value
 	}
 	return result, nil
 }

@@ -40,8 +40,8 @@ resource "atlassian_confluence_space_role" "example" {
 
 ### Optional
 
-- `anonymous_reassignment_role_id` (String) Update-only API field, so it cannot be set while the role is being created. When anonymous access uses this role, move those assignments to this role ID. Confluence does not return this value, so the provider preserves the configured value in state.
-- `guest_reassignment_role_id` (String) Update-only API field, so it cannot be set while the role is being created. When guest access uses this role, move those assignments to this role ID. Confluence does not return this value, so the provider preserves the configured value in state.
+- `anonymous_reassignment_role_id` (String) Update-only API field, so it cannot be set while the role is being created. When anonymous access uses this role, move those assignments to this role ID. Confluence applies the migration whenever principals hold the role, not only when an update removes their access, so the provider sends this value only on the apply that changes it. Confluence does not return the value, so the provider preserves the configured one in state.
+- `guest_reassignment_role_id` (String) Update-only API field, so it cannot be set while the role is being created. When guest access uses this role, move those assignments to this role ID. Confluence applies the migration whenever principals hold the role, not only when an update removes their access, so the provider sends this value only on the apply that changes it. Confluence does not return the value, so the provider preserves the configured one in state.
 
 ### Read-Only
 
