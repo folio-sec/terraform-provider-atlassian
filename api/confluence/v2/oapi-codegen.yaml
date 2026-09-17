@@ -11,6 +11,10 @@ output-options:
     - createSpace
     - getSpacePermissionsAssignments
     - getAvailableSpaceRoles
+    - createSpaceRole
+    - getSpaceRolesById
+    - updateSpaceRole
+    - deleteSpaceRole
     - getSpaceRoleAssignments
     - setSpaceRoleAssignments
   nullable-type: true

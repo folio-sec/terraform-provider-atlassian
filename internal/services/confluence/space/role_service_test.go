@@ -1,0 +1,204 @@
+package space
+
+import (
+	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"reflect"
+	"sync"
+	"testing"
+
+	"github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence"
+)
+
+type fakeSpaceRoles struct {
+	t *testing.T
+
+	mu        sync.Mutex
+	bodies    map[string][]byte
+	deleted   bool
+	staleByID bool
+}
+
+func newFakeSpaceRoles(t *testing.T) (*fakeSpaceRoles, *httptest.Server) {
+	t.Helper()
+	fake := &fakeSpaceRoles{t: t, bodies: map[string][]byte{}}
+	server := httptest.NewServer(fake)
+	t.Cleanup(server.Close)
+	return fake, server
+}
+
+func (f *fakeSpaceRoles) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		f.t.Fatalf("read request body: %v", err)
+	}
+	f.mu.Lock()
+	f.bodies[r.Method+" "+r.URL.Path] = body
+	f.mu.Unlock()
+	w.Header().Set("Content-Type", "application/json")
+
+	const role = `{"id":"role-1","type":"CUSTOM","name":"Editors","description":"Can edit","spacePermissions":["read/space"]}`
+	switch {
+	case r.Method == http.MethodPost && r.URL.Path == "/wiki/api/v2/space-roles":
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(role))
+	case r.Method == http.MethodGet && r.URL.Path == "/wiki/api/v2/space-roles":
+		f.mu.Lock()
+		deleted := f.deleted
+		f.mu.Unlock()
+		if deleted {
+			_, _ = w.Write([]byte(`{"results":[]}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"results":[` + role + `]}`))
+	case r.Method == http.MethodGet && r.URL.Path == "/wiki/api/v2/space-roles/role-1":
+		f.mu.Lock()
+		deleted := f.deleted
+		staleByID := f.staleByID
+		f.mu.Unlock()
+		if deleted && !staleByID {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"errors":[{"status":404,"code":"NOT_FOUND","title":"not found"}]}`))
+			return
+		}
+		_, _ = w.Write([]byte(role))
+	case r.Method == http.MethodPut && r.URL.Path == "/wiki/api/v2/space-roles/role-1":
+		w.WriteHeader(http.StatusAccepted)
+		_, _ = w.Write([]byte(`{"id":"role-1","type":"CUSTOM","name":"Editors","description":"Can edit","taskId":"task-1"}`))
+	case r.Method == http.MethodDelete && r.URL.Path == "/wiki/api/v2/space-roles/role-1":
+		f.mu.Lock()
+		f.deleted = true
+		f.mu.Unlock()
+		w.WriteHeader(http.StatusAccepted)
+		_, _ = w.Write([]byte(`{"taskId":"task-2"}`))
+	default:
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"errors":[{"status":404,"code":"NOT_FOUND","title":"not found"}]}`))
+	}
+}
+
+func (f *fakeSpaceRoles) body(method, path string) []byte {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]byte(nil), f.bodies[method+" "+path]...)
+}
+
+func TestSpaceRoleServiceCRUD(t *testing.T) {
+	t.Parallel()
+	fake, server := newFakeSpaceRoles(t)
+	service := NewService(newTestClient(t, server))
+
+	created, err := service.CreateSpaceRole(context.Background(), SpaceRoleWriteRequest{
+		Name: "Editors", Description: "Can edit", PermissionIDs: []string{"read/space"},
+	})
+	if err != nil {
+		t.Fatalf("CreateSpaceRole() error = %v", err)
+	}
+	if created.ID != "role-1" || created.Type != "CUSTOM" {
+		t.Fatalf("created role = %#v", created)
+	}
+	assertJSONBody(t, fake.body(http.MethodPost, "/wiki/api/v2/space-roles"), map[string]any{
+		"name": "Editors", "description": "Can edit", "spacePermissions": []any{"read/space"},
+	})
+
+	got, err := service.GetSpaceRoleByID(context.Background(), "role-1")
+	if err != nil {
+		t.Fatalf("GetSpaceRoleByID() error = %v", err)
+	}
+	if !reflect.DeepEqual(got.PermissionIDs, []string{"read/space"}) {
+		t.Fatalf("permission ids = %v", got.PermissionIDs)
+	}
+
+	anonymous := "role-anonymous"
+	guest := "role-guest"
+	err = service.UpdateSpaceRole(context.Background(), "role-1", SpaceRoleWriteRequest{
+		Name: "Editors", Description: "Can edit", PermissionIDs: []string{"read/space"},
+		AnonymousReassignmentRoleID: &anonymous, GuestReassignmentRoleID: &guest,
+	})
+	if err != nil {
+		t.Fatalf("UpdateSpaceRole() error = %v", err)
+	}
+	assertJSONBody(t, fake.body(http.MethodPut, "/wiki/api/v2/space-roles/role-1"), map[string]any{
+		"name": "Editors", "description": "Can edit", "spacePermissions": []any{"read/space"},
+		"anonymousReassignmentRoleId": "role-anonymous", "guestReassignmentRoleId": "role-guest",
+	})
+
+	taskID, err := service.DeleteSpaceRole(context.Background(), "role-1")
+	if err != nil {
+		t.Fatalf("DeleteSpaceRole() error = %v", err)
+	}
+	if taskID != "task-2" {
+		t.Fatalf("DeleteSpaceRole() task id = %q, want task-2", taskID)
+	}
+	_, err = service.GetSpaceRoleByID(context.Background(), "role-1")
+	if !confluence.IsNotFound(err) {
+		t.Fatalf("GetSpaceRoleByID() after delete error = %v, want Confluence not found", err)
+	}
+}
+
+func assertJSONBody(t *testing.T, body []byte, want map[string]any) {
+	t.Helper()
+	var got map[string]any
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("decode request body %q: %v", body, err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("request body = %#v, want %#v", got, want)
+	}
+}
+
+func TestRoleMatchesTreatsPermissionOrderAsUnordered(t *testing.T) {
+	t.Parallel()
+	role := SpaceRole{Name: "Editors", Description: "Can edit", PermissionIDs: []string{"read/space", "read/comment", "export/content", "delete/own-content", "delete/own-comment"}}
+	want := SpaceRoleWriteRequest{Name: "Editors", Description: "Can edit", PermissionIDs: []string{"delete/own-comment", "delete/own-content", "export/content", "read/comment", "read/space"}}
+	if !roleMatches(role, want) {
+		t.Fatal("roleMatches() = false for the same permission set in a different order")
+	}
+	want.PermissionIDs = []string{"read/space"}
+	if roleMatches(role, want) {
+		t.Fatal("roleMatches() = true for different permission sets")
+	}
+}
+
+func TestSpaceRoleAbsentRequiresCatalogueEvidence(t *testing.T) {
+	t.Parallel()
+	fake, server := newFakeSpaceRoles(t)
+	resource := &spaceRoleResource{client: NewService(newTestClient(t, server))}
+
+	absent, err := resource.spaceRoleAbsent(context.Background(), "role-1")
+	if err != nil {
+		t.Fatalf("spaceRoleAbsent() error = %v", err)
+	}
+	if absent {
+		t.Fatal("spaceRoleAbsent() = true while the catalogue still contains the role")
+	}
+
+	fake.mu.Lock()
+	fake.deleted = true
+	fake.mu.Unlock()
+	absent, err = resource.spaceRoleAbsent(context.Background(), "role-1")
+	if err != nil {
+		t.Fatalf("spaceRoleAbsent() after delete error = %v", err)
+	}
+	if !absent {
+		t.Fatal("spaceRoleAbsent() = false after the complete catalogue omitted the role")
+	}
+}
+
+func TestWaitForSpaceRoleDeleteAcceptsCatalogueAbsenceWithStaleByIDRead(t *testing.T) {
+	t.Parallel()
+	fake, server := newFakeSpaceRoles(t)
+	resource := &spaceRoleResource{client: NewService(newTestClient(t, server))}
+
+	fake.mu.Lock()
+	fake.deleted = true
+	fake.staleByID = true
+	fake.mu.Unlock()
+
+	if _, err := resource.waitForSpaceRole(context.Background(), "role-1", nil); err != nil {
+		t.Fatalf("waitForSpaceRole() error = %v", err)
+	}
+}

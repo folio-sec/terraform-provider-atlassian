@@ -458,11 +458,11 @@ func TestProviderRegistersOrganizationTypes(t *testing.T) {
 	t.Parallel()
 
 	p := New("test")()
-	if got := len(p.DataSources(context.Background())); got != 11 {
-		t.Fatalf("DataSources() length = %d, want 11", got)
+	if got := len(p.DataSources(context.Background())); got != 12 {
+		t.Fatalf("DataSources() length = %d, want 12", got)
 	}
-	if got := len(p.Resources(context.Background())); got != 10 {
-		t.Fatalf("Resources() length = %d, want 10", got)
+	if got := len(p.Resources(context.Background())); got != 11 {
+		t.Fatalf("Resources() length = %d, want 11", got)
 	}
 	resourceNames := map[string]bool{}
 	for _, constructor := range p.Resources(context.Background()) {
@@ -488,6 +488,9 @@ func TestProviderRegistersOrganizationTypes(t *testing.T) {
 	if !resourceNames["atlassian_confluence_space"] {
 		t.Error("confluence space resource is not registered")
 	}
+	if !resourceNames["atlassian_confluence_space_role"] {
+		t.Error("confluence space role resource is not registered")
+	}
 	if !resourceNames["atlassian_confluence_space_role_assignment"] {
 		t.Error("confluence space role assignment resource is not registered")
 	}
@@ -500,7 +503,7 @@ func TestProviderRegistersOrganizationTypes(t *testing.T) {
 		constructor().Metadata(context.Background(), datasource.MetadataRequest{ProviderTypeName: "atlassian"}, &response)
 		dataSourceNames[response.TypeName] = true
 	}
-	for _, name := range []string{"atlassian_organization_policy", "atlassian_organization_policies", "atlassian_organization_group", "atlassian_organization_groups", "atlassian_organization_user", "atlassian_organization_users", "atlassian_organization_workspaces", "atlassian_confluence_space", "atlassian_confluence_spaces", "atlassian_confluence_space_permission_assignments", "atlassian_confluence_space_roles"} {
+	for _, name := range []string{"atlassian_organization_policy", "atlassian_organization_policies", "atlassian_organization_group", "atlassian_organization_groups", "atlassian_organization_user", "atlassian_organization_users", "atlassian_organization_workspaces", "atlassian_confluence_space", "atlassian_confluence_spaces", "atlassian_confluence_space_permission_assignments", "atlassian_confluence_space_role", "atlassian_confluence_space_roles"} {
 		if !dataSourceNames[name] {
 			t.Errorf("data source %q is not registered", name)
 		}

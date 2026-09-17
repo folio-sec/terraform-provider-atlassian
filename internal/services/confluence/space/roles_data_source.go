@@ -20,11 +20,11 @@ type rolesDataSourceModel struct {
 }
 
 type roleModel struct {
-	ID            types.String `tfsdk:"id"`
-	Name          types.String `tfsdk:"name"`
-	Description   types.String `tfsdk:"description"`
-	Type          types.String `tfsdk:"type"`
-	PermissionIDs types.Set    `tfsdk:"permission_ids"`
+	ID               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	Description      types.String `tfsdk:"description"`
+	Type             types.String `tfsdk:"type"`
+	SpacePermissions types.Set    `tfsdk:"space_permissions"`
 }
 
 // NewRolesDataSource returns the tenant's Confluence space-role catalogue.
@@ -44,11 +44,11 @@ func (d *rolesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 			"roles": schema.SetNestedAttribute{
 				Description: "Every available space role in the tenant.", Computed: true,
 				NestedObject: schema.NestedAttributeObject{Attributes: map[string]schema.Attribute{
-					"id":             computedString("Tenant-specific role ID."),
-					"name":           computedString("Localized role name."),
-					"description":    computedString("Localized role description."),
-					"type":           computedString("Role type returned by the API."),
-					"permission_ids": schema.SetAttribute{Description: "Permission IDs included in the role.", Computed: true, ElementType: types.StringType},
+					"id":                computedString("Tenant-specific role ID."),
+					"name":              computedString("Localized role name."),
+					"description":       computedString("Localized role description."),
+					"type":              computedString("Role type returned by the API."),
+					"space_permissions": schema.SetAttribute{Description: "Space permission IDs included in the role.", Computed: true, ElementType: types.StringType},
 				}},
 			},
 		},
@@ -83,7 +83,7 @@ func (d *rolesDataSource) Read(ctx context.Context, _ datasource.ReadRequest, re
 		resp.Diagnostics.Append(diagnostics...)
 		rows = append(rows, roleModel{
 			ID: types.StringValue(role.ID), Name: types.StringValue(role.Name), Description: types.StringValue(role.Description),
-			Type: types.StringValue(role.Type), PermissionIDs: permissions,
+			Type: types.StringValue(role.Type), SpacePermissions: permissions,
 		})
 	}
 	if resp.Diagnostics.HasError() {
@@ -100,6 +100,6 @@ func (d *rolesDataSource) Read(ctx context.Context, _ datasource.ReadRequest, re
 func roleAttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"id": types.StringType, "name": types.StringType, "description": types.StringType,
-		"type": types.StringType, "permission_ids": types.SetType{ElemType: types.StringType},
+		"type": types.StringType, "space_permissions": types.SetType{ElemType: types.StringType},
 	}
 }

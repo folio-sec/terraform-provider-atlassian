@@ -4,6 +4,49 @@ info:
   title: Confluence Cloud REST API v2 corrections
   version: 1.0.0
 actions:
+  # The upstream response payload schemas have the same names oapi-codegen
+  # assigns to the generated HTTP response wrappers. Give the payloads
+  # distinct names so selecting the write operations produces valid Go.
+  - target: "$.components.schemas"
+    description: Add non-colliding names for space-role mutation payloads.
+    update:
+      UpdateSpaceRoleResult:
+        type: object
+        properties:
+          id:
+            type: string
+            description: Id of the space role.
+          type:
+            $ref: "#/components/schemas/RoleType"
+          name:
+            type: string
+            description: Name of the space role.
+          description:
+            type: string
+            description: Description for the space role.
+          taskId:
+            type: string
+            description: Id of the task that updates the role's space permissions.
+      DeleteSpaceRoleResult:
+        type: object
+        properties:
+          taskId:
+            type: string
+            description: Id of the task that updates the role's space permissions.
+  - target: "$.paths['/space-roles/{id}'].put.responses['202'].content['application/json'].schema"
+    description: Use the non-colliding update response payload name.
+    update:
+      $ref: "#/components/schemas/UpdateSpaceRoleResult"
+  - target: "$.paths['/space-roles/{id}'].delete.responses['202'].content['application/json'].schema"
+    description: Use the non-colliding delete response payload name.
+    update:
+      $ref: "#/components/schemas/DeleteSpaceRoleResult"
+  - target: "$.components.schemas.UpdateSpaceRoleResponse"
+    description: Remove the payload name that collides with the generated HTTP response wrapper.
+    remove: true
+  - target: "$.components.schemas.DeleteSpaceRoleResponse"
+    description: Remove the payload name that collides with the generated HTTP response wrapper.
+    remove: true
   # Every space id the API returns is a string (SpaceBulk.id, SpaceSingle.id),
   # but the getSpaceById path parameter is typed as int64. Retyping the
   # parameter keeps the identifier a string end to end, so the Terraform model,
@@ -41,6 +84,13 @@ actions:
       type: string
   - target: "$.paths['/spaces/{id}/role-assignments'].post.parameters[?(@.name=='id')].schema"
     description: Treat the role-write space id as a string.
+    update:
+      type: string
+  # Space role ids are opaque strings everywhere else in this API, including
+  # SpaceRole.id and the update/delete path parameters. The published read
+  # path alone calls the same identifier an integer.
+  - target: "$.paths['/space-roles/{id}'].get.parameters[?(@.name=='id')].schema"
+    description: Treat the space role id as the string returned by the API.
     update:
       type: string
   # Permission reads returned access-class principals on both sampled spaces,
