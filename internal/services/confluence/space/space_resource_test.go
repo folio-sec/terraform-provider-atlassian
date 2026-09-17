@@ -644,7 +644,7 @@ func TestSpaceResourceImportState(t *testing.T) {
 // path. Adoption binds an existing space to this resource, and a wrongly
 // adopted space is permanently deleted on the next destroy, so a failure that
 // never reached Atlassian must never get there.
-func TestIsAmbiguousCreateFailure(t *testing.T) {
+func TestMutationOutcomeMayBeAmbiguous(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
@@ -683,8 +683,8 @@ func TestIsAmbiguousCreateFailure(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			if got := isAmbiguousCreateFailure(tt.err); got != tt.want {
-				t.Errorf("isAmbiguousCreateFailure(%v) = %v, want %v", tt.err, got, tt.want)
+			if got := mutationOutcomeMayBeAmbiguous(tt.err); got != tt.want {
+				t.Errorf("mutationOutcomeMayBeAmbiguous(%v) = %v, want %v", tt.err, got, tt.want)
 			}
 		})
 	}

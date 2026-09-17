@@ -3,6 +3,65 @@ info:
   title: Confluence Cloud REST API v1 corrections
   version: 1.0.0
 actions:
+  # The published operation-key enums omit ten keys this ROLES_TRANSITION
+  # tenant accepted and returned. Keep the generated request and response
+  # vocabulary aligned with the complete measured set. Pair validity remains
+  # a handwritten service concern because the key and target enums cannot
+  # express which combinations are valid.
+  - target: "$.components.schemas.SpacePermissionRequest.properties.operation.properties.key.enum"
+    description: Add permission operation keys accepted by the live API.
+    update:
+      - administer
+      - archive
+      - archive_space
+      - copy
+      - create
+      - delete
+      - delete_space
+      - export
+      - export_content
+      - manage_content
+      - manage_guest_users
+      - manage_look_and_feel
+      - manage_nonlicensed_users
+      - manage_public_links
+      - manage_templates
+      - manage_users
+      - move
+      - purge
+      - purge_version
+      - read
+      - restore
+      - restrict_content
+      - update
+      - use
+  - target: "$.components.schemas.SpacePermissionV2.properties.operation.properties.key.enum"
+    description: Add permission operation keys returned by the live API.
+    update:
+      - administer
+      - archive
+      - archive_space
+      - copy
+      - create
+      - delete
+      - delete_space
+      - export
+      - export_content
+      - manage_content
+      - manage_guest_users
+      - manage_look_and_feel
+      - manage_nonlicensed_users
+      - manage_public_links
+      - manage_templates
+      - manage_users
+      - move
+      - purge
+      - purge_version
+      - read
+      - restore
+      - restrict_content
+      - update
+      - use
   # The published server is the scheme-relative "//your-domain.atlassian.net",
   # which is not a usable base URL. As with v2, the service layer supplies the
   # base URL from provider configuration because it differs per authentication

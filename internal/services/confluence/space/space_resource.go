@@ -2,9 +2,7 @@ package space
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"regexp"
 	"strings"
 
@@ -87,28 +85,15 @@ func (r *spaceResource) Metadata(_ context.Context, req resource.MetadataRequest
 // lives outside Schema so the schema itself stays readable.
 const spaceResourceDescription = "Manages a Confluence Cloud space.\n\n" +
 	"## Required OAuth scopes\n\n" +
-	"When the provider authenticates as a service account, its credential must carry the scopes for the " +
-	"operations this resource actually performs. A scope is checked when an operation runs, so a resource " +
+	"The API checks scopes when each operation runs, so a resource " +
 	"that is only ever read needs the first bullet alone.\n\n" +
 	"- Read: `read:space:confluence`\n" +
 	"- Create: `write:space:confluence`\n" +
-	"- Update: `read:space-details:confluence`, `write:space:confluence`, `write:space.permission:confluence`\n" +
-	"- Delete: `delete:space:confluence`, `read:content.metadata:confluence`\n\n" +
-	"Managing a space through its whole lifecycle therefore needs all six. Creating one also requires a " +
+	"- Update: `read:space-details:confluence`, `write:space:confluence`, `write:space.permission:confluence`, `write:confluence-space`\n" +
+	"- Delete: `delete:space:confluence`, `read:content.metadata:confluence`, `read:confluence-space.summary`\n\n" +
+	"Managing a space through its whole lifecycle therefore needs all eight. Creating one also requires a " +
 	"tenant with Role-Based Access Control enabled, which is what the v2 createSpace operation is gated " +
 	"behind.\n\n" +
-	"Those six are the granular scope names, and they are all a client credentials credential needs. A " +
-	"service account API token needs more: update, delete and the delete completion check run against the " +
-	"v1 REST API, which an API token reaches only when it also carries the classic scope names. Its scopes " +
-	"are fixed when it is created, so grant the whole set then:\n\n" +
-	"- `read:space:confluence`\n" +
-	"- `write:space:confluence`\n" +
-	"- `delete:space:confluence`\n" +
-	"- `read:space-details:confluence`\n" +
-	"- `write:space.permission:confluence`\n" +
-	"- `read:content.metadata:confluence`\n" +
-	"- `write:confluence-space` (classic, for v1 update and delete)\n" +
-	"- `read:confluence-space.summary` (classic, for the v1 delete completion check)\n\n" +
 	"> **Deletion is permanent**\n" +
 	"> Deleting this resource deletes the space outright; it does not pass through the trash and cannot be undone.\n\n" +
 	"> **Write-only at create**\n" +
@@ -366,35 +351,6 @@ func validateSpaceConfigRoleAssignments(ctx context.Context, config spaceResourc
 	return diagnostics
 }
 
-// isAmbiguousCreateFailure reports whether createSpace's failure leaves it
-// unknown whether the space was created. The answer only changes how the
-// failure is reported -- nothing is looked up or adopted either way -- but an
-// operator told "this may have been created" checks, and one told it failed
-// does not, so the classification has to be right:
-//
-//   - A definite HTTP status: the API told us what happened.
-//   - ErrRequestNotSent: the request never left the client, so nothing can
-//     have been created. A local conversion failure such as an unparseable
-//     copy_space_access_configuration lands here; without this check a plain
-//     configuration typo would send the resource hunting for a space to adopt.
-//
-// What remains is a transport-level failure that never resolved to a status.
-func isAmbiguousCreateFailure(err error) bool {
-	if errors.Is(err, ErrRequestNotSent) {
-		return false
-	}
-	var httpErr *confluence.HTTPError
-	if !errors.As(err, &httpErr) {
-		// No status at all: the request may have been applied before the
-		// transport failed.
-		return true
-	}
-	// A 4xx is Atlassian declining the request, so nothing was created. A 5xx
-	// or a gateway failure can arrive after Confluence has already committed
-	// the space, so the outcome is not settled by the status alone.
-	return httpErr.StatusCode >= http.StatusInternalServerError || httpErr.GatewayRouting
-}
-
 func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan spaceResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -428,7 +384,7 @@ func (r *spaceResource) Create(ctx context.Context, req resource.CreateRequest, 
 	if err != nil {
 		summary := "Unable to create Confluence space"
 		detail := err.Error()
-		if isAmbiguousCreateFailure(err) {
+		if mutationOutcomeMayBeAmbiguous(err) {
 			// The request may or may not have reached Atlassian, and without
 			// an id there is nothing to record. Deliberately no lookup-and-
 			// adopt: a space carrying this key proves only that the key is

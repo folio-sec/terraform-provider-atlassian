@@ -35,6 +35,22 @@ const (
 // applied this" and go looking for a space to adopt.
 var ErrRequestNotSent = errors.New("request was not sent")
 
+// mutationOutcomeMayBeAmbiguous reports whether a failed mutation may have
+// reached Atlassian. A request rejected locally or by a definite 4xx response
+// is settled; a transport failure, server error, or gateway-routing response
+// can occur after the service applied the change and must be verified by a
+// read when the operation supports one.
+func mutationOutcomeMayBeAmbiguous(err error) bool {
+	if errors.Is(err, ErrRequestNotSent) {
+		return false
+	}
+	var httpErr *confluence.HTTPError
+	if !errors.As(err, &httpErr) {
+		return true
+	}
+	return httpErr.StatusCode >= http.StatusInternalServerError || httpErr.GatewayRouting
+}
+
 // RoleAssignment is a create-time-only principal/role pairing accepted by
 // createSpace. There is no ongoing lifecycle for it in this resource; see
 // plans/confluence-space.md, "Create-only attributes".

@@ -260,7 +260,7 @@ func configure(t *testing.T, values map[string]any) (*client.Client, diag.Diagno
 // credential into a case. It must not be combined with t.Parallel.
 func clearAtlassianEnv(t *testing.T) {
 	t.Helper()
-	for _, name := range []string{envAdminAPIKey, envSiteURL, envEmail, envAPIToken, envClientID, envClientSecret, envCloudID} {
+	for _, name := range []string{envAdminAPIKey, envSiteURL, envEmail, envAPIToken, envClientID, envClientSecret, envServiceAccountAPIToken, envCloudID} {
 		t.Setenv(name, "")
 	}
 }
@@ -336,7 +336,12 @@ func TestProviderConfigureCombinations(t *testing.T) {
 		"both credential types, with sources named": {
 			values:    map[string]any{"site_url": site, "service_account": map[string]any{"client_id": "i", "client_secret": "s"}},
 			env:       map[string]string{envEmail: "u@example.com", envAPIToken: "t"},
-			wantError: []string{"Conflicting Confluence credentials", "environment variable " + envEmail, "service_account.client_id from configuration"},
+			wantError: []string{"Conflicting Confluence credentials", "environment variable " + envEmail, "service_account.client_id from configuration", "service_account.api_token from nowhere (unset)"},
+		},
+		"basic auth conflicts with service account api token and names its source": {
+			values:    map[string]any{"site_url": site, "basic_auth": map[string]any{"email": "u@example.com", "api_token": "t"}},
+			env:       map[string]string{envServiceAccountAPIToken: "service-token"},
+			wantError: []string{"Conflicting Confluence credentials", "service_account.api_token from environment variable " + envServiceAccountAPIToken},
 		},
 		"email without token names the missing attribute and its variable": {
 			values:    map[string]any{"site_url": site, "basic_auth": map[string]any{"email": "u@example.com"}},
@@ -453,11 +458,11 @@ func TestProviderRegistersOrganizationTypes(t *testing.T) {
 	t.Parallel()
 
 	p := New("test")()
-	if got := len(p.DataSources(context.Background())); got != 9 {
-		t.Fatalf("DataSources() length = %d, want 9", got)
+	if got := len(p.DataSources(context.Background())); got != 11 {
+		t.Fatalf("DataSources() length = %d, want 11", got)
 	}
-	if got := len(p.Resources(context.Background())); got != 8 {
-		t.Fatalf("Resources() length = %d, want 8", got)
+	if got := len(p.Resources(context.Background())); got != 10 {
+		t.Fatalf("Resources() length = %d, want 10", got)
 	}
 	resourceNames := map[string]bool{}
 	for _, constructor := range p.Resources(context.Background()) {
@@ -483,13 +488,19 @@ func TestProviderRegistersOrganizationTypes(t *testing.T) {
 	if !resourceNames["atlassian_confluence_space"] {
 		t.Error("confluence space resource is not registered")
 	}
+	if !resourceNames["atlassian_confluence_space_role_assignment"] {
+		t.Error("confluence space role assignment resource is not registered")
+	}
+	if !resourceNames["atlassian_confluence_space_principal_permissions"] {
+		t.Error("confluence space principal permissions resource is not registered")
+	}
 	dataSourceNames := map[string]bool{}
 	for _, constructor := range p.DataSources(context.Background()) {
 		var response datasource.MetadataResponse
 		constructor().Metadata(context.Background(), datasource.MetadataRequest{ProviderTypeName: "atlassian"}, &response)
 		dataSourceNames[response.TypeName] = true
 	}
-	for _, name := range []string{"atlassian_organization_policy", "atlassian_organization_policies", "atlassian_organization_group", "atlassian_organization_groups", "atlassian_organization_user", "atlassian_organization_users", "atlassian_organization_workspaces", "atlassian_confluence_space", "atlassian_confluence_spaces"} {
+	for _, name := range []string{"atlassian_organization_policy", "atlassian_organization_policies", "atlassian_organization_group", "atlassian_organization_groups", "atlassian_organization_user", "atlassian_organization_users", "atlassian_organization_workspaces", "atlassian_confluence_space", "atlassian_confluence_spaces", "atlassian_confluence_space_permission_assignments", "atlassian_confluence_space_roles"} {
 		if !dataSourceNames[name] {
 			t.Errorf("data source %q is not registered", name)
 		}

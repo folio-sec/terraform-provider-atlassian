@@ -251,6 +251,8 @@ func (p *AtlassianProvider) Resources(_ context.Context) []func() resource.Resou
 		organizationservice.NewUserOrganizationRoleAssignmentResource,
 		organizationservice.NewUserRoleAssignmentResource,
 		spaceservice.NewSpaceResource,
+		spaceservice.NewRoleAssignmentResource,
+		spaceservice.NewPrincipalPermissionsResource,
 	}
 }
 
@@ -265,6 +267,8 @@ func (p *AtlassianProvider) DataSources(_ context.Context) []func() datasource.D
 		organizationservice.NewWorkspacesDataSource,
 		spaceservice.NewSpaceDataSource,
 		spaceservice.NewSpacesDataSource,
+		spaceservice.NewPermissionAssignmentsDataSource,
+		spaceservice.NewRolesDataSource,
 	}
 }
 
@@ -316,8 +320,8 @@ func (c resolvedCredentials) confluenceConfig() (*confluence.Config, diag.Diagno
 	case basicPresent && accountPresent:
 		diags.AddError(
 			"Conflicting Confluence credentials",
-			fmt.Sprintf("Both basic_auth and service_account are configured; remove one. basic_auth.email came from %s, basic_auth.api_token from %s, service_account.client_id from %s, service_account.client_secret from %s.",
-				describeSource(c.email), describeSource(c.apiToken), describeSource(c.clientID), describeSource(c.clientSecret)),
+			fmt.Sprintf("Both basic_auth and service_account are configured; remove one. basic_auth.email came from %s, basic_auth.api_token from %s, service_account.client_id from %s, service_account.client_secret from %s, service_account.api_token from %s.",
+				describeSource(c.email), describeSource(c.apiToken), describeSource(c.clientID), describeSource(c.clientSecret), describeSource(c.serviceAccountAPIToken)),
 		)
 		return nil, diags
 	case basicPresent:

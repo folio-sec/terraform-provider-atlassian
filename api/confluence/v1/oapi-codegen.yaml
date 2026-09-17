@@ -9,6 +9,8 @@ output-options:
     - updateSpace
     - deleteSpace
     - getTask
+    - addPermissionToSpace
+    - removePermission
   nullable-type: true
   overlay:
     path: api/confluence/v1/overlay.yaml

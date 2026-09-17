@@ -28,6 +28,61 @@ actions:
     description: Treat space ids in the ids filter as strings, matching the id path parameter.
     update:
       type: string
+  # Every space-id path on this surface names the same opaque numeric string.
+  # These operations are published as integer even though getSpaces and live
+  # responses expose strings.
+  - target: "$.paths['/spaces/{id}/permissions'].get.parameters[?(@.name=='id')].schema"
+    description: Treat the permission-read space id as a string.
+    update:
+      type: string
+  - target: "$.paths['/spaces/{id}/role-assignments'].get.parameters[?(@.name=='id')].schema"
+    description: Treat the role-read space id as a string.
+    update:
+      type: string
+  - target: "$.paths['/spaces/{id}/role-assignments'].post.parameters[?(@.name=='id')].schema"
+    description: Treat the role-write space id as a string.
+    update:
+      type: string
+  # Permission reads returned access-class principals on both sampled spaces,
+  # although the published response enum omits that spelling.
+  - target: "$.components.schemas.SpacePermissionAssignment.properties.principal.properties.type.enum"
+    description: Add the access-class principal type observed in permission reads.
+    update:
+      - user
+      - group
+      - role
+      - access-class
+  # The permission-assignment response uses the same operation vocabulary as
+  # the v1 write surface. The published enum omits the management and
+  # transition-era keys measured by gates G and W.
+  - target: "$.components.schemas.SpacePermissionAssignment.properties.operation.properties.key.enum"
+    description: Add permission operation keys returned by the live API.
+    update:
+      - use
+      - create
+      - read
+      - update
+      - delete
+      - copy
+      - move
+      - export
+      - export_content
+      - purge
+      - purge_version
+      - administer
+      - restore
+      - create_space
+      - restrict_content
+      - archive
+      - archive_space
+      - delete_space
+      - manage_content
+      - manage_guest_users
+      - manage_look_and_feel
+      - manage_nonlicensed_users
+      - manage_public_links
+      - manage_templates
+      - manage_users
   # currentActiveAlias is absent from SpaceSingle in the published document,
   # but getSpaceById was observed to return it anyway (plans/confluence-space.md,
   # gate 4: the create response and the read both carried it even though only
