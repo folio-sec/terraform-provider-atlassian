@@ -9,6 +9,7 @@ import (
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence"
 	v2gen "github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence/v2/generated"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -20,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
@@ -127,12 +129,14 @@ func (r *spaceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional:      true,
 				Computed:      true,
 				PlanModifiers: append(append([]planmodifier.String{}, requiresReplaceString...), preserveString...),
+				Validators:    []validator.String{nonBlank},
 			},
 			"alias": schema.StringAttribute{
 				Description:   "Alias for the space in page URLs, used as the space's identifier when key is not set. Exactly one of key or alias is required. Immutable: changing it replaces the space. Maximum 255 alphanumeric characters.",
 				Optional:      true,
 				Computed:      true,
 				PlanModifiers: append(append([]planmodifier.String{}, requiresReplaceString...), preserveString...),
+				Validators:    []validator.String{stringvalidator.RegexMatches(aliasPattern, "must be 1-255 alphanumeric characters")},
 			},
 			"name": schema.StringAttribute{
 				Description: "Name of the space. Maximum 200 characters.",
@@ -161,6 +165,7 @@ func (r *spaceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						Optional:    true,
 						Computed:    true,
 						Default:     stringdefault.StaticString("plain"),
+						Validators:  []validator.String{stringvalidator.OneOf("plain")},
 					},
 				},
 			},
@@ -175,6 +180,7 @@ func (r *spaceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional:      true,
 				Computed:      true,
 				PlanModifiers: preserveString,
+				Validators:    []validator.String{stringvalidator.OneOf("current", "archived")},
 			},
 			"homepage_id": schema.StringAttribute{
 				Description:   "ID of the space's homepage. Server-assigned at creation; updatable afterward.",
@@ -257,14 +263,15 @@ func (r *spaceResource) ValidateConfig(ctx context.Context, req resource.Validat
 	}
 
 	resp.Diagnostics.Append(validateSpaceIdentity(config)...)
-	resp.Diagnostics.Append(validateSpaceConfigStatus(config)...)
-	resp.Diagnostics.Append(validateSpaceConfigDescription(ctx, config)...)
 	resp.Diagnostics.Append(validateSpaceConfigRoleAssignments(ctx, config)...)
 	resp.Diagnostics.Append(validateSpaceConfigCopySource(config)...)
 }
 
 // validateSpaceConfigCopySource rejects a copy_space_access_configuration that
-// is not a space id. The attribute is a string because space ids are opaque
+// is not a space id. It stays hand-written because CreateSpace treats a blank
+// value as unset, so a RegexMatches validator on the attribute would reject a
+// configuration the request layer accepts, and because the value is trimmed
+// before conversion. The attribute is a string because space ids are opaque
 // strings everywhere in this provider, but createSpace types it as an integer,
 // so it is converted just before the request. Catching a bad value here keeps
 // that conversion from failing during apply, where the error would arrive
@@ -282,10 +289,12 @@ func validateSpaceConfigCopySource(config spaceResourceModel) diag.Diagnostics {
 	return diagnostics
 }
 
-// validateSpaceIdentity checks the key/alias exactly-one-of and alias's shape.
+// validateSpaceIdentity checks the key/alias exactly-one-of. Each attribute's
+// own shape is a schema validator; this rule reads both attributes at once,
+// which an attribute validator cannot do without ExactlyOneOf resolving
+// configuration paths, and it has to treat a blank value as unset.
 func validateSpaceIdentity(config spaceResourceModel) diag.Diagnostics {
 	var diagnostics diag.Diagnostics
-	diagnostics.Append(validateNonEmpty(spaceStatusInvalid, namedValue{"key", config.Key}, namedValue{"alias", config.Alias})...)
 	keySet := setNonBlank(config.Key)
 	aliasSet := setNonBlank(config.Alias)
 	switch {
@@ -294,41 +303,10 @@ func validateSpaceIdentity(config spaceResourceModel) diag.Diagnostics {
 	case !keySet && !aliasSet && !config.Key.IsUnknown() && !config.Alias.IsUnknown():
 		diagnostics.AddError(spaceStatusInvalid, "exactly one of key or alias must be set.")
 	}
-	if aliasSet && !aliasPattern.MatchString(config.Alias.ValueString()) {
-		diagnostics.AddError(spaceStatusInvalid, "alias must be 1-255 alphanumeric characters.")
-	}
 	return diagnostics
 }
 
 // validateSpaceConfigStatus rejects any status other than current or archived.
-func validateSpaceConfigStatus(config spaceResourceModel) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	if knownString(config.Status) && strings.TrimSpace(config.Status.ValueString()) != "" {
-		status := config.Status.ValueString()
-		if status != "current" && status != "archived" {
-			diagnostics.AddError(spaceStatusInvalid, fmt.Sprintf("status must be current or archived; trashed cannot be set from configuration, got %q.", status))
-		}
-	}
-	return diagnostics
-}
-
-// validateSpaceConfigDescription rejects a representation other than plain.
-func validateSpaceConfigDescription(ctx context.Context, config spaceResourceModel) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	if config.Description.IsNull() || config.Description.IsUnknown() {
-		return diagnostics
-	}
-	var description descriptionModel
-	diagnostics.Append(config.Description.As(ctx, &description, basetypes.ObjectAsOptions{})...)
-	if knownString(description.Representation) && strings.TrimSpace(description.Representation.ValueString()) != "" {
-		if description.Representation.ValueString() != "plain" {
-			diagnostics.AddError(spaceStatusInvalid, fmt.Sprintf("description.representation must be plain, got %q.", description.Representation.ValueString()))
-		}
-	}
-	return diagnostics
-}
-
-// validateSpaceConfigRoleAssignments rejects an unrecognized principal_type.
 func validateSpaceConfigRoleAssignments(ctx context.Context, config spaceResourceModel) diag.Diagnostics {
 	var diagnostics diag.Diagnostics
 	if config.RoleAssignments.IsNull() || config.RoleAssignments.IsUnknown() {
