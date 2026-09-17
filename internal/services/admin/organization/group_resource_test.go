@@ -95,7 +95,7 @@ func TestGroupResourceMetadataSchemaAndIdentity(t *testing.T) {
 func TestValidateGroupValues(t *testing.T) {
 	t.Parallel()
 
-	if diagnostics := validateGroupValues(types.StringValue("org"), types.StringValue("directory"), types.StringNull(), types.StringValue("engineering")); diagnostics.HasError() {
+	if diagnostics := validateGroupValues(context.Background(), types.StringValue("org"), types.StringValue("directory"), types.StringNull(), types.StringValue("engineering")); diagnostics.HasError() {
 		t.Fatalf("valid diagnostics = %v", diagnostics)
 	}
 	for name, values := range map[string][]types.String{
@@ -106,7 +106,7 @@ func TestValidateGroupValues(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			if diagnostics := validateGroupValues(values[0], values[1], values[2], values[3]); !diagnostics.HasError() {
+			if diagnostics := validateGroupValues(context.Background(), values[0], values[1], values[2], values[3]); !diagnostics.HasError() {
 				t.Fatal("validation accepted an empty value")
 			}
 		})

@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -89,16 +90,19 @@ func (r *groupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Description:   "Atlassian organization ID used in the Organization API path.",
 				Required:      true,
 				PlanModifiers: requiresReplace,
+				Validators:    groupStringValidators,
 			},
 			"directory_id": schema.StringAttribute{
 				Description:   "Directory containing the group.",
 				Required:      true,
 				PlanModifiers: requiresReplace,
+				Validators:    groupStringValidators,
 			},
 			"name": schema.StringAttribute{
 				Description:   "Group name. Changing it replaces the group because the API has no update operation.",
 				Required:      true,
 				PlanModifiers: requiresReplace,
+				Validators:    groupStringValidators,
 			},
 			"description": schema.StringAttribute{
 				Description:   "Group description. Changing it replaces the group because the API has no update operation.",
@@ -153,26 +157,23 @@ func (r *groupResource) ValidateConfig(ctx context.Context, req resource.Validat
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(validateGroupValues(config.OrganizationID, config.DirectoryID, types.StringNull(), config.Name)...)
+	resp.Diagnostics.Append(validateGroupValues(ctx, config.OrganizationID, config.DirectoryID, types.StringNull(), config.Name)...)
 }
 
-func validateGroupValues(organizationID, directoryID, groupID, name types.String) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	values := []struct {
-		name  string
-		value types.String
-	}{
-		{"organization_id", organizationID},
-		{"directory_id", directoryID},
-		{"group_id", groupID},
-		{"name", name},
-	}
-	for _, item := range values {
-		if !item.value.IsNull() && !item.value.IsUnknown() && strings.TrimSpace(item.value.ValueString()) == "" {
-			diagnostics.AddError("Invalid organization group", fmt.Sprintf("%s must not be empty.", item.name))
-		}
-	}
-	return diagnostics
+// groupStringValidators is the rule every group identifier and the group name
+// share. The schema applies it to configuration and validateGroupValues
+// applies the same instance to identity values.
+var groupStringValidators = []validator.String{nonBlank}
+
+// validateGroupValues applies the schema's own attribute validators to values
+// Terraform does not validate for us, such as import identity.
+func validateGroupValues(ctx context.Context, organizationID, directoryID, groupID, name types.String) diag.Diagnostics {
+	return runIdentityStringValidators(ctx,
+		identityStringValidators{"organization_id", organizationID, groupStringValidators},
+		identityStringValidators{"directory_id", directoryID, groupStringValidators},
+		identityStringValidators{"group_id", groupID, groupStringValidators},
+		identityStringValidators{"name", name, groupStringValidators},
+	)
 }
 
 func (r *groupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -372,7 +373,7 @@ func (r *groupResource) ImportState(ctx context.Context, req resource.ImportStat
 		resp.Diagnostics.AddError("Invalid import identifier", "Expected either a string ID or a resource identity.")
 		return
 	}
-	resp.Diagnostics.Append(validateGroupValues(identity.OrganizationID, identity.DirectoryID, identity.GroupID, types.StringNull())...)
+	resp.Diagnostics.Append(validateGroupValues(ctx, identity.OrganizationID, identity.DirectoryID, identity.GroupID, types.StringNull())...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

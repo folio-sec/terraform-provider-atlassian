@@ -49,9 +49,9 @@ func (d *groupDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 		Description: "Retrieves one Atlassian organization group by its group ID.",
 		Attributes: map[string]schema.Attribute{
 			"id":              computedString("Data source ID, equal to the Atlassian group ID."),
-			"organization_id": schema.StringAttribute{Description: "Atlassian organization ID used in the Organization API path.", Required: true},
-			"directory_id":    schema.StringAttribute{Description: "Directory containing the group.", Required: true},
-			"group_id":        schema.StringAttribute{Description: "Unique Atlassian group ID.", Required: true},
+			"organization_id": schema.StringAttribute{Description: "Atlassian organization ID used in the Organization API path.", Required: true, Validators: groupStringValidators},
+			"directory_id":    schema.StringAttribute{Description: "Directory containing the group.", Required: true, Validators: groupStringValidators},
+			"group_id":        schema.StringAttribute{Description: "Unique Atlassian group ID.", Required: true, Validators: groupStringValidators},
 			"name":            computedString("Group name."),
 			"description":     computedString("Group description."),
 			"external_synced": computedBool("Whether the group is synchronized from an identity provider."),
@@ -91,7 +91,7 @@ func (d *groupDataSource) ValidateConfig(ctx context.Context, req datasource.Val
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(validateGroupValues(config.OrganizationID, config.DirectoryID, config.GroupID, types.StringNull())...)
+	resp.Diagnostics.Append(validateGroupValues(ctx, config.OrganizationID, config.DirectoryID, config.GroupID, types.StringNull())...)
 }
 
 func (d *groupDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

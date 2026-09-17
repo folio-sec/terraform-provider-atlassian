@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -75,10 +76,11 @@ func (r *groupRoleAssignmentResource) Metadata(_ context.Context, req resource.M
 }
 
 func (r *groupRoleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	requiredReplace := func(description string) schema.StringAttribute {
+	requiredReplace := func(description string, validators ...validator.String) schema.StringAttribute {
 		return schema.StringAttribute{
 			Description: description,
 			Required:    true,
+			Validators:  validators,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},
@@ -98,11 +100,11 @@ func (r *groupRoleAssignmentResource) Schema(_ context.Context, _ resource.Schem
 		),
 		Attributes: map[string]schema.Attribute{
 			"id":              schema.StringAttribute{Description: "Composite group role assignment identifier.", Computed: true},
-			"organization_id": requiredReplace("Atlassian organization ID used in the Organization API path."),
-			"directory_id":    requiredReplace("Directory ID that contains the group."),
-			"group_id":        requiredReplace("Immutable Atlassian group ID."),
-			"resource":        requiredReplace("Application resource ARI beginning with ari:cloud:, such as ari:cloud:confluence::site/<site-id>."),
-			"role":            requiredReplace("Atlassian application role to assign to the group, such as atlassian/user."),
+			"organization_id": requiredReplace("Atlassian organization ID used in the Organization API path.", groupRoleAssignmentIdentifierValidators...),
+			"directory_id":    requiredReplace("Directory ID that contains the group.", groupRoleAssignmentIdentifierValidators...),
+			"group_id":        requiredReplace("Immutable Atlassian group ID.", groupRoleAssignmentIdentifierValidators...),
+			"resource":        requiredReplace("Application resource ARI beginning with ari:cloud:, such as ari:cloud:confluence::site/<site-id>.", resourceARIValidators...),
+			"role":            requiredReplace("Atlassian application role to assign to the group, such as atlassian/user.", groupRoleAssignmentIdentifierValidators...),
 		},
 	}
 }
@@ -144,7 +146,7 @@ func (r *groupRoleAssignmentResource) ValidateConfig(ctx context.Context, req re
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(validateGroupRoleAssignment(groupRoleAssignmentResourceIdentityModel{
+	resp.Diagnostics.Append(validateGroupRoleAssignment(ctx, groupRoleAssignmentResourceIdentityModel{
 		OrganizationID: config.OrganizationID,
 		DirectoryID:    config.DirectoryID,
 		GroupID:        config.GroupID,
@@ -158,17 +160,21 @@ func (r *groupRoleAssignmentResource) ValidateConfig(ctx context.Context, req re
 // accepted roles differ from the user endpoint's and exist only as prose in the
 // specification, so a local copy would reject roles the API accepts. An
 // unsupported role is answered with a clear 400.
-func validateGroupRoleAssignment(values groupRoleAssignmentResourceIdentityModel) diag.Diagnostics {
-	const summary = "Invalid group role assignment"
-	diagnostics := validateNonEmpty(summary,
-		namedValue{"organization_id", values.OrganizationID},
-		namedValue{"directory_id", values.DirectoryID},
-		namedValue{"group_id", values.GroupID},
-		namedValue{"resource", values.Resource},
-		namedValue{"role", values.Role},
+// groupRoleAssignmentIdentifierValidators is the rule the identifiers and the
+// role share. The role is deliberately not checked against a list, for the
+// reason stated above validateGroupRoleAssignment.
+var groupRoleAssignmentIdentifierValidators = []validator.String{nonBlank}
+
+// validateGroupRoleAssignment applies the schema's own attribute validators to
+// values Terraform does not validate for us.
+func validateGroupRoleAssignment(ctx context.Context, values groupRoleAssignmentResourceIdentityModel) diag.Diagnostics {
+	return runIdentityStringValidators(ctx,
+		identityStringValidators{"organization_id", values.OrganizationID, groupRoleAssignmentIdentifierValidators},
+		identityStringValidators{"directory_id", values.DirectoryID, groupRoleAssignmentIdentifierValidators},
+		identityStringValidators{"group_id", values.GroupID, groupRoleAssignmentIdentifierValidators},
+		identityStringValidators{"resource", values.Resource, resourceARIValidators},
+		identityStringValidators{"role", values.Role, groupRoleAssignmentIdentifierValidators},
 	)
-	diagnostics.Append(validateResourceARI(summary, values.Resource)...)
-	return diagnostics
 }
 
 func (r *groupRoleAssignmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -275,7 +281,7 @@ func (r *groupRoleAssignmentResource) ImportState(ctx context.Context, req resou
 	if !ok {
 		return
 	}
-	resp.Diagnostics.Append(validateGroupRoleAssignment(identity)...)
+	resp.Diagnostics.Append(validateGroupRoleAssignment(ctx, identity)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

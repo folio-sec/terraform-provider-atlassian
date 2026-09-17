@@ -10,7 +10,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	datasourceschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -115,7 +117,7 @@ func TestUserDetailsDataSourceSchema(t *testing.T) {
 func TestValidateOrganizationUserIdentifiers(t *testing.T) {
 	t.Parallel()
 
-	if diagnostics := validateOrganizationUserIdentifiers(types.StringValue("org"), types.StringValue("directory"), types.StringValue("712020:account")); diagnostics.HasError() {
+	if diagnostics := validateOrganizationUserIdentifiers(context.Background(), types.StringValue("org"), types.StringValue("directory"), types.StringValue("712020:account")); diagnostics.HasError() {
 		t.Fatalf("valid identifiers returned diagnostics: %v", diagnostics)
 	}
 	for _, values := range [][3]types.String{
@@ -123,11 +125,11 @@ func TestValidateOrganizationUserIdentifiers(t *testing.T) {
 		{types.StringValue("org"), types.StringValue(""), types.StringValue("account")},
 		{types.StringValue("org"), types.StringValue("directory"), types.StringValue("\t")},
 	} {
-		if diagnostics := validateOrganizationUserIdentifiers(values[0], values[1], values[2]); !diagnostics.HasError() {
+		if diagnostics := validateOrganizationUserIdentifiers(context.Background(), values[0], values[1], values[2]); !diagnostics.HasError() {
 			t.Fatalf("invalid identifiers %#v returned no diagnostics", values)
 		}
 	}
-	if diagnostics := validateOrganizationUserIdentifiers(types.StringUnknown(), types.StringUnknown(), types.StringUnknown()); diagnostics.HasError() {
+	if diagnostics := validateOrganizationUserIdentifiers(context.Background(), types.StringUnknown(), types.StringUnknown(), types.StringUnknown()); diagnostics.HasError() {
 		t.Fatalf("unknown identifiers returned diagnostics: %v", diagnostics)
 	}
 }
@@ -393,7 +395,7 @@ func TestValidateUserRoleAssignmentValues(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			diagnostics := validateUserRoleAssignmentValues(test.values)
+			diagnostics := validateUserRoleAssignmentValues(context.Background(), test.values)
 			if diagnostics.HasError() != test.wantErrors {
 				t.Fatalf("HasError() = %t, want %t; diagnostics = %v", diagnostics.HasError(), test.wantErrors, diagnostics)
 			}
@@ -413,50 +415,52 @@ func TestNullableStringValue(t *testing.T) {
 	}
 }
 
-func TestValidateStringSet(t *testing.T) {
+// TestUserFilterSetValidators runs the validators the users data source
+// schema declares, so removing one from an attribute fails the test.
+func TestUserFilterSetValidators(t *testing.T) {
 	t.Parallel()
+
+	var response datasource.SchemaResponse
+	NewUsersDataSource().Schema(context.Background(), datasource.SchemaRequest{}, &response)
+	statusAttribute, ok := response.Schema.Attributes["status"].(datasourceschema.SetAttribute)
+	if !ok {
+		t.Fatalf("status attribute type = %T, want schema.SetAttribute", response.Schema.Attributes["status"])
+	}
 
 	tests := map[string]struct {
 		value      types.Set
-		maximum    int
-		allowed    map[string]struct{}
 		wantErrors bool
 	}{
-		"valid": {
-			value:   types.SetValueMust(types.StringType, []attr.Value{types.StringValue("active")}),
-			maximum: 1,
-			allowed: stringSet("active"),
+		"supported value": {
+			value: types.SetValueMust(types.StringType, []attr.Value{types.StringValue("active")}),
 		},
 		"empty": {
 			value:      types.SetValueMust(types.StringType, nil),
-			maximum:    1,
 			wantErrors: true,
 		},
 		"too many": {
-			value:      types.SetValueMust(types.StringType, []attr.Value{types.StringValue("one"), types.StringValue("two")}),
-			maximum:    1,
+			value: types.SetValueMust(types.StringType, []attr.Value{
+				types.StringValue("active"), types.StringValue("suspended"), types.StringValue("not_invited"),
+				types.StringValue("deactivated"), types.StringValue("for_deletion"),
+			}),
 			wantErrors: true,
 		},
 		"unsupported": {
 			value:      types.SetValueMust(types.StringType, []attr.Value{types.StringValue("invalid")}),
-			maximum:    1,
-			allowed:    stringSet("active"),
 			wantErrors: true,
 		},
 		"unknown element": {
-			value:   types.SetValueMust(types.StringType, []attr.Value{types.StringUnknown()}),
-			maximum: 1,
-			allowed: stringSet("active"),
+			value: types.SetValueMust(types.StringType, []attr.Value{types.StringUnknown()}),
 		},
+		"null": {value: types.SetNull(types.StringType)},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			var response datasource.ValidateConfigResponse
-			validateStringSet("test", test.value, test.maximum, test.allowed, &response)
-			if response.Diagnostics.HasError() != test.wantErrors {
-				t.Fatalf("HasError() = %t, want %t; diagnostics = %v", response.Diagnostics.HasError(), test.wantErrors, response.Diagnostics)
+			diagnostics := runSetValidators(context.Background(), path.Root("status"), test.value, statusAttribute.Validators)
+			if diagnostics.HasError() != test.wantErrors {
+				t.Fatalf("HasError() = %t, want %t; diagnostics = %v", diagnostics.HasError(), test.wantErrors, diagnostics)
 			}
 		})
 	}
@@ -543,6 +547,11 @@ func TestWorkspacesDataSourceSchemaReturnsWorkspacesAsSet(t *testing.T) {
 func TestSharedValueValidators(t *testing.T) {
 	t.Parallel()
 
+	run := func(t *testing.T, value types.String, validators []validator.String) bool {
+		t.Helper()
+		return runStringValidators(context.Background(), path.Root("attribute"), value, validators).HasError()
+	}
+
 	t.Run("non-empty", func(t *testing.T) {
 		t.Parallel()
 		tests := map[string]struct {
@@ -559,9 +568,8 @@ func TestSharedValueValidators(t *testing.T) {
 		for name, test := range tests {
 			t.Run(name, func(t *testing.T) {
 				t.Parallel()
-				diagnostics := validateNonEmpty("summary", namedValue{"attribute", test.value})
-				if diagnostics.HasError() != test.wantError {
-					t.Fatalf("diagnostics = %v, wantError = %t", diagnostics, test.wantError)
+				if got := run(t, test.value, []validator.String{nonBlank}); got != test.wantError {
+					t.Fatalf("rejected = %t, wantError = %t", got, test.wantError)
 				}
 			})
 		}
@@ -582,62 +590,71 @@ func TestSharedValueValidators(t *testing.T) {
 		for name, test := range tests {
 			t.Run(name, func(t *testing.T) {
 				t.Parallel()
-				diagnostics := validateResourceARI("summary", test.value)
-				if diagnostics.HasError() != test.wantError {
-					t.Fatalf("diagnostics = %v, wantError = %t", diagnostics, test.wantError)
+				if got := run(t, test.value, []validator.String{resourceARI}); got != test.wantError {
+					t.Fatalf("rejected = %t, wantError = %t", got, test.wantError)
 				}
 			})
 		}
 	})
 }
 
-func TestValidateWorkspaceQueryFields(t *testing.T) {
+// TestWorkspaceQueryFieldValidators runs the validators the workspaces data
+// source declares on the operands nested under query.fields.
+func TestWorkspaceQueryFieldValidators(t *testing.T) {
 	t.Parallel()
+
+	var response datasource.SchemaResponse
+	NewWorkspacesDataSource().Schema(context.Background(), datasource.SchemaRequest{}, &response)
+	query, ok := response.Schema.Attributes["query"].(datasourceschema.SingleNestedAttribute)
+	if !ok {
+		t.Fatalf("query attribute type = %T", response.Schema.Attributes["query"])
+	}
+	fields, ok := query.Attributes["fields"].(datasourceschema.ListNestedAttribute)
+	if !ok {
+		t.Fatalf("query.fields attribute type = %T", query.Attributes["fields"])
+	}
+	nameAttribute, ok := fields.NestedObject.Attributes["name"].(datasourceschema.StringAttribute)
+	if !ok {
+		t.Fatalf("query.fields.name attribute type = %T", fields.NestedObject.Attributes["name"])
+	}
+	valuesAttribute, ok := fields.NestedObject.Attributes["values"].(datasourceschema.SetAttribute)
+	if !ok {
+		t.Fatalf("query.fields.values attribute type = %T", fields.NestedObject.Attributes["values"])
+	}
 
 	stringSetValue := func(values ...string) types.Set {
 		elements := make([]attr.Value, len(values))
 		for i, value := range values {
 			elements[i] = types.StringValue(value)
 		}
-		set, diagnostics := types.SetValue(types.StringType, elements)
-		if diagnostics.HasError() {
-			t.Fatalf("SetValue() diagnostics = %v", diagnostics)
-		}
-		return set
+		return types.SetValueMust(types.StringType, elements)
 	}
 
 	tests := map[string]struct {
-		model     workspaceQueryFieldModel
+		name      types.String
+		values    types.Set
 		wantError bool
 	}{
-		"populated": {
-			model: workspaceQueryFieldModel{Name: types.StringValue("attributes.type"), Values: stringSetValue("confluence")},
-		},
+		"populated": {name: types.StringValue("attributes.type"), values: stringSetValue("confluence")},
 		"blank name": {
-			model:     workspaceQueryFieldModel{Name: types.StringValue("  "), Values: stringSetValue("confluence")},
-			wantError: true,
+			name: types.StringValue("  "), values: stringSetValue("confluence"), wantError: true,
 		},
 		"empty values": {
-			model:     workspaceQueryFieldModel{Name: types.StringValue("attributes.type"), Values: stringSetValue()},
-			wantError: true,
+			name: types.StringValue("attributes.type"), values: stringSetValue(), wantError: true,
 		},
 		// A filter derived from another object is unknown while validating, and
 		// rejecting it here would refuse a configuration that is fine once the
 		// value resolves. The service layer checks it again after planning.
-		"unknown values": {
-			model: workspaceQueryFieldModel{Name: types.StringValue("attributes.type"), Values: types.SetUnknown(types.StringType)},
-		},
-		"unknown name": {
-			model: workspaceQueryFieldModel{Name: types.StringUnknown(), Values: stringSetValue("confluence")},
-		},
-		"null values": {
-			model: workspaceQueryFieldModel{Name: types.StringValue("attributes.type"), Values: types.SetNull(types.StringType)},
-		},
+		"unknown values": {name: types.StringValue("attributes.type"), values: types.SetUnknown(types.StringType)},
+		"unknown name":   {name: types.StringUnknown(), values: stringSetValue("confluence")},
+		"null values":    {name: types.StringValue("attributes.type"), values: types.SetNull(types.StringType)},
 	}
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			diagnostics := validateWorkspaceQueryFields("summary", []workspaceQueryFieldModel{test.model})
+			fieldPath := path.Root("query").AtName("fields").AtListIndex(0)
+			diagnostics := runStringValidators(context.Background(), fieldPath.AtName("name"), test.name, nameAttribute.Validators)
+			diagnostics.Append(runSetValidators(context.Background(), fieldPath.AtName("values"), test.values, valuesAttribute.Validators)...)
 			if diagnostics.HasError() != test.wantError {
 				t.Fatalf("diagnostics = %v, wantError = %t", diagnostics, test.wantError)
 			}

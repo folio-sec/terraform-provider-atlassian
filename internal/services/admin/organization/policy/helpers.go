@@ -2,29 +2,17 @@ package policy
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
-	"strings"
+	"regexp"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
-	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-type namedValue struct {
-	name  string
-	value types.String
-}
-
-func validateNonEmpty(summary string, values ...namedValue) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	for _, item := range values {
-		if !item.value.IsNull() && !item.value.IsUnknown() && strings.TrimSpace(item.value.ValueString()) == "" {
-			diagnostics.AddError(summary, fmt.Sprintf("%s must not be empty.", item.name))
-		}
-	}
-	return diagnostics
-}
+// nonBlank rejects a value that is set to blank or whitespace, which the API
+// answers with an opaque 400.
+var nonBlank = stringvalidator.RegexMatches(regexp.MustCompile(`\S`), "must not be empty")
 
 func nullableStringValue(value *string) types.String {
 	if value == nil {
