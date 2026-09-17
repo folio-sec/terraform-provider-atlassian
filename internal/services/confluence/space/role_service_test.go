@@ -7,11 +7,17 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -302,6 +308,47 @@ func TestReassignmentRequested(t *testing.T) {
 			})
 			if got != testCase.want {
 				t.Fatalf("reassignmentRequested() = %t, want %t", got, testCase.want)
+			}
+		})
+	}
+}
+
+// TestSpaceRoleSchemaNameValidators runs the validators the schema actually
+// carries, so removing one from the attribute fails the test.
+func TestSpaceRoleSchemaNameValidators(t *testing.T) {
+	t.Parallel()
+	response := &resource.SchemaResponse{}
+	(&spaceRoleResource{}).Schema(context.Background(), resource.SchemaRequest{}, response)
+	attribute, ok := response.Schema.Attributes["name"].(schema.StringAttribute)
+	if !ok {
+		t.Fatalf("name attribute type = %T, want schema.StringAttribute", response.Schema.Attributes["name"])
+	}
+
+	for _, testCase := range []struct {
+		name      string
+		value     string
+		wantError bool
+	}{
+		{name: "the measured maximum", value: strings.Repeat("a", spaceRoleNameMaxCharacters)},
+		// 25 multibyte characters are 75 bytes; a byte-counting validator
+		// would reject this name although the API accepted it.
+		{name: "the measured maximum in multibyte characters", value: strings.Repeat("テ", spaceRoleNameMaxCharacters)},
+		{name: "one character too many", value: strings.Repeat("a", spaceRoleNameMaxCharacters+1), wantError: true},
+		{name: "whitespace only", value: "   ", wantError: true},
+		{name: "empty", value: "", wantError: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			var diagnostics diag.Diagnostics
+			for _, nameValidator := range attribute.Validators {
+				result := &validator.StringResponse{}
+				nameValidator.ValidateString(context.Background(), validator.StringRequest{
+					Path: path.Root("name"), ConfigValue: types.StringValue(testCase.value),
+				}, result)
+				diagnostics.Append(result.Diagnostics...)
+			}
+			if diagnostics.HasError() != testCase.wantError {
+				t.Fatalf("validators rejected = %t, want %t (%v)", diagnostics.HasError(), testCase.wantError, diagnostics)
 			}
 		})
 	}

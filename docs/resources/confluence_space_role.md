@@ -35,7 +35,7 @@ resource "atlassian_confluence_space_role" "example" {
 ### Required
 
 - `description` (String) Description of the space role.
-- `name` (String) Name of the space role.
+- `name` (String) Name of the space role. Confluence accepts at most 25 characters.
 - `space_permissions` (Set of String) IDs of the space permissions included in the role, such as `read/space`.
 
 ### Optional

@@ -3,24 +3,41 @@ package space
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+// spaceRoleNameMaxCharacters is the longest name createSpaceRole accepts.
+// The limit is documented nowhere: maxLength does not occur in the Confluence
+// v2 specification, in the live upstream copy of it, or in the REST reference.
+// It was measured on 2026-09-17 by binary search over createSpaceRole against
+// a disposable tenant: 25 characters were accepted and 26 were rejected with
+// "Role name exceeds maximum length". A name of 25 multibyte characters (75
+// bytes) was accepted, so the bound counts characters rather than bytes.
+// Atlassian could raise it, in which case this check would reject a name the
+// API would now take.
+const spaceRoleNameMaxCharacters = 25
+
+// spaceRoleNonBlank rejects a value that is present but holds only
+// whitespace, which the API would take and store verbatim.
+var spaceRoleNonBlank = stringvalidator.RegexMatches(regexp.MustCompile(`\S`), "must not be empty")
 
 var _ resource.Resource = &spaceRoleResource{}
 var _ resource.ResourceWithIdentity = &spaceRoleResource{}
 var _ resource.ResourceWithImportState = &spaceRoleResource{}
-var _ resource.ResourceWithValidateConfig = &spaceRoleResource{}
 
 type spaceRoleResource struct{ client *Service }
 
@@ -54,8 +71,21 @@ func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Description: "Tenant-specific space role ID.", Computed: true,
 				PlanModifiers: preserve,
 			},
-			"name":        schema.StringAttribute{Description: "Name of the space role.", Required: true},
-			"description": schema.StringAttribute{Description: "Description of the space role.", Required: true},
+			"name": schema.StringAttribute{
+				Description: "Name of the space role. Confluence accepts at most 25 characters.",
+				Required:    true,
+				Validators: []validator.String{
+					spaceRoleNonBlank,
+					// UTF8LengthAtMost counts characters; LengthAtMost counts
+					// bytes and would reject a name the API accepts.
+					stringvalidator.UTF8LengthAtMost(spaceRoleNameMaxCharacters),
+				},
+			},
+			"description": schema.StringAttribute{
+				Description: "Description of the space role.",
+				Required:    true,
+				Validators:  []validator.String{spaceRoleNonBlank},
+			},
 			"space_permissions": schema.SetAttribute{
 				Description: "IDs of the space permissions included in the role, such as `read/space`.",
 				Required:    true, ElementType: types.StringType,
@@ -67,10 +97,12 @@ func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"anonymous_reassignment_role_id": schema.StringAttribute{
 				Description: "Update-only API field, so it cannot be set while the role is being created. When anonymous access uses this role, move those assignments to this role ID. Confluence applies the migration whenever principals hold the role, not only when an update removes their access, so the provider sends this value only on the apply that changes it. Confluence does not return the value, so the provider preserves the configured one in state.",
 				Optional:    true,
+				Validators:  []validator.String{spaceRoleNonBlank},
 			},
 			"guest_reassignment_role_id": schema.StringAttribute{
 				Description: "Update-only API field, so it cannot be set while the role is being created. When guest access uses this role, move those assignments to this role ID. Confluence applies the migration whenever principals hold the role, not only when an update removes their access, so the provider sends this value only on the apply that changes it. Confluence does not return the value, so the provider preserves the configured one in state.",
 				Optional:    true,
+				Validators:  []validator.String{spaceRoleNonBlank},
 			},
 		},
 	}
@@ -98,15 +130,6 @@ func (r *spaceRoleResource) Configure(_ context.Context, req resource.ConfigureR
 	r.client = NewService(atlassianClient.Confluence)
 }
 
-func (r *spaceRoleResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var config spaceRoleResourceModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(validateNonEmpty("Invalid Confluence space role", namedValue{"name", config.Name}, namedValue{"description", config.Description}, namedValue{"anonymous_reassignment_role_id", config.AnonymousReassignmentRoleID}, namedValue{"guest_reassignment_role_id", config.GuestReassignmentRoleID})...)
-}
-
 func (r *spaceRoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan spaceRoleResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -116,8 +139,8 @@ func (r *spaceRoleResource) Create(ctx context.Context, req resource.CreateReque
 	// createSpaceRole accepts only name, description, and spacePermissions;
 	// the reassignment ids belong to updateSpaceRole, and a role that has just
 	// been created has no anonymous or guest assignments to migrate. Reject
-	// them rather than dropping them silently, because ValidateConfig cannot
-	// tell a create apart from an update.
+	// them rather than dropping them silently, because schema validation runs
+	// before Terraform knows whether this is a create or an update.
 	if reassignmentRequested(plan) {
 		resp.Diagnostics.AddError(
 			"Confluence space role reassignment is update-only",
