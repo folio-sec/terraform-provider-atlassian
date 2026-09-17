@@ -29,6 +29,7 @@ func validateSpacesConfig(t *testing.T, model spacesDataSourceModel) datasource.
 	config := tfsdk.Config{Raw: state.Raw, Schema: schemaResp.Schema}
 	var resp datasource.ValidateConfigResponse
 	(&spacesDataSource{}).ValidateConfig(ctx, datasource.ValidateConfigRequest{Config: config}, &resp)
+	resp.Diagnostics.Append(datasourceSchemaStringDiagnostics(ctx, config, schemaResp.Schema.Attributes, nil)...)
 	return resp
 }
 

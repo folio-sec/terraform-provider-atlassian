@@ -8,12 +8,15 @@ import (
 	"strings"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
@@ -30,6 +33,17 @@ type principalPermissionsService interface {
 	AddPermissionToSpace(context.Context, string, Principal, PermissionOperation) (string, error)
 	RemovePermission(context.Context, string, string) error
 }
+
+// These lists are the single definition of each attribute's rules. The schema
+// applies them to configuration and validatePermissionsIdentity applies the
+// same instances to identity values.
+var (
+	// The numeric pattern already excludes a blank value.
+	permissionsSpaceIDValidators      = []validator.String{stringvalidator.RegexMatches(numericIDPattern, "must be a numeric string")}
+	permissionsSpaceKeyValidators     = []validator.String{nonBlank}
+	permissionsPrincipalTypeValidator = []validator.String{stringvalidator.OneOf("user", "group")}
+	permissionsPrincipalIDValidators  = []validator.String{nonBlank}
+)
 
 type principalPermissionsResource struct{ client principalPermissionsService }
 
@@ -86,8 +100,12 @@ func (r *principalPermissionsResource) Metadata(_ context.Context, req resource.
 }
 
 func (r *principalPermissionsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	requiredReplace := func(description string) schema.StringAttribute {
-		return schema.StringAttribute{Description: description, Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}}
+	requiredReplace := func(description string, validators ...validator.String) schema.StringAttribute {
+		return schema.StringAttribute{
+			Description: description, Required: true,
+			PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			Validators:    validators,
+		}
 	}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages the complete Custom access permission set for one Confluence space principal. Operations absent from configuration are revoked, so UI changes appear as drift. Every non-empty set must include `read/space`; remove the resource to revoke all access.\n\nThe resource uses v2 reads by `space_id` and v1 writes by `space_key`, and verifies that they identify the same space before writing. It never converts a role assignment into Custom access.\n\n## Required OAuth scopes\n\n- `read:space:confluence`\n- `read:space.permission:confluence`\n- `write:space.permission:confluence`\n",
@@ -97,13 +115,13 @@ func (r *principalPermissionsResource) Schema(_ context.Context, _ resource.Sche
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
-			"space_id":  requiredReplace("Numeric-string ID used by v2 reads."),
-			"space_key": requiredReplace("Space key used by v1 writes. Must match space_id."),
+			"space_id":  requiredReplace("Numeric-string ID used by v2 reads.", permissionsSpaceIDValidators...),
+			"space_key": requiredReplace("Space key used by v1 writes. Must match space_id.", permissionsSpaceKeyValidators...),
 			"principal": schema.SingleNestedAttribute{
 				Description: "User or group whose complete Custom access set is managed.", Required: true,
 				Attributes: map[string]schema.Attribute{
-					"type": requiredReplace("Principal type: user or group."),
-					"id":   requiredReplace("Immutable Atlassian account or group ID."),
+					"type": requiredReplace("Principal type: user or group.", permissionsPrincipalTypeValidator...),
+					"id":   requiredReplace("Immutable Atlassian account or group ID.", permissionsPrincipalIDValidators...),
 				},
 			},
 			"operations": schema.SetNestedAttribute{
@@ -151,7 +169,7 @@ func (r *principalPermissionsResource) ValidateConfig(ctx context.Context, req r
 	}
 	_, diagnostics := permissionsIdentityFromState(ctx, config)
 	resp.Diagnostics.Append(diagnostics...)
-	resp.Diagnostics.Append(validateNonEmpty("Invalid Confluence Custom access", namedValue{"space_key", config.SpaceKey})...)
+	// The operations set is not a string attribute, so its contents stay here.
 	_, diagnostics = operationsFromSet(ctx, config.Operations)
 	resp.Diagnostics.Append(diagnostics...)
 }
@@ -600,22 +618,18 @@ func permissionsIdentityFromState(ctx context.Context, state principalPermission
 		diagnostics.Append(state.Principal.As(ctx, &principal, basetypes.ObjectAsOptions{})...)
 	}
 	identity := principalPermissionsIdentity{SpaceID: state.SpaceID, PrincipalType: principal.Type, PrincipalID: principal.ID}
-	diagnostics.Append(validatePermissionsIdentity(identity)...)
+	diagnostics.Append(validatePermissionsIdentity(ctx, identity)...)
 	return identity, diagnostics
 }
 
-func validatePermissionsIdentity(identity principalPermissionsIdentity) diag.Diagnostics {
-	diagnostics := validateNonEmpty("Invalid Confluence Custom access",
-		namedValue{"space_id", identity.SpaceID}, namedValue{"principal.type", identity.PrincipalType}, namedValue{"principal.id", identity.PrincipalID})
-	if knownString(identity.SpaceID) && !numericIDPattern.MatchString(identity.SpaceID.ValueString()) {
-		diagnostics.AddError("Invalid Confluence Custom access", "space_id must be a numeric string.")
-	}
-	if knownString(identity.PrincipalType) {
-		value := identity.PrincipalType.ValueString()
-		if value != "user" && value != "group" {
-			diagnostics.AddError("Invalid Confluence Custom access", fmt.Sprintf("principal.type must be user or group, got %q.", value))
-		}
-	}
+// validatePermissionsIdentity applies the schema's own attribute validators to
+// identity values, which Terraform does not validate for us.
+func validatePermissionsIdentity(ctx context.Context, identity principalPermissionsIdentity) diag.Diagnostics {
+	var diagnostics diag.Diagnostics
+	diagnostics.Append(runStringValidators(ctx, path.Root("space_id"), identity.SpaceID, permissionsSpaceIDValidators)...)
+	principal := path.Root("principal")
+	diagnostics.Append(runStringValidators(ctx, principal.AtName("type"), identity.PrincipalType, permissionsPrincipalTypeValidator)...)
+	diagnostics.Append(runStringValidators(ctx, principal.AtName("id"), identity.PrincipalID, permissionsPrincipalIDValidators)...)
 	return diagnostics
 }
 
@@ -726,7 +740,9 @@ func parsePermissionsImport(ctx context.Context, req resource.ImportStateRequest
 	var identity principalPermissionsIdentity
 	ok := parsePrincipalImport(ctx, req, resp, &identity, func(parts [3]string) principalPermissionsIdentity {
 		return principalPermissionsIdentity{SpaceID: types.StringValue(parts[0]), PrincipalType: types.StringValue(parts[1]), PrincipalID: types.StringValue(parts[2])}
-	}, validatePermissionsIdentity)
+	}, func(identity principalPermissionsIdentity) diag.Diagnostics {
+		return validatePermissionsIdentity(ctx, identity)
+	})
 	return identity, ok
 }
 

@@ -5,14 +5,15 @@ import (
 	"fmt"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 var _ datasource.DataSource = &permissionAssignmentsDataSource{}
-var _ datasource.DataSourceWithValidateConfig = &permissionAssignmentsDataSource{}
 
 type permissionAssignmentsDataSource struct{ client *Service }
 
@@ -54,7 +55,11 @@ func (d *permissionAssignmentsDataSource) Schema(_ context.Context, _ datasource
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Reads every legacy permission assignment for one Confluence space. The result is an unordered set and includes Custom access, role-expanded permissions, and access-class principals returned by the API.\n\n## Required OAuth scopes\n\n- `read:space:confluence`\n",
 		Attributes: map[string]schema.Attribute{
-			"space_id": schema.StringAttribute{Description: "Numeric-string ID of the space.", Required: true},
+			"space_id": schema.StringAttribute{
+				Description: "Numeric-string ID of the space.", Required: true,
+				// The numeric pattern already excludes a blank value.
+				Validators: []validator.String{stringvalidator.RegexMatches(numericIDPattern, "must be a numeric string")},
+			},
 			"assignments": schema.SetNestedAttribute{
 				Description: "Complete permission assignments returned for the space.",
 				Computed:    true,
@@ -88,18 +93,6 @@ func (d *permissionAssignmentsDataSource) Configure(_ context.Context, req datas
 		return
 	}
 	d.client = NewService(atlassianClient.Confluence)
-}
-
-func (d *permissionAssignmentsDataSource) ValidateConfig(ctx context.Context, req datasource.ValidateConfigRequest, resp *datasource.ValidateConfigResponse) {
-	var config permissionAssignmentsDataSourceModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(validateNonEmpty("Invalid Confluence space permission assignments", namedValue{"space_id", config.SpaceID})...)
-	if knownString(config.SpaceID) && !numericIDPattern.MatchString(config.SpaceID.ValueString()) {
-		resp.Diagnostics.AddError("Invalid Confluence space permission assignments", "space_id must be a numeric string.")
-	}
 }
 
 func (d *permissionAssignmentsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

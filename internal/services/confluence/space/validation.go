@@ -3,37 +3,43 @@ package space
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	v2gen "github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence/v2/generated"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
+
+// nonBlank rejects a value that is present but holds only whitespace, which
+// these endpoints accept and store verbatim.
+var nonBlank = stringvalidator.RegexMatches(regexp.MustCompile(`\S`), "must not be empty")
+
+// runStringValidators applies an attribute's own validators to a value the
+// framework will not validate for us. Terraform runs attribute validators
+// against configuration only, so import identity values would otherwise need a
+// second, hand-written copy of the same rules; AGENTS.md requires identity to
+// be validated by the same rules as configuration, and sharing the validator
+// list is the only way to keep one source of truth.
+func runStringValidators(ctx context.Context, attribute path.Path, value types.String, validators []validator.String) diag.Diagnostics {
+	var diagnostics diag.Diagnostics
+	for _, item := range validators {
+		response := &validator.StringResponse{}
+		item.ValidateString(ctx, validator.StringRequest{Path: attribute, ConfigValue: value}, response)
+		diagnostics.Append(response.Diagnostics...)
+	}
+	return diagnostics
+}
 
 // knownString reports whether a value is set and can be inspected. Null and
 // unknown values are left to Terraform and to the API, mirroring
 // internal/services/admin/organization/validation.go.
 func knownString(value types.String) bool {
 	return !value.IsNull() && !value.IsUnknown()
-}
-
-// namedValue pairs a schema attribute name with its configured value so
-// validation diagnostics can name the attribute that is at fault.
-type namedValue struct {
-	name  string
-	value types.String
-}
-
-// validateNonEmpty reports every attribute that is set to blank or whitespace.
-func validateNonEmpty(summary string, values ...namedValue) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	for _, item := range values {
-		if knownString(item.value) && strings.TrimSpace(item.value.ValueString()) == "" {
-			diagnostics.AddError(summary, fmt.Sprintf("%s must not be empty.", item.name))
-		}
-	}
-	return diagnostics
 }
 
 func principalImportIDParts(id string) ([3]string, error) {

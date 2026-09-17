@@ -350,6 +350,11 @@ func baseSpaceResourceModel() spaceResourceModel {
 	}
 }
 
+// validateSpaceResourceConfig reports everything Terraform would reject about
+// a configuration: the resource's own ValidateConfig plus the validators the
+// schema declares on individual attributes. Both are included so a test states
+// that a configuration is refused without depending on which of the two
+// carries the rule.
 func validateSpaceResourceConfig(t *testing.T, model spaceResourceModel) resource.ValidateConfigResponse {
 	t.Helper()
 	ctx := context.Background()
@@ -361,6 +366,7 @@ func validateSpaceResourceConfig(t *testing.T, model spaceResourceModel) resourc
 	config := tfsdk.Config{Raw: state.Raw, Schema: schemaValue}
 	var resp resource.ValidateConfigResponse
 	(&spaceResource{}).ValidateConfig(ctx, resource.ValidateConfigRequest{Config: config}, &resp)
+	resp.Diagnostics.Append(resourceSchemaStringDiagnostics(ctx, config, schemaValue.Attributes, nil)...)
 	return resp
 }
 
