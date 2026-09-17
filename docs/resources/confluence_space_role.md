@@ -14,7 +14,7 @@ Manages a tenant-wide Confluence space role. Roles created through this resource
 
 - Read: `read:space.permission:confluence`
 - Create: `write:configuration:confluence`
-- Update and delete: `write:configuration:confluence`, `read:space.permission:confluence`, `read:content.metadata:confluence`, `read:confluence-space.summary`
+- Update and delete: `write:configuration:confluence`, `read:space.permission:confluence`, `read:confluence-space.summary`
 
 ## Example Usage
 
