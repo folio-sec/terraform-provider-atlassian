@@ -25,6 +25,12 @@ var nonBlank = stringvalidator.RegexMatches(regexp.MustCompile(`\S`), "must not 
 // second, hand-written copy of the same rules; AGENTS.md requires identity to
 // be validated by the same rules as configuration, and sharing the validator
 // list is the only way to keep one source of truth.
+//
+// Only self-contained validators may go in these lists. The replayed request
+// carries a value and a path but no configuration, so a validator that
+// resolves other attributes -- ConflictsWith, ExactlyOneOf, AlsoRequires --
+// dereferences a nil config and panics rather than returning a diagnostic.
+// Rules that need to read a second attribute stay hand-written.
 func runStringValidators(ctx context.Context, attribute path.Path, value types.String, validators []validator.String) diag.Diagnostics {
 	var diagnostics diag.Diagnostics
 	for _, item := range validators {

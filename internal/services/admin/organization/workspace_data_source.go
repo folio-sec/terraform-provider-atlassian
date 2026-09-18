@@ -16,7 +16,6 @@ import (
 )
 
 var _ datasource.DataSource = &workspacesDataSource{}
-var _ datasource.DataSourceWithValidateConfig = &workspacesDataSource{}
 
 type workspacesDataSource struct {
 	client *organizationclient.Service
@@ -62,6 +61,10 @@ func (d *workspacesDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 	computedString := func(description string) schema.StringAttribute {
 		return schema.StringAttribute{Description: description, Computed: true}
 	}
+	// Every rule this data source applies is a validator on the attribute it
+	// constrains, including the operands nested under query.fields, so there
+	// is no ValidateConfig. Unknown values are skipped by those validators and
+	// checked again in the service layer once they resolve.
 	resp.Schema = schema.Schema{
 		Description: "Queries all pages of an Atlassian organization and returns every matching workspace. A workspace is a single app instance, and its ID is the resource ARI that role assignments refer to.",
 		Attributes: map[string]schema.Attribute{
@@ -133,20 +136,6 @@ func (d *workspacesDataSource) Configure(_ context.Context, req datasource.Confi
 	d.client = atlassianClient.Organization
 }
 
-func (d *workspacesDataSource) ValidateConfig(ctx context.Context, req datasource.ValidateConfigRequest, resp *datasource.ValidateConfigResponse) {
-	var config workspacesDataSourceModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	// Every rule this data source applies is a validator on the attribute it
-	// constrains, including the field operands nested under query.fields.
-	// Unknown values are left alone by those validators, and the service layer
-	// checks them again once they resolve.
-}
-
-// workspaceQueryFieldModels reads the configured field operands, treating a
-// null or unknown list as no operands at all.
 func workspaceQueryFieldModels(ctx context.Context, query *workspaceQueryModel) ([]workspaceQueryFieldModel, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 	if query == nil || query.Fields.IsNull() || query.Fields.IsUnknown() {

@@ -12,6 +12,7 @@ import (
 	datasourceschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	resourceschema "github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -657,6 +658,68 @@ func TestWorkspaceQueryFieldValidators(t *testing.T) {
 			diagnostics.Append(runSetValidators(context.Background(), fieldPath.AtName("values"), test.values, valuesAttribute.Validators)...)
 			if diagnostics.HasError() != test.wantError {
 				t.Fatalf("diagnostics = %v, wantError = %t", diagnostics, test.wantError)
+			}
+		})
+	}
+}
+
+// TestResourceSchemasCarryTheirRules reads each attribute out of the schema the
+// resource actually builds. The identity validation functions consume the same
+// validator lists directly, so without this an attribute could stop
+// referencing them and the suite would stay green.
+func TestResourceSchemasCarryTheirRules(t *testing.T) {
+	t.Parallel()
+
+	stringAttribute := func(t *testing.T, attributes map[string]resourceschema.Attribute, name string) resourceschema.StringAttribute {
+		t.Helper()
+		attribute, ok := attributes[name].(resourceschema.StringAttribute)
+		if !ok {
+			t.Fatalf("%s attribute type = %T, want schema.StringAttribute", name, attributes[name])
+		}
+		return attribute
+	}
+	schemaOf := func(t *testing.T, subject resource.Resource) map[string]resourceschema.Attribute {
+		t.Helper()
+		response := &resource.SchemaResponse{}
+		subject.Schema(context.Background(), resource.SchemaRequest{}, response)
+		if response.Diagnostics.HasError() {
+			t.Fatalf("Schema() diagnostics = %v", response.Diagnostics)
+		}
+		return response.Schema.Attributes
+	}
+
+	group := schemaOf(t, NewGroupResource())
+	membership := schemaOf(t, NewGroupMembershipResource())
+	userRole := schemaOf(t, NewUserRoleAssignmentResource())
+	orgRole := schemaOf(t, NewUserOrganizationRoleAssignmentResource())
+	groupRole := schemaOf(t, NewGroupRoleAssignmentResource())
+
+	for _, testCase := range []struct {
+		name      string
+		attribute resourceschema.StringAttribute
+		value     string
+		wantError bool
+	}{
+		{name: "group organization_id", attribute: stringAttribute(t, group, "organization_id"), value: "org"},
+		{name: "blank group organization_id", attribute: stringAttribute(t, group, "organization_id"), value: " ", wantError: true},
+		{name: "blank group name", attribute: stringAttribute(t, group, "name"), value: "  ", wantError: true},
+		{name: "blank membership account_id", attribute: stringAttribute(t, membership, "account_id"), value: " ", wantError: true},
+		{name: "resource ari", attribute: stringAttribute(t, userRole, "resource"), value: "ari:cloud:jira::site/site-id"},
+		{name: "bare resource id", attribute: stringAttribute(t, userRole, "resource"), value: "site-id", wantError: true},
+		{name: "supported application role", attribute: stringAttribute(t, userRole, "role"), value: "atlassian/user"},
+		{name: "organization role on the user role resource", attribute: stringAttribute(t, userRole, "role"), value: "atlassian/org-admin", wantError: true},
+		{name: "organization admin role", attribute: stringAttribute(t, orgRole, "role"), value: organizationAdminRole},
+		{name: "application role on the organization role resource", attribute: stringAttribute(t, orgRole, "role"), value: "atlassian/user", wantError: true},
+		{name: "group role resource ari", attribute: stringAttribute(t, groupRole, "resource"), value: "ari:cloud:confluence::site/site-id"},
+		{name: "group role is not enumerated", attribute: stringAttribute(t, groupRole, "role"), value: "atlassian/anything"},
+		{name: "blank group role", attribute: stringAttribute(t, groupRole, "role"), value: " ", wantError: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			diagnostics := runStringValidators(context.Background(), path.Root("attribute"),
+				types.StringValue(testCase.value), testCase.attribute.Validators)
+			if diagnostics.HasError() != testCase.wantError {
+				t.Fatalf("rejected = %t, want %t; diagnostics = %v", diagnostics.HasError(), testCase.wantError, diagnostics)
 			}
 		})
 	}
