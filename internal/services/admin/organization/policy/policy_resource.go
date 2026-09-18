@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization/generated"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -51,7 +53,7 @@ func (r *policyResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		"organization_id": schema.StringAttribute{
 			Required:            true,
 			MarkdownDescription: "Organization ID used in the API path.",
-			Validators:          []validator.String{nonBlank},
+			Validators:          []validator.String{validation.NonBlank},
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},

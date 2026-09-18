@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -37,7 +39,7 @@ func (d *roleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Reads one tenant-wide Confluence space role by ID.\n\n## Required OAuth scopes\n\n- `read:space.permission:confluence`\n",
 		Attributes: map[string]schema.Attribute{
-			"id":                schema.StringAttribute{Description: "Tenant-specific space role ID.", Required: true, Validators: []validator.String{nonBlank}},
+			"id":                schema.StringAttribute{Description: "Tenant-specific space role ID.", Required: true, Validators: []validator.String{validation.NonBlank}},
 			"name":              computedString("Name of the space role."),
 			"description":       computedString("Description of the space role."),
 			"type":              computedString("Role type returned by Confluence."),

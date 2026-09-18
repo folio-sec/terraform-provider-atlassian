@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
@@ -163,7 +165,7 @@ func (r *groupRoleAssignmentResource) ValidateConfig(ctx context.Context, req re
 // groupRoleAssignmentIdentifierValidators is the rule the identifiers and the
 // role share. The role is deliberately not checked against a list, for the
 // reason stated above validateGroupRoleAssignment.
-var groupRoleAssignmentIdentifierValidators = []validator.String{nonBlank}
+var groupRoleAssignmentIdentifierValidators = []validator.String{validation.NonBlank}
 
 // validateGroupRoleAssignment applies the schema's own attribute validators to
 // values Terraform does not validate for us.

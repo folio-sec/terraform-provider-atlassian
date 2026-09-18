@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
@@ -117,7 +119,7 @@ func (r *groupMembershipResource) ValidateConfig(ctx context.Context, req resour
 // membershipStringValidators is the rule every membership identifier shares.
 // The schema applies it to configuration and validateGroupMembership applies
 // the same instance to identity values.
-var membershipStringValidators = []validator.String{nonBlank}
+var membershipStringValidators = []validator.String{validation.NonBlank}
 
 // validateGroupMembership applies the schema's own attribute validators to
 // values Terraform does not validate for us, such as import identity.

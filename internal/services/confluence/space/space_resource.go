@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence"
 	v2gen "github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence/v2/generated"
@@ -129,7 +131,7 @@ func (r *spaceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional:      true,
 				Computed:      true,
 				PlanModifiers: append(append([]planmodifier.String{}, requiresReplaceString...), preserveString...),
-				Validators:    []validator.String{nonBlank},
+				Validators:    []validator.String{validation.NonBlank},
 			},
 			"alias": schema.StringAttribute{
 				Description:   "Alias for the space in page URLs, used as the space's identifier when key is not set. Exactly one of key or alias is required. Immutable: changing it replaces the space. Maximum 255 alphanumeric characters.",

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization/generated"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -111,7 +113,7 @@ func (d *policyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		"organization_id": schema.StringAttribute{
 			Required:            true,
 			MarkdownDescription: "Organization ID used in the API path.",
-			Validators:          []validator.String{nonBlank},
+			Validators:          []validator.String{validation.NonBlank},
 		},
 	}
 	markdownDescription := "Reads one organization policy. Requires `read:policies:admin`.\n\n" +
@@ -122,7 +124,7 @@ func (d *policyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		fields["type"] = schema.StringAttribute{
 			Optional:            true,
 			MarkdownDescription: "API policy type filter. Undocumented type values are passed through.",
-			Validators:          []validator.String{nonBlank},
+			Validators:          []validator.String{validation.NonBlank},
 		}
 		fields["data"] = schema.SetNestedAttribute{
 			Computed:            true,
@@ -135,7 +137,7 @@ func (d *policyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		fields["policy_id"] = schema.StringAttribute{
 			Required:            true,
 			MarkdownDescription: "Policy ID used in the API path.",
-			Validators:          []validator.String{nonBlank},
+			Validators:          []validator.String{validation.NonBlank},
 		}
 		fields["data"] = schema.SingleNestedAttribute{
 			Computed:            true,

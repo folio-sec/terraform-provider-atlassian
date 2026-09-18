@@ -3,21 +3,15 @@ package space
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	v2gen "github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence/v2/generated"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
-
-// nonBlank rejects a value that is present but holds only whitespace, which
-// these endpoints accept and store verbatim.
-var nonBlank = stringvalidator.RegexMatches(regexp.MustCompile(`\S`), "must not be empty")
 
 // runStringValidators applies an attribute's own validators to a value the
 // framework will not validate for us. Terraform runs attribute validators

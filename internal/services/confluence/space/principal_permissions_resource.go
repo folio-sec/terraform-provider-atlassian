@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -40,9 +42,9 @@ type principalPermissionsService interface {
 var (
 	// The numeric pattern already excludes a blank value.
 	permissionsSpaceIDValidators      = []validator.String{stringvalidator.RegexMatches(numericIDPattern, "must be a numeric string")}
-	permissionsSpaceKeyValidators     = []validator.String{nonBlank}
+	permissionsSpaceKeyValidators     = []validator.String{validation.NonBlank}
 	permissionsPrincipalTypeValidator = []validator.String{stringvalidator.OneOf("user", "group")}
-	permissionsPrincipalIDValidators  = []validator.String{nonBlank}
+	permissionsPrincipalIDValidators  = []validator.String{validation.NonBlank}
 )
 
 type principalPermissionsResource struct{ client principalPermissionsService }

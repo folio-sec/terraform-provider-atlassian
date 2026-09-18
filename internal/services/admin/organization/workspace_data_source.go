@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -68,7 +70,7 @@ func (d *workspacesDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 	resp.Schema = schema.Schema{
 		Description: "Queries all pages of an Atlassian organization and returns every matching workspace. A workspace is a single app instance, and its ID is the resource ARI that role assignments refer to.",
 		Attributes: map[string]schema.Attribute{
-			"organization_id": schema.StringAttribute{Description: "Atlassian organization ID used in the Organization API path.", Required: true, Validators: []validator.String{nonBlank}},
+			"organization_id": schema.StringAttribute{Description: "Atlassian organization ID used in the Organization API path.", Required: true, Validators: []validator.String{validation.NonBlank}},
 			"query": schema.SingleNestedAttribute{
 				Description: "Filters narrowing which workspaces match. Configuring more than one filter returns only workspaces matching all of them.",
 				Optional:    true,
@@ -76,7 +78,7 @@ func (d *workspacesDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 					"search": schema.StringAttribute{
 						Description: "Free-text search matching part of a workspace name or URL.",
 						Optional:    true,
-						Validators:  []validator.String{nonBlank},
+						Validators:  []validator.String{validation.NonBlank},
 					},
 					"features": schema.SetAttribute{
 						Description: "Feature keys the workspace must contain.",
@@ -90,7 +92,7 @@ func (d *workspacesDataSource) Schema(_ context.Context, _ datasource.SchemaRequ
 							"name": schema.StringAttribute{
 								Description: "Field name to match, such as attributes.type.",
 								Required:    true,
-								Validators:  []validator.String{nonBlank},
+								Validators:  []validator.String{validation.NonBlank},
 							},
 							"values": schema.SetAttribute{
 								Description: "Values the field may hold. A workspace matches when the field holds any of them.",

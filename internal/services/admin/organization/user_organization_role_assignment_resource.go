@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
@@ -150,7 +152,7 @@ func (r *userOrganizationRoleAssignmentResource) ValidateConfig(ctx context.Cont
 
 // These lists are the single definition of each attribute's rules.
 var (
-	organizationRoleAssignmentIdentifierValidators = []validator.String{nonBlank}
+	organizationRoleAssignmentIdentifierValidators = []validator.String{validation.NonBlank}
 	// OneOf already excludes a blank value. Only the organization admin role
 	// is granted through these endpoints.
 	organizationAdminRoleValidators = []validator.String{stringvalidator.OneOf(organizationAdminRole)}
