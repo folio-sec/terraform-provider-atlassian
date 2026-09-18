@@ -19,3 +19,8 @@ dist/
 .env
 .DS_Store
 go.work
+
+# Local investigation notes and live-API verification records. These carry
+# tenant hostnames, operator email addresses and object IDs from disposable
+# sites, so they stay out of this public repository.
+plans/
