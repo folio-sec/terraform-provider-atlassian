@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 	"net/http"
 	"strings"
 	"time"
@@ -150,7 +151,7 @@ func (r *userOrganizationRoleAssignmentResource) ValidateConfig(ctx context.Cont
 
 // These lists are the single definition of each attribute's rules.
 var (
-	organizationRoleAssignmentIdentifierValidators = []validator.String{nonBlank}
+	organizationRoleAssignmentIdentifierValidators = []validator.String{validation.NonBlank}
 	// OneOf already excludes a blank value. Only the organization admin role
 	// is granted through these endpoints.
 	organizationAdminRoleValidators = []validator.String{stringvalidator.OneOf(organizationAdminRole)}

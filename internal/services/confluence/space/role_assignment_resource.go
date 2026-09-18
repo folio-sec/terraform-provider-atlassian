@@ -3,6 +3,7 @@ package space
 import (
 	"context"
 	"fmt"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 	"strings"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
@@ -27,12 +28,12 @@ var _ resource.ResourceWithImportState = &roleAssignmentResource{}
 // applies them to configuration and validateRoleAssignmentIdentity applies the
 // same instances to identity values.
 var (
-	// The numeric pattern already excludes a blank value, so nonBlank would
+	// The numeric pattern already excludes a blank value, so validation.NonBlank would
 	// only add a second diagnostic for the same input.
 	assignmentSpaceIDValidators      = []validator.String{stringvalidator.RegexMatches(numericIDPattern, "must be a numeric string")}
 	assignmentPrincipalTypeValidator = []validator.String{stringvalidator.OneOf("GROUP", "USER")}
-	assignmentPrincipalIDValidators  = []validator.String{nonBlank}
-	assignmentRoleIDValidators       = []validator.String{nonBlank}
+	assignmentPrincipalIDValidators  = []validator.String{validation.NonBlank}
+	assignmentRoleIDValidators       = []validator.String{validation.NonBlank}
 )
 
 type roleAssignmentResource struct{ client *Service }

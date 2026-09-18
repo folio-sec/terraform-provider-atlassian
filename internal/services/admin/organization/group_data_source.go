@@ -3,6 +3,7 @@ package organization
 import (
 	"context"
 	"fmt"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
@@ -64,7 +65,7 @@ func (d *groupsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 	filterSet := func(description string, maximum int) schema.SetAttribute {
 		return schema.SetAttribute{
 			Description: description, Optional: true, ElementType: types.StringType,
-			Validators: []validator.Set{setvalidator.SizeBetween(1, maximum), setvalidator.ValueStringsAre(nonBlank)},
+			Validators: []validator.Set{setvalidator.SizeBetween(1, maximum), setvalidator.ValueStringsAre(validation.NonBlank)},
 		}
 	}
 	computedString := func(description string) schema.StringAttribute {
@@ -84,7 +85,7 @@ func (d *groupsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 			"role_ids":        filterSet("Canonical Atlassian role IDs to match. Accepts 1 to 10 values.", 10),
 			"resource_owners": filterSet("Resource type keys to match. Accepts 1 to 10 values.", 10),
 			"resource_ids":    filterSet("Resource IDs to match. Accepts 1 to 20 values.", 20),
-			"search_term":     schema.StringAttribute{Description: "Free-text group name search. Mutually exclusive with group_names.", Optional: true, Validators: []validator.String{nonBlank}},
+			"search_term":     schema.StringAttribute{Description: "Free-text group name search. Mutually exclusive with group_names.", Optional: true, Validators: []validator.String{validation.NonBlank}},
 			"group_ids":       filterSet("Group IDs to match. Accepts 1 to 10 values and is mutually exclusive with group_names.", 10),
 			"group_names":     filterSet("Full group names to match exactly, case-insensitively. Accepts 1 to 100 values and is mutually exclusive with search_term and group_ids.", 100),
 			"groups": schema.SetNestedAttribute{

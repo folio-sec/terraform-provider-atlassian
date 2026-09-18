@@ -3,6 +3,7 @@ package organization
 import (
 	"context"
 	"fmt"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
@@ -166,7 +167,7 @@ func (d *userDetailsDataSource) Read(ctx context.Context, req datasource.ReadReq
 
 // organizationUserStringValidators is the rule every organization user
 // identifier shares.
-var organizationUserStringValidators = []validator.String{nonBlank}
+var organizationUserStringValidators = []validator.String{validation.NonBlank}
 
 // validateOrganizationUserIdentifiers applies the schema's own attribute
 // validators to values Terraform does not validate for us.

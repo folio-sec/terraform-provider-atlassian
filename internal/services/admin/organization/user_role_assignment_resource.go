@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 	"net/http"
 	"strings"
 
@@ -140,9 +141,9 @@ func (r *userRoleAssignmentResource) ValidateConfig(ctx context.Context, req res
 // applies them to configuration and validateUserRoleAssignmentValues applies
 // the same instances to identity values.
 var (
-	userRoleAssignmentIdentifierValidators = []validator.String{nonBlank}
+	userRoleAssignmentIdentifierValidators = []validator.String{validation.NonBlank}
 	resourceARIValidators                  = []validator.String{resourceARI}
-	// OneOf already excludes a blank value, so nonBlank would only add a
+	// OneOf already excludes a blank value, so validation.NonBlank would only add a
 	// second diagnostic for the same input. Organization-level
 	// atlassian/org-admin is deliberately absent: it is granted through
 	// separate organization endpoints with different lifecycle semantics.

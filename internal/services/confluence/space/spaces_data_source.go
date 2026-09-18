@@ -3,6 +3,7 @@ package space
 import (
 	"context"
 	"fmt"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -71,11 +72,11 @@ func (d *spacesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		Attributes: map[string]schema.Attribute{
 			"ids":              filterSet("Space IDs to match."),
 			"keys":             filterSet("Space keys to match."),
-			"type":             schema.StringAttribute{Description: "Space type to match.", Optional: true, Validators: []validator.String{nonBlank}},
-			"status":           schema.StringAttribute{Description: "Space status to match. Set this to exclude archived spaces from the result.", Optional: true, Validators: []validator.String{nonBlank}},
+			"type":             schema.StringAttribute{Description: "Space type to match.", Optional: true, Validators: []validator.String{validation.NonBlank}},
+			"status":           schema.StringAttribute{Description: "Space status to match. Set this to exclude archived spaces from the result.", Optional: true, Validators: []validator.String{validation.NonBlank}},
 			"labels":           filterSet("Space labels to match."),
-			"favorited_by":     schema.StringAttribute{Description: "Account ID of a user; matches spaces that user has favorited.", Optional: true, Validators: []validator.String{nonBlank}},
-			"not_favorited_by": schema.StringAttribute{Description: "Account ID of a user; matches spaces that user has not favorited.", Optional: true, Validators: []validator.String{nonBlank}},
+			"favorited_by":     schema.StringAttribute{Description: "Account ID of a user; matches spaces that user has favorited.", Optional: true, Validators: []validator.String{validation.NonBlank}},
+			"not_favorited_by": schema.StringAttribute{Description: "Account ID of a user; matches spaces that user has not favorited.", Optional: true, Validators: []validator.String{validation.NonBlank}},
 			"spaces": schema.SetNestedAttribute{
 				Description: "Every space matching the configured filters. The set is empty when no space matches. " +
 					"Includes archived spaces unless status is used to filter them out.",

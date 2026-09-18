@@ -3,6 +3,7 @@ package space
 import (
 	"context"
 	"fmt"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 	"strings"
 	"time"
 
@@ -59,13 +60,13 @@ func (d *spaceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 				Description: "Numeric-string ID of the space. Exactly one of id or key is required; the other is computed from the lookup.",
 				Optional:    true,
 				Computed:    true,
-				Validators:  []validator.String{nonBlank},
+				Validators:  []validator.String{validation.NonBlank},
 			},
 			"key": schema.StringAttribute{
 				Description: "Key of the space. Exactly one of id or key is required; the other is computed from the lookup.",
 				Optional:    true,
 				Computed:    true,
-				Validators:  []validator.String{nonBlank},
+				Validators:  []validator.String{validation.NonBlank},
 			},
 			"name":                 computedString("Name of the space."),
 			"type":                 computedString("Type of the space."),

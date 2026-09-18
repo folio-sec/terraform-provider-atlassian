@@ -3,6 +3,7 @@ package organization
 import (
 	"context"
 	"errors"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 	"net/http"
 	"testing"
 
@@ -569,7 +570,7 @@ func TestSharedValueValidators(t *testing.T) {
 		for name, test := range tests {
 			t.Run(name, func(t *testing.T) {
 				t.Parallel()
-				if got := run(t, test.value, []validator.String{nonBlank}); got != test.wantError {
+				if got := run(t, test.value, []validator.String{validation.NonBlank}); got != test.wantError {
 					t.Fatalf("rejected = %t, wantError = %t", got, test.wantError)
 				}
 			})

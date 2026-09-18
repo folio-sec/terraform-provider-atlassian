@@ -11,11 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-// nonBlank rejects a value that is set to blank or whitespace. The API answers
-// those with an opaque 400, so catching them during validation keeps the error
-// next to the offending attribute.
-var nonBlank = stringvalidator.RegexMatches(regexp.MustCompile(`\S`), "must not be empty")
-
 // resourceARI checks the shape shared by every resource-scoped role
 // assignment. The set of valid ARIs is not enumerable client side, so only the
 // scheme prefix is checked and the API decides the rest.

@@ -3,6 +3,7 @@ package organization
 import (
 	"context"
 	"fmt"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
@@ -80,7 +81,7 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 		if len(allowed) > 0 {
 			validators = append(validators, setvalidator.ValueStringsAre(stringvalidator.OneOf(allowed...)))
 		} else {
-			validators = append(validators, setvalidator.ValueStringsAre(nonBlank))
+			validators = append(validators, setvalidator.ValueStringsAre(validation.NonBlank))
 		}
 		return schema.SetAttribute{Description: description, Optional: true, ElementType: types.StringType, Validators: validators}
 	}
@@ -104,7 +105,7 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			"membership_status": filterSet("Organization membership statuses to match: active, suspended, or no_membership.", 3, "active", "suspended", "no_membership"),
 			"role_ids":          filterSet("Atlassian role IDs to match. Accepts 1 to 10 API-supported values.", 10, "atlassian/user", "atlassian/admin", "atlassian/guest", "atlassian/customer", "atlassian/user-access-admin", "atlassian/contributor", "atlassian/basic", "atlassian/stakeholder", "atlassian/org-admin", "atlassian/site-admin", "atlassian/ai-access"),
 			"email_domains":     filterSet("Email domains to match. Accepts 1 to 10 values.", 10),
-			"search_term":       schema.StringAttribute{Description: "Free-text display name or email search. Mutually exclusive with emails.", Optional: true, Validators: []validator.String{nonBlank}},
+			"search_term":       schema.StringAttribute{Description: "Free-text display name or email search. Mutually exclusive with emails.", Optional: true, Validators: []validator.String{validation.NonBlank}},
 			"emails":            filterSet("Full email addresses to match exactly. Accepts 1 to 100 values and is mutually exclusive with search_term.", 100),
 			"users": schema.SetNestedAttribute{
 				Description: "All users matching the configured filters. The set is empty when no users match.",

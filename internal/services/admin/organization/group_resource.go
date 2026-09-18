@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 	"net/http"
 	"strings"
 	"time"
@@ -163,7 +164,7 @@ func (r *groupResource) ValidateConfig(ctx context.Context, req resource.Validat
 // groupStringValidators is the rule every group identifier and the group name
 // share. The schema applies it to configuration and validateGroupValues
 // applies the same instance to identity values.
-var groupStringValidators = []validator.String{nonBlank}
+var groupStringValidators = []validator.String{validation.NonBlank}
 
 // validateGroupValues applies the schema's own attribute validators to values
 // Terraform does not validate for us, such as import identity.
