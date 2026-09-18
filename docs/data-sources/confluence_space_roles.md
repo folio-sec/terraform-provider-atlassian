@@ -37,5 +37,5 @@ Read-Only:
 - `description` (String) Localized role description.
 - `id` (String) Tenant-specific role ID.
 - `name` (String) Localized role name.
-- `permission_ids` (Set of String) Permission IDs included in the role.
+- `space_permissions` (Set of String) Space permission IDs included in the role.
 - `type` (String) Role type returned by the API.

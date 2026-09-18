@@ -251,6 +251,7 @@ func (p *AtlassianProvider) Resources(_ context.Context) []func() resource.Resou
 		organizationservice.NewUserOrganizationRoleAssignmentResource,
 		organizationservice.NewUserRoleAssignmentResource,
 		spaceservice.NewSpaceResource,
+		spaceservice.NewRoleResource,
 		spaceservice.NewRoleAssignmentResource,
 		spaceservice.NewPrincipalPermissionsResource,
 	}
@@ -268,6 +269,7 @@ func (p *AtlassianProvider) DataSources(_ context.Context) []func() datasource.D
 		spaceservice.NewSpaceDataSource,
 		spaceservice.NewSpacesDataSource,
 		spaceservice.NewPermissionAssignmentsDataSource,
+		spaceservice.NewRoleDataSource,
 		spaceservice.NewRolesDataSource,
 	}
 }

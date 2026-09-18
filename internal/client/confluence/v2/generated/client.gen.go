@@ -377,6 +377,12 @@ type BodyType struct {
 	Value *string `json:"value,omitempty"`
 }
 
+// DeleteSpaceRoleResult defines model for DeleteSpaceRoleResult.
+type DeleteSpaceRoleResult struct {
+	// TaskId Id of the task that updates the role's space permissions.
+	TaskId *string `json:"taskId,omitempty"`
+}
+
 // Label defines model for Label.
 type Label struct {
 	// Id ID of the label.
@@ -665,6 +671,24 @@ type SpaceStatus string
 // SpaceType The type of space.
 type SpaceType string
 
+// UpdateSpaceRoleResult defines model for UpdateSpaceRoleResult.
+type UpdateSpaceRoleResult struct {
+	// Description Description for the space role.
+	Description *string `json:"description,omitempty"`
+
+	// Id Id of the space role.
+	Id *string `json:"id,omitempty"`
+
+	// Name Name of the space role.
+	Name *string `json:"name,omitempty"`
+
+	// TaskId Id of the task that updates the role's space permissions.
+	TaskId *string `json:"taskId,omitempty"`
+
+	// Type The role type.
+	Type *RoleType `json:"type,omitempty"`
+}
+
 // SetSpaceRoleAssignmentRequest defines model for SetSpaceRoleAssignmentRequest.
 type SetSpaceRoleAssignmentRequest = []struct {
 	// Principal The principal of the role assignment.
@@ -730,6 +754,36 @@ type GetAvailableSpaceRolesParams struct {
 
 	// Limit Maximum number of space roles to return. If more results exist, use the `Link` response header to retrieve a relative URL that will return the next set of results.
 	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// CreateSpaceRoleJSONBody defines parameters for CreateSpaceRole.
+type CreateSpaceRoleJSONBody struct {
+	// Description Description for the space role
+	Description string `json:"description"`
+
+	// Name Name of the space role
+	Name string `json:"name"`
+
+	// SpacePermissions The ids of the space permissions associated with the space role. Sample value "read/space"; retrieve ids from responses returned by [GET /space-permissions](https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-space-permissions/#api-space-permissions-get) endpoint
+	SpacePermissions []string `json:"spacePermissions"`
+}
+
+// UpdateSpaceRoleJSONBody defines parameters for UpdateSpaceRole.
+type UpdateSpaceRoleJSONBody struct {
+	// AnonymousReassignmentRoleId If space anonymous access is assigned to the role being modified, the Id of a role to migrate those assignments to can be specified. Anonymous access role assignments left unchanged if unspecified.
+	AnonymousReassignmentRoleId *string `json:"anonymousReassignmentRoleId,omitempty"`
+
+	// Description Description for the space role
+	Description string `json:"description"`
+
+	// GuestReassignmentRoleId If guests are assigned to the role being modified, the Id of a role to migrate those assignments to can be specified. Guest role assignments left unchanged if unspecified.
+	GuestReassignmentRoleId *string `json:"guestReassignmentRoleId,omitempty"`
+
+	// Name Name of the space role
+	Name string `json:"name"`
+
+	// SpacePermissions The ids of the space permissions associated with the space role. Sample value "read/space"; retrieve ids from responses returned by [GET /space-permissions](https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-space-permissions/#api-space-permissions-get) endpoint
+	SpacePermissions []string `json:"spacePermissions"`
 }
 
 // GetSpacesParams defines parameters for GetSpaces.
@@ -887,6 +941,12 @@ type SetSpaceRoleAssignmentsJSONBody = []struct {
 	RoleId *string `json:"roleId,omitempty"`
 }
 
+// CreateSpaceRoleJSONRequestBody defines body for CreateSpaceRole for application/json ContentType.
+type CreateSpaceRoleJSONRequestBody CreateSpaceRoleJSONBody
+
+// UpdateSpaceRoleJSONRequestBody defines body for UpdateSpaceRole for application/json ContentType.
+type UpdateSpaceRoleJSONRequestBody UpdateSpaceRoleJSONBody
+
 // CreateSpaceJSONRequestBody defines body for CreateSpace for application/json ContentType.
 type CreateSpaceJSONRequestBody CreateSpaceJSONBody
 
@@ -978,6 +1038,86 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /space-roles (the `GetAvailableSpaceRoles` operationId).
 	GetAvailableSpaceRoles(ctx context.Context, params *GetAvailableSpaceRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateSpaceRoleWithBody Create a space role
+	//
+	// Create a space role.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /space-roles (the `CreateSpaceRole` operationId).
+	CreateSpaceRoleWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateSpaceRole Create a space role
+	//
+	// Create a space role.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /space-roles (the `CreateSpaceRole` operationId).
+	CreateSpaceRole(ctx context.Context, body CreateSpaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteSpaceRole Delete a space role
+	//
+	// Delete a space role
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+	//
+	// Corresponds with DELETE /space-roles/{id} (the `DeleteSpaceRole` operationId).
+	DeleteSpaceRole(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetSpaceRolesById Get space role by ID
+	//
+	// Retrieves the space role by ID.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// Permission to access the Confluence site.
+	//
+	// Corresponds with GET /space-roles/{id} (the `GetSpaceRolesById` operationId).
+	GetSpaceRolesById(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateSpaceRoleWithBody Update a space role
+	//
+	// Update a space role.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with PUT /space-roles/{id} (the `UpdateSpaceRole` operationId).
+	UpdateSpaceRoleWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UpdateSpaceRole Update a space role
+	//
+	// Update a space role.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with PUT /space-roles/{id} (the `UpdateSpaceRole` operationId).
+	UpdateSpaceRole(ctx context.Context, id string, body UpdateSpaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetSpaces Get spaces
 	//
@@ -1094,6 +1234,146 @@ type ClientInterface interface {
 // Corresponds with GET /space-roles (the `GetAvailableSpaceRoles` operationId).
 func (c *Client) GetAvailableSpaceRoles(ctx context.Context, params *GetAvailableSpaceRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetAvailableSpaceRolesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSpaceRoleWithBody Create a space role
+//
+// Create a space role.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /space-roles (the `CreateSpaceRole` operationId).
+func (c *Client) CreateSpaceRoleWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSpaceRoleRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// CreateSpaceRole Create a space role
+//
+// Create a space role.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /space-roles (the `CreateSpaceRole` operationId).
+func (c *Client) CreateSpaceRole(ctx context.Context, body CreateSpaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateSpaceRoleRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// DeleteSpaceRole Delete a space role
+//
+// # Delete a space role
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+//
+// Corresponds with DELETE /space-roles/{id} (the `DeleteSpaceRole` operationId).
+func (c *Client) DeleteSpaceRole(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteSpaceRoleRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetSpaceRolesById Get space role by ID
+//
+// Retrieves the space role by ID.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// Permission to access the Confluence site.
+//
+// Corresponds with GET /space-roles/{id} (the `GetSpaceRolesById` operationId).
+func (c *Client) GetSpaceRolesById(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSpaceRolesByIdRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateSpaceRoleWithBody Update a space role
+//
+// Update a space role.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with PUT /space-roles/{id} (the `UpdateSpaceRole` operationId).
+func (c *Client) UpdateSpaceRoleWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateSpaceRoleRequestWithBody(c.Server, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// UpdateSpaceRole Update a space role
+//
+// Update a space role.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with PUT /space-roles/{id} (the `UpdateSpaceRole` operationId).
+func (c *Client) UpdateSpaceRole(ctx context.Context, id string, body UpdateSpaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUpdateSpaceRoleRequest(c.Server, id, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1396,6 +1676,161 @@ func NewGetAvailableSpaceRolesRequest(server string, params *GetAvailableSpaceRo
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewCreateSpaceRoleRequest calls the generic CreateSpaceRole builder with application/json body
+func NewCreateSpaceRoleRequest(server string, body CreateSpaceRoleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateSpaceRoleRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateSpaceRoleRequestWithBody constructs an http.Request for the CreateSpaceRole method, with any body, and a specified content type
+func NewCreateSpaceRoleRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/space-roles")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteSpaceRoleRequest constructs an http.Request for the DeleteSpaceRole method
+func NewDeleteSpaceRoleRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/space-roles/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetSpaceRolesByIdRequest constructs an http.Request for the GetSpaceRolesById method
+func NewGetSpaceRolesByIdRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/space-roles/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUpdateSpaceRoleRequest calls the generic UpdateSpaceRole builder with application/json body
+func NewUpdateSpaceRoleRequest(server string, id string, body UpdateSpaceRoleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUpdateSpaceRoleRequestWithBody(server, id, "application/json", bodyReader)
+}
+
+// NewUpdateSpaceRoleRequestWithBody constructs an http.Request for the UpdateSpaceRole method, with any body, and a specified content type
+func NewUpdateSpaceRoleRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/space-roles/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -2058,6 +2493,90 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with GET /space-roles (the `GetAvailableSpaceRoles` operationId).
 	GetAvailableSpaceRolesWithResponse(ctx context.Context, params *GetAvailableSpaceRolesParams, reqEditors ...RequestEditorFn) (*GetAvailableSpaceRolesResponse, error)
 
+	// CreateSpaceRoleWithBodyWithResponse Create a space role
+	//
+	// Create a space role.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /space-roles (the `CreateSpaceRole` operationId).
+	CreateSpaceRoleWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSpaceRoleResponse, error)
+
+	// CreateSpaceRoleWithResponse Create a space role
+	//
+	// Create a space role.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /space-roles (the `CreateSpaceRole` operationId).
+	CreateSpaceRoleWithResponse(ctx context.Context, body CreateSpaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSpaceRoleResponse, error)
+
+	// DeleteSpaceRoleWithResponse Delete a space role
+	//
+	// Delete a space role
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with DELETE /space-roles/{id} (the `DeleteSpaceRole` operationId).
+	DeleteSpaceRoleWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DeleteSpaceRoleResponse, error)
+
+	// GetSpaceRolesByIdWithResponse Get space role by ID
+	//
+	// Retrieves the space role by ID.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// Permission to access the Confluence site.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /space-roles/{id} (the `GetSpaceRolesById` operationId).
+	GetSpaceRolesByIdWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetSpaceRolesByIdResponse, error)
+
+	// UpdateSpaceRoleWithBodyWithResponse Update a space role
+	//
+	// Update a space role.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /space-roles/{id} (the `UpdateSpaceRole` operationId).
+	UpdateSpaceRoleWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSpaceRoleResponse, error)
+
+	// UpdateSpaceRoleWithResponse Update a space role
+	//
+	// Update a space role.
+	//
+	// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+	//
+	// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+	// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with PUT /space-roles/{id} (the `UpdateSpaceRole` operationId).
+	UpdateSpaceRoleWithResponse(ctx context.Context, id string, body UpdateSpaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSpaceRoleResponse, error)
+
 	// GetSpacesWithResponse Get spaces
 	//
 	// Returns all spaces. The results will be sorted by id ascending. The number of results is limited by the `limit` parameter and
@@ -2210,6 +2729,210 @@ func (r GetAvailableSpaceRolesResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetAvailableSpaceRolesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type CreateSpaceRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON201 the response for an HTTP 201 `application/json` response
+	JSON201 *SpaceRole
+}
+
+// GetJSON201 returns the response for an HTTP 201 `application/json` response
+func (r CreateSpaceRoleResponse) GetJSON201() *SpaceRole {
+	return r.JSON201
+}
+
+// GetBody returns the raw response body bytes
+func (r CreateSpaceRoleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateSpaceRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateSpaceRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r CreateSpaceRoleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type DeleteSpaceRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *DeleteSpaceRoleResult
+}
+
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r DeleteSpaceRoleResponse) GetJSON202() *DeleteSpaceRoleResult {
+	return r.JSON202
+}
+
+// GetBody returns the raw response body bytes
+func (r DeleteSpaceRoleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteSpaceRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteSpaceRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r DeleteSpaceRoleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetSpaceRolesByIdResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *struct {
+		UnderscoreLinks *struct {
+			// Base Base url of the Confluence site.
+			Base *string `json:"base,omitempty"`
+		} `json:"_links,omitempty"`
+
+		// Description The description for the space role’s usage.
+		Description *string `json:"description,omitempty"`
+
+		// Id The identifier for the space role.
+		Id *string `json:"id,omitempty"`
+
+		// Name The name for the space role.
+		Name *string `json:"name,omitempty"`
+
+		// SpacePermissions The space permissions the space role is comprised of.
+		SpacePermissions *[]string `json:"spacePermissions,omitempty"`
+
+		// Type The role type.
+		Type *RoleType `json:"type,omitempty"`
+	}
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetSpaceRolesByIdResponse) GetJSON200() *struct {
+	UnderscoreLinks *struct {
+		// Base Base url of the Confluence site.
+		Base *string `json:"base,omitempty"`
+	} `json:"_links,omitempty"`
+
+	// Description The description for the space role’s usage.
+	Description *string `json:"description,omitempty"`
+
+	// Id The identifier for the space role.
+	Id *string `json:"id,omitempty"`
+
+	// Name The name for the space role.
+	Name *string `json:"name,omitempty"`
+
+	// SpacePermissions The space permissions the space role is comprised of.
+	SpacePermissions *[]string `json:"spacePermissions,omitempty"`
+
+	// Type The role type.
+	Type *RoleType `json:"type,omitempty"`
+} {
+	return r.JSON200
+}
+
+// GetBody returns the raw response body bytes
+func (r GetSpaceRolesByIdResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetSpaceRolesByIdResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetSpaceRolesByIdResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetSpaceRolesByIdResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type UpdateSpaceRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON202 the response for an HTTP 202 `application/json` response
+	JSON202 *UpdateSpaceRoleResult
+}
+
+// GetJSON202 returns the response for an HTTP 202 `application/json` response
+func (r UpdateSpaceRoleResponse) GetJSON202() *UpdateSpaceRoleResult {
+	return r.JSON202
+}
+
+// GetBody returns the raw response body bytes
+func (r UpdateSpaceRoleResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r UpdateSpaceRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UpdateSpaceRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r UpdateSpaceRoleResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -2717,6 +3440,126 @@ func (c *ClientWithResponses) GetAvailableSpaceRolesWithResponse(ctx context.Con
 	return ParseGetAvailableSpaceRolesResponse(rsp)
 }
 
+// CreateSpaceRoleWithBodyWithResponse Create a space role
+//
+// Create a space role.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /space-roles (the `CreateSpaceRole` operationId).
+func (c *ClientWithResponses) CreateSpaceRoleWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateSpaceRoleResponse, error) {
+	rsp, err := c.CreateSpaceRoleWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSpaceRoleResponse(rsp)
+}
+
+// CreateSpaceRoleWithResponse Create a space role
+//
+// Create a space role.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /space-roles (the `CreateSpaceRole` operationId).
+func (c *ClientWithResponses) CreateSpaceRoleWithResponse(ctx context.Context, body CreateSpaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateSpaceRoleResponse, error) {
+	rsp, err := c.CreateSpaceRole(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateSpaceRoleResponse(rsp)
+}
+
+// DeleteSpaceRoleWithResponse Delete a space role
+//
+// # Delete a space role
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with DELETE /space-roles/{id} (the `DeleteSpaceRole` operationId).
+func (c *ClientWithResponses) DeleteSpaceRoleWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DeleteSpaceRoleResponse, error) {
+	rsp, err := c.DeleteSpaceRole(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteSpaceRoleResponse(rsp)
+}
+
+// GetSpaceRolesByIdWithResponse Get space role by ID
+//
+// Retrieves the space role by ID.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// Permission to access the Confluence site.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /space-roles/{id} (the `GetSpaceRolesById` operationId).
+func (c *ClientWithResponses) GetSpaceRolesByIdWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetSpaceRolesByIdResponse, error) {
+	rsp, err := c.GetSpaceRolesById(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetSpaceRolesByIdResponse(rsp)
+}
+
+// UpdateSpaceRoleWithBodyWithResponse Update a space role
+//
+// Update a space role.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /space-roles/{id} (the `UpdateSpaceRole` operationId).
+func (c *ClientWithResponses) UpdateSpaceRoleWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UpdateSpaceRoleResponse, error) {
+	rsp, err := c.UpdateSpaceRoleWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateSpaceRoleResponse(rsp)
+}
+
+// UpdateSpaceRoleWithResponse Update a space role
+//
+// Update a space role.
+//
+// Available on tenants with [Role-Based Access Control](https://support.atlassian.com/confluence-cloud/docs/manage-user-roles/).
+//
+// **[Permissions](https://confluence.atlassian.com/x/_AozKw) required**:
+// User must be an organization or site admin. Connect and Forge app users are not authorized to access this resource.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with PUT /space-roles/{id} (the `UpdateSpaceRole` operationId).
+func (c *ClientWithResponses) UpdateSpaceRoleWithResponse(ctx context.Context, id string, body UpdateSpaceRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateSpaceRoleResponse, error) {
+	rsp, err := c.UpdateSpaceRole(ctx, id, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUpdateSpaceRoleResponse(rsp)
+}
+
 // GetSpacesWithResponse Get spaces
 //
 // Returns all spaces. The results will be sorted by id ascending. The number of results is limited by the `limit` parameter and
@@ -2898,6 +3741,166 @@ func ParseGetAvailableSpaceRolesResponse(rsp *http.Response) (*GetAvailableSpace
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
+
+	case rsp.StatusCode == 401:
+		break // No content-type
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateSpaceRoleResponse parses an HTTP response from a CreateSpaceRoleWithResponse call
+func ParseCreateSpaceRoleResponse(rsp *http.Response) (*CreateSpaceRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateSpaceRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest SpaceRole
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
+
+	case rsp.StatusCode == 401:
+		break // No content-type
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteSpaceRoleResponse parses an HTTP response from a DeleteSpaceRoleWithResponse call
+func ParseDeleteSpaceRoleResponse(rsp *http.Response) (*DeleteSpaceRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteSpaceRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest DeleteSpaceRoleResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
+
+	case rsp.StatusCode == 401:
+		break // No content-type
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
+	}
+
+	return response, nil
+}
+
+// ParseGetSpaceRolesByIdResponse parses an HTTP response from a GetSpaceRolesByIdWithResponse call
+func ParseGetSpaceRolesByIdResponse(rsp *http.Response) (*GetSpaceRolesByIdResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetSpaceRolesByIdResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			UnderscoreLinks *struct {
+				// Base Base url of the Confluence site.
+				Base *string `json:"base,omitempty"`
+			} `json:"_links,omitempty"`
+
+			// Description The description for the space role’s usage.
+			Description *string `json:"description,omitempty"`
+
+			// Id The identifier for the space role.
+			Id *string `json:"id,omitempty"`
+
+			// Name The name for the space role.
+			Name *string `json:"name,omitempty"`
+
+			// SpacePermissions The space permissions the space role is comprised of.
+			SpacePermissions *[]string `json:"spacePermissions,omitempty"`
+
+			// Type The role type.
+			Type *RoleType `json:"type,omitempty"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
+
+	case rsp.StatusCode == 401:
+		break // No content-type
+
+	case rsp.StatusCode == 404:
+		break // No content-type
+
+	}
+
+	return response, nil
+}
+
+// ParseUpdateSpaceRoleResponse parses an HTTP response from a UpdateSpaceRoleWithResponse call
+func ParseUpdateSpaceRoleResponse(rsp *http.Response) (*UpdateSpaceRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UpdateSpaceRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 202:
+		var dest UpdateSpaceRoleResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON202 = &dest
 
 	case rsp.StatusCode == 400:
 		break // No content-type
