@@ -2,6 +2,7 @@ package space
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -138,15 +139,21 @@ func (r *spaceRoleResource) Create(ctx context.Context, req resource.CreateReque
 	}
 	// createSpaceRole accepts only name, description, and spacePermissions;
 	// the reassignment ids belong to updateSpaceRole, and a role that has just
-	// been created has no anonymous or guest assignments to migrate. Reject
-	// them rather than dropping them silently, because schema validation runs
+	// been created holds no anonymous or guest assignments to migrate. Say so
+	// rather than dropping them silently, because schema validation runs
 	// before Terraform knows whether this is a create or an update.
+	//
+	// This is a warning and not an error on purpose. A role deleted outside
+	// Terraform has to be recreatable from a configuration that legitimately
+	// carries these ids, since they are what makes a permission-widening
+	// update succeed at all. Failing the create would leave that
+	// configuration unable to apply until the operator removed the attribute,
+	// applied, and put it back.
 	if reassignmentRequested(plan) {
-		resp.Diagnostics.AddError(
+		resp.Diagnostics.AddWarning(
 			"Confluence space role reassignment is update-only",
-			"anonymous_reassignment_role_id and guest_reassignment_role_id are accepted only by the Confluence space role update operation, so they cannot be set while the role is being created. Create the role without them, then add them in a later change.",
+			"anonymous_reassignment_role_id and guest_reassignment_role_id are accepted only by the Confluence space role update operation, so they have no effect while the role is being created. Terraform keeps the configured values in state and sends them with the first update.",
 		)
-		return
 	}
 	write, diagnostics := spaceRoleWriteRequest(ctx, plan, nil)
 	resp.Diagnostics.Append(diagnostics...)
@@ -198,30 +205,20 @@ func (r *spaceRoleResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 	current, err := r.client.GetSpaceRoleByID(ctx, state.ID.ValueString())
-	if err != nil {
-		if confluence.IsNotFound(err) {
-			absent, verifyErr := r.spaceRoleAbsent(ctx, state.ID.ValueString())
-			if verifyErr != nil {
-				resp.Diagnostics.AddError("Unable to verify Confluence space role absence", verifyErr.Error())
-				return
-			}
-			if absent {
-				resp.State.RemoveResource(ctx)
-				return
-			}
-		}
-		resp.Diagnostics.AddError("Unable to read Confluence space role", err.Error())
-		return
+	// A by-id read is unusable in three ways, and none of them is evidence
+	// about whether the role exists. getSpaceRolesById documents 404 only for
+	// missing permission. A deleted role was seen once during live testing to
+	// stay readable as a 200 with an empty permission set after the catalogue
+	// had dropped it; that serialization is not recorded in a committed
+	// artefact, and Confluence could as well omit the field, which fails
+	// conversion instead. Corroborating all three against the complete
+	// catalogue is correct whichever shape a tombstone takes, and it is the
+	// only evidence that permits removing the resource from state.
+	unusable := err != nil && (confluence.IsNotFound(err) || errors.Is(err, ErrIncompleteRole))
+	if err == nil && len(current.PermissionIDs) == 0 {
+		unusable = true
 	}
-	// A deleted role was seen once during live testing to remain readable by
-	// id as a 200 response with an empty permission set after the complete
-	// catalogue had stopped returning it. That observation is not recorded in
-	// a committed artefact, so treat it as unverified. Requiring both an empty
-	// permission set and catalogue absence is correct either way: if the
-	// tombstone is real, refresh detects the deletion; if it is not, a role
-	// that genuinely holds no permissions stays in state because the
-	// catalogue still lists it.
-	if len(current.PermissionIDs) == 0 {
+	if unusable {
 		absent, verifyErr := r.spaceRoleAbsent(ctx, state.ID.ValueString())
 		if verifyErr != nil {
 			resp.Diagnostics.AddError("Unable to verify Confluence space role absence", verifyErr.Error())
@@ -231,6 +228,10 @@ func (r *spaceRoleResource) Read(ctx context.Context, req resource.ReadRequest, 
 			resp.State.RemoveResource(ctx)
 			return
 		}
+	}
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to read Confluence space role", err.Error())
+		return
 	}
 	updated, diagnostics := spaceRoleState(ctx, state, current)
 	resp.Diagnostics.Append(diagnostics...)

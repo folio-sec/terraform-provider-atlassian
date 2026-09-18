@@ -3,6 +3,7 @@ package space
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -377,5 +378,27 @@ func TestSpaceRoleSchemaNameValidators(t *testing.T) {
 				t.Fatalf("validators rejected = %t, want %t (%v)", diagnostics.HasError(), testCase.wantError, diagnostics)
 			}
 		})
+	}
+}
+
+// TestGetSpaceRoleByIDReportsAnIncompleteBody pins the sentinel the resource
+// layer matches on. A 200 whose body omits spacePermissions is one of the
+// shapes a deleted role could take, and Read corroborates it against the
+// catalogue instead of failing the refresh outright.
+func TestGetSpaceRoleByIDReportsAnIncompleteBody(t *testing.T) {
+	t.Parallel()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"id":"role-1","type":"CUSTOM","name":"Editors","description":"Can edit"}`))
+	}))
+	t.Cleanup(server.Close)
+
+	_, err := NewService(newTestClient(t, server)).GetSpaceRoleByID(context.Background(), "role-1")
+	if !errors.Is(err, ErrIncompleteRole) {
+		t.Fatalf("GetSpaceRoleByID() error = %v, want ErrIncompleteRole", err)
+	}
+	if confluence.IsNotFound(err) {
+		t.Fatal("an incomplete body must not be reported as a Confluence not-found")
 	}
 }
