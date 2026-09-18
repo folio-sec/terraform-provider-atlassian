@@ -50,6 +50,7 @@ func validateSpaceConfig(t *testing.T, model spaceDataSourceModel) (datasource.V
 	config := tfsdk.Config{Raw: state.Raw, Schema: schemaResp.Schema}
 	var resp datasource.ValidateConfigResponse
 	(&spaceDataSource{}).ValidateConfig(ctx, datasource.ValidateConfigRequest{Config: config}, &resp)
+	resp.Diagnostics.Append(datasourceSchemaStringDiagnostics(ctx, config, schemaResp.Schema.Attributes, nil)...)
 	return resp, schemaResp
 }
 
@@ -92,6 +93,17 @@ func TestSpaceDataSourceValidateConfig(t *testing.T) {
 			mutate: func(m *spaceDataSourceModel) {
 				m.ID = types.StringValue("10001")
 				m.Key = types.StringValue("DEMO")
+			},
+			wantErr: true,
+		},
+		{
+			// The exactly-one-of rule is satisfied here, so this case isolates
+			// the blank check on the attribute itself. Without it the blank
+			// cases below pass incidentally, through the other branch.
+			name: "a valid id with a blank key is an error",
+			mutate: func(m *spaceDataSourceModel) {
+				m.ID = types.StringValue("10001")
+				m.Key = types.StringValue(" ")
 			},
 			wantErr: true,
 		},

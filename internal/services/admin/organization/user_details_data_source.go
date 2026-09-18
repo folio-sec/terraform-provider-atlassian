@@ -3,13 +3,14 @@ package organization
 import (
 	"context"
 	"fmt"
-	"strings"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -64,9 +65,9 @@ func (d *userDetailsDataSource) Schema(_ context.Context, _ datasource.SchemaReq
 		Description: "Retrieves one Atlassian organization user by account ID.",
 		Attributes: map[string]schema.Attribute{
 			"id":                computedString("Data source ID, equal to the Atlassian account ID."),
-			"organization_id":   schema.StringAttribute{Description: "Atlassian organization ID used in the Organization API path.", Required: true},
-			"directory_id":      schema.StringAttribute{Description: "Directory containing the user.", Required: true},
-			"account_id":        schema.StringAttribute{Description: "Unique Atlassian account ID.", Required: true},
+			"organization_id":   schema.StringAttribute{Description: "Atlassian organization ID used in the Organization API path.", Required: true, Validators: organizationUserStringValidators},
+			"directory_id":      schema.StringAttribute{Description: "Directory containing the user.", Required: true, Validators: organizationUserStringValidators},
+			"account_id":        schema.StringAttribute{Description: "Unique Atlassian account ID.", Required: true, Validators: organizationUserStringValidators},
 			"account_type":      computedString("Atlassian account type."),
 			"status":            computedString("Composite user status."),
 			"account_status":    computedString("Account lifecycle status."),
@@ -114,7 +115,7 @@ func (d *userDetailsDataSource) ValidateConfig(ctx context.Context, req datasour
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(validateOrganizationUserIdentifiers(config.OrganizationID, config.DirectoryID, config.AccountID)...)
+	resp.Diagnostics.Append(validateOrganizationUserIdentifiers(ctx, config.OrganizationID, config.DirectoryID, config.AccountID)...)
 }
 
 func (d *userDetailsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -164,19 +165,17 @@ func (d *userDetailsDataSource) Read(ctx context.Context, req datasource.ReadReq
 	resp.Diagnostics.Append(resp.State.Set(ctx, &config)...)
 }
 
-func validateOrganizationUserIdentifiers(organizationID, directoryID, accountID types.String) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	for _, item := range []struct {
-		name  string
-		value types.String
-	}{
-		{"organization_id", organizationID},
-		{"directory_id", directoryID},
-		{"account_id", accountID},
-	} {
-		if !item.value.IsNull() && !item.value.IsUnknown() && strings.TrimSpace(item.value.ValueString()) == "" {
-			diagnostics.AddError("Invalid organization user", fmt.Sprintf("%s must not be empty.", item.name))
-		}
-	}
+// organizationUserStringValidators is the rule every organization user
+// identifier shares.
+var organizationUserStringValidators = []validator.String{validation.NonBlank}
+
+// validateOrganizationUserIdentifiers applies the schema's own attribute
+// validators to values Terraform does not validate for us.
+func validateOrganizationUserIdentifiers(ctx context.Context, organizationID, directoryID, accountID types.String) diag.Diagnostics {
+	diagnostics := runIdentityStringValidators(ctx,
+		identityStringValidators{"organization_id", organizationID, organizationUserStringValidators},
+		identityStringValidators{"directory_id", directoryID, organizationUserStringValidators},
+		identityStringValidators{"account_id", accountID, organizationUserStringValidators},
+	)
 	return diagnostics
 }

@@ -3,11 +3,13 @@ package space
 import (
 	"context"
 	"fmt"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -70,11 +72,11 @@ func (d *spacesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		Attributes: map[string]schema.Attribute{
 			"ids":              filterSet("Space IDs to match."),
 			"keys":             filterSet("Space keys to match."),
-			"type":             schema.StringAttribute{Description: "Space type to match.", Optional: true},
-			"status":           schema.StringAttribute{Description: "Space status to match. Set this to exclude archived spaces from the result.", Optional: true},
+			"type":             schema.StringAttribute{Description: "Space type to match.", Optional: true, Validators: []validator.String{validation.NonBlank}},
+			"status":           schema.StringAttribute{Description: "Space status to match. Set this to exclude archived spaces from the result.", Optional: true, Validators: []validator.String{validation.NonBlank}},
 			"labels":           filterSet("Space labels to match."),
-			"favorited_by":     schema.StringAttribute{Description: "Account ID of a user; matches spaces that user has favorited.", Optional: true},
-			"not_favorited_by": schema.StringAttribute{Description: "Account ID of a user; matches spaces that user has not favorited.", Optional: true},
+			"favorited_by":     schema.StringAttribute{Description: "Account ID of a user; matches spaces that user has favorited.", Optional: true, Validators: []validator.String{validation.NonBlank}},
+			"not_favorited_by": schema.StringAttribute{Description: "Account ID of a user; matches spaces that user has not favorited.", Optional: true, Validators: []validator.String{validation.NonBlank}},
 			"spaces": schema.SetNestedAttribute{
 				Description: "Every space matching the configured filters. The set is empty when no space matches. " +
 					"Includes archived spaces unless status is used to filter them out.",
@@ -127,13 +129,10 @@ func (d *spacesDataSource) ValidateConfig(ctx context.Context, req datasource.Va
 		return
 	}
 
+	// The blank checks are schema validators. These two stay here because they
+	// ask the generated enums' own Valid method rather than repeating their
+	// value lists, which a OneOf validator would require.
 	const summary = "Invalid Confluence space filters"
-	resp.Diagnostics.Append(validateNonEmpty(summary,
-		namedValue{"type", config.Type},
-		namedValue{"status", config.Status},
-		namedValue{"favorited_by", config.FavoritedBy},
-		namedValue{"not_favorited_by", config.NotFavoritedBy},
-	)...)
 	resp.Diagnostics.Append(validateSpaceType(summary, config.Type)...)
 	resp.Diagnostics.Append(validateSpaceStatus(summary, config.Status)...)
 }

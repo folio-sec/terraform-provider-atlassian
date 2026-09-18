@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 	"net/http"
 	"strings"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -52,10 +54,11 @@ func (r *groupMembershipResource) Metadata(_ context.Context, req resource.Metad
 }
 
 func (r *groupMembershipResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	requiredReplace := func(description string) schema.StringAttribute {
+	requiredReplace := func(description string, validators ...validator.String) schema.StringAttribute {
 		return schema.StringAttribute{
 			Description: description,
 			Required:    true,
+			Validators:  validators,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},
@@ -65,10 +68,10 @@ func (r *groupMembershipResource) Schema(_ context.Context, _ resource.SchemaReq
 		Description: "Manages a user's membership in an Atlassian organization group.",
 		Attributes: map[string]schema.Attribute{
 			"id":              schema.StringAttribute{Description: "Composite group membership identifier.", Computed: true},
-			"organization_id": requiredReplace("Atlassian organization ID used in the Organization API path."),
-			"directory_id":    requiredReplace("Directory ID containing both the user and group."),
-			"group_id":        requiredReplace("Atlassian organization group ID."),
-			"account_id":      requiredReplace("Atlassian account ID of the group member."),
+			"organization_id": requiredReplace("Atlassian organization ID used in the Organization API path.", membershipStringValidators...),
+			"directory_id":    requiredReplace("Directory ID containing both the user and group.", membershipStringValidators...),
+			"group_id":        requiredReplace("Atlassian organization group ID.", membershipStringValidators...),
+			"account_id":      requiredReplace("Atlassian account ID of the group member.", membershipStringValidators...),
 		},
 	}
 }
@@ -109,18 +112,23 @@ func (r *groupMembershipResource) ValidateConfig(ctx context.Context, req resour
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(validateGroupMembership(config.OrganizationID, config.DirectoryID, config.GroupID, config.AccountID)...)
+	resp.Diagnostics.Append(validateGroupMembership(ctx, config.OrganizationID, config.DirectoryID, config.GroupID, config.AccountID)...)
 }
 
-func validateGroupMembership(values ...types.String) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	names := []string{"organization_id", "directory_id", "group_id", "account_id"}
-	for index, value := range values {
-		if !value.IsNull() && !value.IsUnknown() && strings.TrimSpace(value.ValueString()) == "" {
-			diagnostics.AddError("Invalid group membership", fmt.Sprintf("%s must not be empty.", names[index]))
-		}
-	}
-	return diagnostics
+// membershipStringValidators is the rule every membership identifier shares.
+// The schema applies it to configuration and validateGroupMembership applies
+// the same instance to identity values.
+var membershipStringValidators = []validator.String{validation.NonBlank}
+
+// validateGroupMembership applies the schema's own attribute validators to
+// values Terraform does not validate for us, such as import identity.
+func validateGroupMembership(ctx context.Context, organizationID, directoryID, groupID, accountID types.String) diag.Diagnostics {
+	return runIdentityStringValidators(ctx,
+		identityStringValidators{"organization_id", organizationID, membershipStringValidators},
+		identityStringValidators{"directory_id", directoryID, membershipStringValidators},
+		identityStringValidators{"group_id", groupID, membershipStringValidators},
+		identityStringValidators{"account_id", accountID, membershipStringValidators},
+	)
 }
 
 func (r *groupMembershipResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -220,7 +228,7 @@ func (r *groupMembershipResource) ImportState(ctx context.Context, req resource.
 		return
 	}
 
-	resp.Diagnostics.Append(validateGroupMembership(identity.OrganizationID, identity.DirectoryID, identity.GroupID, identity.AccountID)...)
+	resp.Diagnostics.Append(validateGroupMembership(ctx, identity.OrganizationID, identity.DirectoryID, identity.GroupID, identity.AccountID)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

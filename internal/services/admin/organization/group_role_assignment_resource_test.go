@@ -139,7 +139,7 @@ func TestValidateGroupRoleAssignment(t *testing.T) {
 			if test.mutate != nil {
 				test.mutate(&values)
 			}
-			diagnostics := validateGroupRoleAssignment(values)
+			diagnostics := validateGroupRoleAssignment(context.Background(), values)
 			if diagnostics.HasError() != test.wantError {
 				t.Fatalf("diagnostics = %v, wantError = %t", diagnostics, test.wantError)
 			}

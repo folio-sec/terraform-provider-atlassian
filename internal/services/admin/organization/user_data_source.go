@@ -3,13 +3,16 @@ package organization
 import (
 	"context"
 	"fmt"
-	"strings"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -71,8 +74,16 @@ func (d *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequ
 }
 
 func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	filterSet := func(description string) schema.SetAttribute {
-		return schema.SetAttribute{Description: description, Optional: true, ElementType: types.StringType}
+	// Each filter carries the count the endpoint accepts, and the ones with a
+	// closed value list carry that list too.
+	filterSet := func(description string, maximum int, allowed ...string) schema.SetAttribute {
+		validators := []validator.Set{setvalidator.SizeBetween(1, maximum)}
+		if len(allowed) > 0 {
+			validators = append(validators, setvalidator.ValueStringsAre(stringvalidator.OneOf(allowed...)))
+		} else {
+			validators = append(validators, setvalidator.ValueStringsAre(validation.NonBlank))
+		}
+		return schema.SetAttribute{Description: description, Optional: true, ElementType: types.StringType, Validators: validators}
 	}
 	computedString := func(description string) schema.StringAttribute {
 		return schema.StringAttribute{Description: description, Computed: true}
@@ -81,21 +92,21 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 	resp.Schema = schema.Schema{
 		Description: "Searches all pages of an Atlassian organization directory and returns every matching user.",
 		Attributes: map[string]schema.Attribute{
-			"organization_id":   schema.StringAttribute{Description: "Atlassian organization ID used in the Organization API path.", Required: true},
-			"directory_id":      schema.StringAttribute{Description: "Directory ID used in the Organization API path.", Required: true},
-			"account_ids":       filterSet("Account IDs to match. Accepts 1 to 10 values."),
-			"directory_ids":     filterSet("Directory IDs to match. Accepts 1 to 10 values."),
-			"resource_ids":      filterSet("Resource ARIs to match. Accepts 1 to 20 values."),
-			"group_ids":         filterSet("Group IDs to match. Accepts 1 to 10 values."),
+			"organization_id":   schema.StringAttribute{Description: "Atlassian organization ID used in the Organization API path.", Required: true, Validators: organizationUserStringValidators},
+			"directory_id":      schema.StringAttribute{Description: "Directory ID used in the Organization API path.", Required: true, Validators: organizationUserStringValidators},
+			"account_ids":       filterSet("Account IDs to match. Accepts 1 to 10 values.", 10),
+			"directory_ids":     filterSet("Directory IDs to match. Accepts 1 to 10 values.", 10),
+			"resource_ids":      filterSet("Resource ARIs to match. Accepts 1 to 20 values.", 20),
+			"group_ids":         filterSet("Group IDs to match. Accepts 1 to 10 values.", 10),
 			"mfa_enabled":       schema.BoolAttribute{Description: "Filter by whether MFA is enabled.", Optional: true},
-			"claim_status":      schema.StringAttribute{Description: "Filter by claim status: managed or unmanaged.", Optional: true},
-			"status":            filterSet("Composite user statuses to match. Accepts 1 to 4 API-supported values."),
-			"account_status":    filterSet("Account lifecycle statuses to match: active, inactive, or closed."),
-			"membership_status": filterSet("Organization membership statuses to match: active, suspended, or no_membership."),
-			"role_ids":          filterSet("Atlassian role IDs to match. Accepts 1 to 10 API-supported values."),
-			"email_domains":     filterSet("Email domains to match. Accepts 1 to 10 values."),
-			"search_term":       schema.StringAttribute{Description: "Free-text display name or email search. Mutually exclusive with emails.", Optional: true},
-			"emails":            filterSet("Full email addresses to match exactly. Accepts 1 to 100 values and is mutually exclusive with search_term."),
+			"claim_status":      schema.StringAttribute{Description: "Filter by claim status: managed or unmanaged.", Optional: true, Validators: []validator.String{stringvalidator.OneOf("managed", "unmanaged")}},
+			"status":            filterSet("Composite user statuses to match. Accepts 1 to 4 API-supported values.", 4, "active", "suspended", "not_invited", "deactivated", "for_deletion"),
+			"account_status":    filterSet("Account lifecycle statuses to match: active, inactive, or closed.", 3, "active", "inactive", "closed"),
+			"membership_status": filterSet("Organization membership statuses to match: active, suspended, or no_membership.", 3, "active", "suspended", "no_membership"),
+			"role_ids":          filterSet("Atlassian role IDs to match. Accepts 1 to 10 API-supported values.", 10, "atlassian/user", "atlassian/admin", "atlassian/guest", "atlassian/customer", "atlassian/user-access-admin", "atlassian/contributor", "atlassian/basic", "atlassian/stakeholder", "atlassian/org-admin", "atlassian/site-admin", "atlassian/ai-access"),
+			"email_domains":     filterSet("Email domains to match. Accepts 1 to 10 values.", 10),
+			"search_term":       schema.StringAttribute{Description: "Free-text display name or email search. Mutually exclusive with emails.", Optional: true, Validators: []validator.String{validation.NonBlank}},
+			"emails":            filterSet("Full email addresses to match exactly. Accepts 1 to 100 values and is mutually exclusive with search_term.", 100),
 			"users": schema.SetNestedAttribute{
 				Description: "All users matching the configured filters. The set is empty when no users match.",
 				Computed:    true,
@@ -149,41 +160,10 @@ func (d *userDataSource) ValidateConfig(ctx context.Context, req datasource.Vali
 		return
 	}
 
-	resp.Diagnostics.Append(validateOrganizationUserIdentifiers(config.OrganizationID, config.DirectoryID, types.StringNull())...)
-
-	if !config.SearchTerm.IsNull() && !config.SearchTerm.IsUnknown() {
-		if strings.TrimSpace(config.SearchTerm.ValueString()) == "" {
-			resp.Diagnostics.AddError("Invalid organization user filters", "search_term must not be empty when configured.")
-		}
-		if !config.Emails.IsNull() && !config.Emails.IsUnknown() {
-			resp.Diagnostics.AddError("Invalid organization user filters", "search_term and emails are mutually exclusive.")
-		}
-	}
-	if !config.ClaimStatus.IsNull() && !config.ClaimStatus.IsUnknown() {
-		if _, allowed := map[string]struct{}{"managed": {}, "unmanaged": {}}[config.ClaimStatus.ValueString()]; !allowed {
-			resp.Diagnostics.AddError("Invalid organization user filters", "claim_status must be managed or unmanaged.")
-		}
-	}
-
-	validations := []struct {
-		name    string
-		value   types.Set
-		maximum int
-		allowed map[string]struct{}
-	}{
-		{"account_ids", config.AccountIDs, 10, nil},
-		{"directory_ids", config.DirectoryIDs, 10, nil},
-		{"resource_ids", config.ResourceIDs, 20, nil},
-		{"group_ids", config.GroupIDs, 10, nil},
-		{"status", config.Status, 4, stringSet("active", "suspended", "not_invited", "deactivated", "for_deletion")},
-		{"account_status", config.AccountStatus, 3, stringSet("active", "inactive", "closed")},
-		{"membership_status", config.MembershipStatus, 3, stringSet("active", "suspended", "no_membership")},
-		{"role_ids", config.RoleIDs, 10, stringSet("atlassian/user", "atlassian/admin", "atlassian/guest", "atlassian/customer", "atlassian/user-access-admin", "atlassian/contributor", "atlassian/basic", "atlassian/stakeholder", "atlassian/org-admin", "atlassian/site-admin", "atlassian/ai-access")},
-		{"email_domains", config.EmailDomains, 10, nil},
-		{"emails", config.Emails, 100, nil},
-	}
-	for _, validation := range validations {
-		validateStringSet(validation.name, validation.value, validation.maximum, validation.allowed, resp)
+	// Each attribute's own rules are schema validators. Only the rule that
+	// reads two attributes at once stays here.
+	if knownString(config.SearchTerm) && !config.Emails.IsNull() && !config.Emails.IsUnknown() {
+		resp.Diagnostics.AddError("Invalid organization user filters", "search_term and emails are mutually exclusive.")
 	}
 }
 
@@ -314,42 +294,4 @@ func nullableBoolValue(value *bool) types.Bool {
 		return types.BoolNull()
 	}
 	return types.BoolValue(*value)
-}
-
-func stringSet(values ...string) map[string]struct{} {
-	result := make(map[string]struct{}, len(values))
-	for _, value := range values {
-		result[value] = struct{}{}
-	}
-	return result
-}
-
-func validateStringSet(name string, value types.Set, maximum int, allowed map[string]struct{}, resp *datasource.ValidateConfigResponse) {
-	validateStringSetWithSummary("Invalid organization user filters", name, value, maximum, allowed, resp)
-}
-
-func validateStringSetWithSummary(summary, name string, value types.Set, maximum int, allowed map[string]struct{}, resp *datasource.ValidateConfigResponse) {
-	if value.IsNull() || value.IsUnknown() {
-		return
-	}
-	if length := len(value.Elements()); length == 0 || length > maximum {
-		resp.Diagnostics.AddError(summary, fmt.Sprintf("%s must contain between 1 and %d values.", name, maximum))
-		return
-	}
-	for _, element := range value.Elements() {
-		itemValue, ok := element.(types.String)
-		if !ok || itemValue.IsNull() || itemValue.IsUnknown() {
-			continue
-		}
-		item := itemValue.ValueString()
-		if strings.TrimSpace(item) == "" {
-			resp.Diagnostics.AddError(summary, fmt.Sprintf("%s must not contain empty values.", name))
-			continue
-		}
-		if allowed != nil {
-			if _, valid := allowed[item]; !valid {
-				resp.Diagnostics.AddError(summary, fmt.Sprintf("%q is not a supported value for %s.", item, name))
-			}
-		}
-	}
 }
