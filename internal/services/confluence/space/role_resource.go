@@ -95,12 +95,12 @@ func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Computed:    true, PlanModifiers: preserve,
 			},
 			"anonymous_reassignment_role_id": schema.StringAttribute{
-				Description: "Update-only API field, so it cannot be set while the role is being created. When anonymous access uses this role, move those assignments to this role ID. Confluence was observed not to migrate anything when an update left the permission set unchanged, so this value is sent on every update and takes effect only when Confluence decides a migration is needed. Confluence does not return the value, so the provider preserves the configured one in state.",
+				Description: "Update-only API field, so it cannot be set while the role is being created. Set it to the role ID that anonymous assignments should move to when an update would give this role permissions anonymous access may not hold. Confluence rejects such an update with `400 Role is currently held by anonymous and new permissions cannot be assigned to anonymous access` unless this value is set, and ignores it for updates that create no such conflict. Confluence does not return the value, so the provider preserves the configured one in state.",
 				Optional:    true,
 				Validators:  []validator.String{spaceRoleNonBlank},
 			},
 			"guest_reassignment_role_id": schema.StringAttribute{
-				Description: "Update-only API field, so it cannot be set while the role is being created. When guest access uses this role, move those assignments to this role ID. Confluence was observed not to migrate anything when an update left the permission set unchanged, so this value is sent on every update and takes effect only when Confluence decides a migration is needed. Confluence does not return the value, so the provider preserves the configured one in state.",
+				Description: "Update-only API field, so it cannot be set while the role is being created. Set it to the role ID that guest assignments should move to when an update would give this role permissions guests may not hold. This mirrors `anonymous_reassignment_role_id`, whose behaviour was measured against a live tenant; the guest case is assumed to work the same way and has not been verified, because it needs a guest account. Confluence does not return the value, so the provider preserves the configured one in state.",
 				Optional:    true,
 				Validators:  []validator.String{spaceRoleNonBlank},
 			},
@@ -429,17 +429,20 @@ func reassignmentRequested(model spaceRoleResourceModel) bool {
 // create, which omits the update-only reassignment ids; otherwise prior is the
 // current state and the ids are sent as configured.
 //
-// An earlier revision sent them only when the configured value changed, to
-// avoid migrating whoever held the role during an unrelated edit. A live
-// tenant measured that premise false: an update carrying
-// anonymousReassignmentRoleId while anonymous access held the role left the
-// assignment in place across five reads, because the permission set was
-// unchanged. The trigger is therefore narrower than "holds the role", most
-// likely an update that removes the principal's access, but that is not
-// verified. Sending the value as configured keeps the directive on the
-// applies that change permissions, which is where it can matter, and the
-// measured case shows it does not migrate anything on its own. Confluence
-// never returns these fields, so the result stays unobservable through a read.
+// Live measurement settled what the reassignment ids do. Adding a permission
+// anonymous access may not hold, to a role anonymous access currently holds,
+// is rejected with 400 "Role is currently held by anonymous and new
+// permissions cannot be assigned to anonymous access". The same update
+// carrying anonymousReassignmentRoleId succeeds and moves the anonymous
+// assignment to the named role. Updates that create no such conflict ignore
+// the value: an unchanged definition, a description-only change and an added
+// export/content each left the assignment where it was.
+//
+// So the id is a precondition for a class of update rather than an action of
+// its own, which is why it is sent whenever configured. Sending it only when
+// it changed, as an earlier revision did, would have failed exactly the
+// updates that need it. Confluence never returns these fields, so a read
+// cannot confirm a migration that did happen.
 func spaceRoleWriteRequest(ctx context.Context, model spaceRoleResourceModel, prior *spaceRoleResourceModel) (SpaceRoleWriteRequest, diag.Diagnostics) {
 	var permissionIDs []string
 	diagnostics := model.SpacePermissions.ElementsAs(ctx, &permissionIDs, false)

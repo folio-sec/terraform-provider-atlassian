@@ -88,10 +88,10 @@ func (s *Service) GetSpaceRoleByID(ctx context.Context, id string) (SpaceRole, e
 // UpdateSpaceRole replaces the writable definition of a tenant-wide role and
 // returns the long-task id Confluence assigns, which is empty when Confluence
 // scheduled no asynchronous work. A live tenant answered 202 with a null
-// taskId for an update whose name, description and permissions were unchanged,
-// so an absent id is a success rather than a malformed response. The resource
-// layer waits for a task when there is one and confirms the readable
-// definition either way.
+// taskId for an unchanged definition and for a description-only change, and
+// returned an id only when the permission set changed, so an absent id is a
+// success rather than a malformed response. The resource layer waits for a
+// task when there is one and confirms the readable definition either way.
 func (s *Service) UpdateSpaceRole(ctx context.Context, id string, req SpaceRoleWriteRequest) (string, error) {
 	const operation = "update space role"
 	v2, err := s.client.V2(ctx)
