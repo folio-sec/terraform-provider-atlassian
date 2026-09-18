@@ -249,7 +249,7 @@ func TestWaitForSpaceRoleDeleteAcceptsCatalogueAbsenceWithStaleByIDRead(t *testi
 	}
 }
 
-func TestSpaceRoleWriteRequestSendsReassignmentOnlyOnChange(t *testing.T) {
+func TestSpaceRoleWriteRequestSendsConfiguredReassignment(t *testing.T) {
 	t.Parallel()
 	model := spaceRoleResourceModel{
 		Name: types.StringValue("Editors"), Description: types.StringValue("Can edit"),
@@ -266,12 +266,18 @@ func TestSpaceRoleWriteRequestSendsReassignmentOnlyOnChange(t *testing.T) {
 		t.Fatal("a create must omit the update-only reassignment ids")
 	}
 
+	// An update sends the configured id even when it matches state. A live
+	// tenant left the assignment in place for an update whose permission set
+	// was unchanged, so re-sending cannot migrate anything on its own.
 	unchanged, diagnostics := spaceRoleWriteRequest(context.Background(), model, &model)
 	if diagnostics.HasError() {
 		t.Fatalf("spaceRoleWriteRequest() diagnostics = %v", diagnostics)
 	}
-	if unchanged.AnonymousReassignmentRoleID != nil {
-		t.Fatalf("an unchanged reassignment id must not be re-sent, got %q", *unchanged.AnonymousReassignmentRoleID)
+	if unchanged.AnonymousReassignmentRoleID == nil || *unchanged.AnonymousReassignmentRoleID != "role-anonymous" {
+		t.Fatalf("a configured reassignment id must be sent, got %#v", unchanged.AnonymousReassignmentRoleID)
+	}
+	if unchanged.GuestReassignmentRoleID != nil {
+		t.Fatal("a null reassignment id must not be sent")
 	}
 
 	prior := model
@@ -283,8 +289,28 @@ func TestSpaceRoleWriteRequestSendsReassignmentOnlyOnChange(t *testing.T) {
 	if changed.AnonymousReassignmentRoleID == nil || *changed.AnonymousReassignmentRoleID != "role-anonymous" {
 		t.Fatalf("a newly configured reassignment id must be sent, got %#v", changed.AnonymousReassignmentRoleID)
 	}
-	if changed.GuestReassignmentRoleID != nil {
-		t.Fatal("a null reassignment id must not be sent")
+}
+
+// TestUpdateSpaceRoleAcceptsSuccessWithoutTaskID pins the observed live
+// behaviour: a tenant answered 202 with a null taskId for an update whose
+// name, description and permissions were unchanged.
+func TestUpdateSpaceRoleAcceptsSuccessWithoutTaskID(t *testing.T) {
+	t.Parallel()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusAccepted)
+		_, _ = w.Write([]byte(`{"id":"role-1","type":"CUSTOM","name":"Editors","description":"Can edit","taskId":null}`))
+	}))
+	t.Cleanup(server.Close)
+
+	taskID, err := NewService(newTestClient(t, server)).UpdateSpaceRole(context.Background(), "role-1", SpaceRoleWriteRequest{
+		Name: "Editors", Description: "Can edit", PermissionIDs: []string{"read/space"},
+	})
+	if err != nil {
+		t.Fatalf("UpdateSpaceRole() error = %v, want nil for a 202 without a task id", err)
+	}
+	if taskID != "" {
+		t.Fatalf("UpdateSpaceRole() task id = %q, want empty", taskID)
 	}
 }
 

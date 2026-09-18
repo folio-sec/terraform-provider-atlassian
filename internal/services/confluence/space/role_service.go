@@ -85,9 +85,13 @@ func (s *Service) GetSpaceRoleByID(ctx context.Context, id string) (SpaceRole, e
 	return role, nil
 }
 
-// UpdateSpaceRole replaces the writable definition of a tenant-wide role.
-// Atlassian applies the change asynchronously; the resource layer waits for
-// the returned task and then confirms the readable role definition.
+// UpdateSpaceRole replaces the writable definition of a tenant-wide role and
+// returns the long-task id Confluence assigns, which is empty when Confluence
+// scheduled no asynchronous work. A live tenant answered 202 with a null
+// taskId for an update whose name, description and permissions were unchanged,
+// so an absent id is a success rather than a malformed response. The resource
+// layer waits for a task when there is one and confirms the readable
+// definition either way.
 func (s *Service) UpdateSpaceRole(ctx context.Context, id string, req SpaceRoleWriteRequest) (string, error) {
 	const operation = "update space role"
 	v2, err := s.client.V2(ctx)
@@ -112,15 +116,17 @@ func (s *Service) UpdateSpaceRole(ctx context.Context, id string, req SpaceRoleW
 	if resp.JSON202 == nil {
 		return "", fmt.Errorf("%s: API returned an invalid success response", operation)
 	}
-	if resp.JSON202.TaskId == nil || *resp.JSON202.TaskId == "" {
-		return "", fmt.Errorf("%s: API returned a success response without a task id", operation)
+	if resp.JSON202.TaskId == nil {
+		return "", nil
 	}
 	return *resp.JSON202.TaskId, nil
 }
 
 // DeleteSpaceRole requests deletion of a tenant-wide role and returns the
-// long-task id Confluence assigns to the asynchronous operation. The caller
-// verifies a Confluence 404 against the complete role catalogue, because the
+// long-task id Confluence assigns, which is empty when Confluence returns
+// none. Both observed deletions did return one, but the caller confirms
+// absence from the role catalogue regardless, so it does not depend on that.
+// The caller also verifies a Confluence 404 against the catalogue, because the
 // operation documents the same status for missing permission.
 func (s *Service) DeleteSpaceRole(ctx context.Context, id string) (string, error) {
 	const operation = "delete space role"
@@ -141,8 +147,8 @@ func (s *Service) DeleteSpaceRole(ctx context.Context, id string) (string, error
 	if resp.JSON202 == nil {
 		return "", fmt.Errorf("%s: API returned an invalid success response", operation)
 	}
-	if resp.JSON202.TaskId == nil || *resp.JSON202.TaskId == "" {
-		return "", fmt.Errorf("%s: API returned a success response without a task id", operation)
+	if resp.JSON202.TaskId == nil {
+		return "", nil
 	}
 	return *resp.JSON202.TaskId, nil
 }

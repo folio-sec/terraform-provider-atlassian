@@ -95,12 +95,12 @@ func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Computed:    true, PlanModifiers: preserve,
 			},
 			"anonymous_reassignment_role_id": schema.StringAttribute{
-				Description: "Update-only API field, so it cannot be set while the role is being created. When anonymous access uses this role, move those assignments to this role ID. Confluence applies the migration whenever principals hold the role, not only when an update removes their access, so the provider sends this value only on the apply that changes it. Confluence does not return the value, so the provider preserves the configured one in state.",
+				Description: "Update-only API field, so it cannot be set while the role is being created. When anonymous access uses this role, move those assignments to this role ID. Confluence was observed not to migrate anything when an update left the permission set unchanged, so this value is sent on every update and takes effect only when Confluence decides a migration is needed. Confluence does not return the value, so the provider preserves the configured one in state.",
 				Optional:    true,
 				Validators:  []validator.String{spaceRoleNonBlank},
 			},
 			"guest_reassignment_role_id": schema.StringAttribute{
-				Description: "Update-only API field, so it cannot be set while the role is being created. When guest access uses this role, move those assignments to this role ID. Confluence applies the migration whenever principals hold the role, not only when an update removes their access, so the provider sends this value only on the apply that changes it. Confluence does not return the value, so the provider preserves the configured one in state.",
+				Description: "Update-only API field, so it cannot be set while the role is being created. When guest access uses this role, move those assignments to this role ID. Confluence was observed not to migrate anything when an update left the permission set unchanged, so this value is sent on every update and takes effect only when Confluence decides a migration is needed. Confluence does not return the value, so the provider preserves the configured one in state.",
 				Optional:    true,
 				Validators:  []validator.String{spaceRoleNonBlank},
 			},
@@ -427,16 +427,19 @@ func reassignmentRequested(model spaceRoleResourceModel) bool {
 
 // spaceRoleWriteRequest builds the write body for model. A nil prior means a
 // create, which omits the update-only reassignment ids; otherwise prior is the
-// current state.
+// current state and the ids are sent as configured.
 //
-// The reassignment ids are sent only when the configured value differs from
-// state. updateSpaceRole conditions the migration on principals being assigned
-// to the role being modified, not on the edit removing their access, so
-// re-sending an unchanged id would migrate whoever holds the role at that
-// moment. Whether a repeat is a no-op is unverified: Confluence never returns
-// these fields, so neither a read nor roleMatches can observe the result.
-// Sending only on change is correct under either answer, and it still applies
-// the directive on the apply where the operator writes the value.
+// An earlier revision sent them only when the configured value changed, to
+// avoid migrating whoever held the role during an unrelated edit. A live
+// tenant measured that premise false: an update carrying
+// anonymousReassignmentRoleId while anonymous access held the role left the
+// assignment in place across five reads, because the permission set was
+// unchanged. The trigger is therefore narrower than "holds the role", most
+// likely an update that removes the principal's access, but that is not
+// verified. Sending the value as configured keeps the directive on the
+// applies that change permissions, which is where it can matter, and the
+// measured case shows it does not migrate anything on its own. Confluence
+// never returns these fields, so the result stays unobservable through a read.
 func spaceRoleWriteRequest(ctx context.Context, model spaceRoleResourceModel, prior *spaceRoleResourceModel) (SpaceRoleWriteRequest, diag.Diagnostics) {
 	var permissionIDs []string
 	diagnostics := model.SpacePermissions.ElementsAs(ctx, &permissionIDs, false)
@@ -447,11 +450,11 @@ func spaceRoleWriteRequest(ctx context.Context, model spaceRoleResourceModel, pr
 	if prior == nil {
 		return result, nil
 	}
-	if setNonBlank(model.AnonymousReassignmentRoleID) && !model.AnonymousReassignmentRoleID.Equal(prior.AnonymousReassignmentRoleID) {
+	if setNonBlank(model.AnonymousReassignmentRoleID) {
 		value := model.AnonymousReassignmentRoleID.ValueString()
 		result.AnonymousReassignmentRoleID = &value
 	}
-	if setNonBlank(model.GuestReassignmentRoleID) && !model.GuestReassignmentRoleID.Equal(prior.GuestReassignmentRoleID) {
+	if setNonBlank(model.GuestReassignmentRoleID) {
 		value := model.GuestReassignmentRoleID.ValueString()
 		result.GuestReassignmentRoleID = &value
 	}
