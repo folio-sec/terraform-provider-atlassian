@@ -65,7 +65,7 @@ func (r *spaceRoleResource) Metadata(_ context.Context, req resource.MetadataReq
 func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	preserve := []planmodifier.String{stringplanmodifier.UseStateForUnknown()}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a tenant-wide Confluence space role. Roles created through this resource have type CUSTOM. The role can then be assigned within a space using `atlassian_confluence_space_role_assignment`. Updates and deletes are asynchronous in Confluence; the provider tracks their tasks and verifies the observable final state before completing.\n\n## Required OAuth scopes\n\n- Read: `read:space.permission:confluence`\n- Create: `write:configuration:confluence`\n- Update and delete: `write:configuration:confluence`, `read:space.permission:confluence`, `read:confluence-space.summary`\n",
+		MarkdownDescription: "Manages a tenant-wide Confluence space role. Roles created through this resource have type CUSTOM. The role can then be assigned within a space using `atlassian_confluence_space_role_assignment`. Updates and deletes are asynchronous in Confluence; the provider tracks their tasks and verifies the observable final state before completing.\n\nConfluence allows at most 10 custom roles per tenant.\n\n## Required OAuth scopes\n\n- Read: `read:space.permission:confluence`\n- Create: `write:configuration:confluence`\n- Update and delete: `write:configuration:confluence`, `read:space.permission:confluence`, `read:confluence-space.summary`\n",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Tenant-specific space role ID.", Computed: true,

@@ -10,6 +10,8 @@ description: |-
 
 Manages a tenant-wide Confluence space role. Roles created through this resource have type CUSTOM. The role can then be assigned within a space using `atlassian_confluence_space_role_assignment`. Updates and deletes are asynchronous in Confluence; the provider tracks their tasks and verifies the observable final state before completing.
 
+Confluence allows at most 10 custom roles per tenant.
+
 ## Required OAuth scopes
 
 - Read: `read:space.permission:confluence`
