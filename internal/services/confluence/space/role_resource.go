@@ -2,13 +2,14 @@ package space
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -30,10 +31,6 @@ import (
 // Atlassian could raise it, in which case this check would reject a name the
 // API would now take.
 const spaceRoleNameMaxCharacters = 25
-
-// spaceRoleNonBlank rejects a value that is present but holds only
-// whitespace, which the API would take and store verbatim.
-var spaceRoleNonBlank = stringvalidator.RegexMatches(regexp.MustCompile(`\S`), "must not be empty")
 
 var _ resource.Resource = &spaceRoleResource{}
 var _ resource.ResourceWithIdentity = &spaceRoleResource{}
@@ -65,7 +62,7 @@ func (r *spaceRoleResource) Metadata(_ context.Context, req resource.MetadataReq
 func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	preserve := []planmodifier.String{stringplanmodifier.UseStateForUnknown()}
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a tenant-wide Confluence space role. Roles created through this resource have type CUSTOM. The role can then be assigned within a space using `atlassian_confluence_space_role_assignment`. Updates and deletes are asynchronous in Confluence; the provider tracks their tasks and verifies the observable final state before completing.\n\n## Required OAuth scopes\n\n- Read: `read:space.permission:confluence`\n- Create: `write:configuration:confluence`\n- Update and delete: `write:configuration:confluence`, `read:space.permission:confluence`, `read:confluence-space.summary`\n",
+		MarkdownDescription: "Manages a tenant-wide Confluence space role. Roles created through this resource have type CUSTOM. The role can then be assigned within a space using `atlassian_confluence_space_role_assignment`. Updates and deletes are asynchronous in Confluence; the provider tracks their tasks and verifies the observable final state before completing.\n\nConfluence allows at most 10 custom roles per tenant.\n\n## Required OAuth scopes\n\n- Read: `read:space.permission:confluence`\n- Create: `write:configuration:confluence`\n- Update and delete: `write:configuration:confluence`, `read:space.permission:confluence`, `read:confluence-space.summary`\n",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "Tenant-specific space role ID.", Computed: true,
@@ -75,7 +72,7 @@ func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Description: "Name of the space role. Confluence accepts at most 25 characters.",
 				Required:    true,
 				Validators: []validator.String{
-					spaceRoleNonBlank,
+					validation.NonBlank,
 					// UTF8LengthAtMost counts characters; LengthAtMost counts
 					// bytes and would reject a name the API accepts.
 					stringvalidator.UTF8LengthAtMost(spaceRoleNameMaxCharacters),
@@ -84,7 +81,7 @@ func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"description": schema.StringAttribute{
 				Description: "Description of the space role.",
 				Required:    true,
-				Validators:  []validator.String{spaceRoleNonBlank},
+				Validators:  []validator.String{validation.NonBlank},
 			},
 			"space_permissions": schema.SetAttribute{
 				Description: "IDs of the space permissions included in the role, such as `read/space`.",
@@ -95,14 +92,14 @@ func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Computed:    true, PlanModifiers: preserve,
 			},
 			"anonymous_reassignment_role_id": schema.StringAttribute{
-				Description: "Update-only API field, so it cannot be set while the role is being created. When anonymous access uses this role, move those assignments to this role ID. Confluence applies the migration whenever principals hold the role, not only when an update removes their access, so the provider sends this value only on the apply that changes it. Confluence does not return the value, so the provider preserves the configured one in state.",
+				Description: "Update-only API field, so it cannot be set while the role is being created. Set it to the role ID that anonymous assignments should move to when an update would give this role permissions anonymous access may not hold. Confluence rejects such an update with `400 Role is currently held by anonymous and new permissions cannot be assigned to anonymous access` unless this value is set, and ignores it for updates that create no such conflict. Confluence does not return the value, so the provider preserves the configured one in state.",
 				Optional:    true,
-				Validators:  []validator.String{spaceRoleNonBlank},
+				Validators:  []validator.String{validation.NonBlank},
 			},
 			"guest_reassignment_role_id": schema.StringAttribute{
-				Description: "Update-only API field, so it cannot be set while the role is being created. When guest access uses this role, move those assignments to this role ID. Confluence applies the migration whenever principals hold the role, not only when an update removes their access, so the provider sends this value only on the apply that changes it. Confluence does not return the value, so the provider preserves the configured one in state.",
+				Description: "Update-only API field, so it cannot be set while the role is being created. Set it to the role ID that guest assignments should move to when an update would give this role permissions guests may not hold. This mirrors `anonymous_reassignment_role_id`, whose behaviour was measured against a live tenant; the guest case is assumed to work the same way and has not been verified, because it needs a guest account. Confluence does not return the value, so the provider preserves the configured one in state.",
 				Optional:    true,
-				Validators:  []validator.String{spaceRoleNonBlank},
+				Validators:  []validator.String{validation.NonBlank},
 			},
 		},
 	}
@@ -138,15 +135,21 @@ func (r *spaceRoleResource) Create(ctx context.Context, req resource.CreateReque
 	}
 	// createSpaceRole accepts only name, description, and spacePermissions;
 	// the reassignment ids belong to updateSpaceRole, and a role that has just
-	// been created has no anonymous or guest assignments to migrate. Reject
-	// them rather than dropping them silently, because schema validation runs
+	// been created holds no anonymous or guest assignments to migrate. Say so
+	// rather than dropping them silently, because schema validation runs
 	// before Terraform knows whether this is a create or an update.
+	//
+	// This is a warning and not an error on purpose. A role deleted outside
+	// Terraform has to be recreatable from a configuration that legitimately
+	// carries these ids, since they are what makes a permission-widening
+	// update succeed at all. Failing the create would leave that
+	// configuration unable to apply until the operator removed the attribute,
+	// applied, and put it back.
 	if reassignmentRequested(plan) {
-		resp.Diagnostics.AddError(
+		resp.Diagnostics.AddWarning(
 			"Confluence space role reassignment is update-only",
-			"anonymous_reassignment_role_id and guest_reassignment_role_id are accepted only by the Confluence space role update operation, so they cannot be set while the role is being created. Create the role without them, then add them in a later change.",
+			"anonymous_reassignment_role_id and guest_reassignment_role_id are accepted only by the Confluence space role update operation, so they have no effect while the role is being created. Terraform keeps the configured values in state and sends them with the first update.",
 		)
-		return
 	}
 	write, diagnostics := spaceRoleWriteRequest(ctx, plan, nil)
 	resp.Diagnostics.Append(diagnostics...)
@@ -198,30 +201,20 @@ func (r *spaceRoleResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 	current, err := r.client.GetSpaceRoleByID(ctx, state.ID.ValueString())
-	if err != nil {
-		if confluence.IsNotFound(err) {
-			absent, verifyErr := r.spaceRoleAbsent(ctx, state.ID.ValueString())
-			if verifyErr != nil {
-				resp.Diagnostics.AddError("Unable to verify Confluence space role absence", verifyErr.Error())
-				return
-			}
-			if absent {
-				resp.State.RemoveResource(ctx)
-				return
-			}
-		}
-		resp.Diagnostics.AddError("Unable to read Confluence space role", err.Error())
-		return
+	// A by-id read is unusable in three ways, and none of them is evidence
+	// about whether the role exists. getSpaceRolesById documents 404 only for
+	// missing permission. A deleted role was seen once during live testing to
+	// stay readable as a 200 with an empty permission set after the catalogue
+	// had dropped it; that serialization is not recorded in a committed
+	// artefact, and Confluence could as well omit the field, which fails
+	// conversion instead. Corroborating all three against the complete
+	// catalogue is correct whichever shape a tombstone takes, and it is the
+	// only evidence that permits removing the resource from state.
+	unusable := err != nil && (confluence.IsNotFound(err) || errors.Is(err, ErrIncompleteRole))
+	if err == nil && len(current.PermissionIDs) == 0 {
+		unusable = true
 	}
-	// A deleted role was seen once during live testing to remain readable by
-	// id as a 200 response with an empty permission set after the complete
-	// catalogue had stopped returning it. That observation is not recorded in
-	// a committed artefact, so treat it as unverified. Requiring both an empty
-	// permission set and catalogue absence is correct either way: if the
-	// tombstone is real, refresh detects the deletion; if it is not, a role
-	// that genuinely holds no permissions stays in state because the
-	// catalogue still lists it.
-	if len(current.PermissionIDs) == 0 {
+	if unusable {
 		absent, verifyErr := r.spaceRoleAbsent(ctx, state.ID.ValueString())
 		if verifyErr != nil {
 			resp.Diagnostics.AddError("Unable to verify Confluence space role absence", verifyErr.Error())
@@ -231,6 +224,10 @@ func (r *spaceRoleResource) Read(ctx context.Context, req resource.ReadRequest, 
 			resp.State.RemoveResource(ctx)
 			return
 		}
+	}
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to read Confluence space role", err.Error())
+		return
 	}
 	updated, diagnostics := spaceRoleState(ctx, state, current)
 	resp.Diagnostics.Append(diagnostics...)
@@ -427,16 +424,22 @@ func reassignmentRequested(model spaceRoleResourceModel) bool {
 
 // spaceRoleWriteRequest builds the write body for model. A nil prior means a
 // create, which omits the update-only reassignment ids; otherwise prior is the
-// current state.
+// current state and the ids are sent as configured.
 //
-// The reassignment ids are sent only when the configured value differs from
-// state. updateSpaceRole conditions the migration on principals being assigned
-// to the role being modified, not on the edit removing their access, so
-// re-sending an unchanged id would migrate whoever holds the role at that
-// moment. Whether a repeat is a no-op is unverified: Confluence never returns
-// these fields, so neither a read nor roleMatches can observe the result.
-// Sending only on change is correct under either answer, and it still applies
-// the directive on the apply where the operator writes the value.
+// Live measurement settled what the reassignment ids do. Adding a permission
+// anonymous access may not hold, to a role anonymous access currently holds,
+// is rejected with 400 "Role is currently held by anonymous and new
+// permissions cannot be assigned to anonymous access". The same update
+// carrying anonymousReassignmentRoleId succeeds and moves the anonymous
+// assignment to the named role. Updates that create no such conflict ignore
+// the value: an unchanged definition, a description-only change and an added
+// export/content each left the assignment where it was.
+//
+// So the id is a precondition for a class of update rather than an action of
+// its own, which is why it is sent whenever configured. Sending it only when
+// it changed, as an earlier revision did, would have failed exactly the
+// updates that need it. Confluence never returns these fields, so a read
+// cannot confirm a migration that did happen.
 func spaceRoleWriteRequest(ctx context.Context, model spaceRoleResourceModel, prior *spaceRoleResourceModel) (SpaceRoleWriteRequest, diag.Diagnostics) {
 	var permissionIDs []string
 	diagnostics := model.SpacePermissions.ElementsAs(ctx, &permissionIDs, false)
@@ -447,11 +450,11 @@ func spaceRoleWriteRequest(ctx context.Context, model spaceRoleResourceModel, pr
 	if prior == nil {
 		return result, nil
 	}
-	if setNonBlank(model.AnonymousReassignmentRoleID) && !model.AnonymousReassignmentRoleID.Equal(prior.AnonymousReassignmentRoleID) {
+	if setNonBlank(model.AnonymousReassignmentRoleID) {
 		value := model.AnonymousReassignmentRoleID.ValueString()
 		result.AnonymousReassignmentRoleID = &value
 	}
-	if setNonBlank(model.GuestReassignmentRoleID) && !model.GuestReassignmentRoleID.Equal(prior.GuestReassignmentRoleID) {
+	if setNonBlank(model.GuestReassignmentRoleID) {
 		value := model.GuestReassignmentRoleID.ValueString()
 		result.GuestReassignmentRoleID = &value
 	}

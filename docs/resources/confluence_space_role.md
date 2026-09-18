@@ -10,6 +10,8 @@ description: |-
 
 Manages a tenant-wide Confluence space role. Roles created through this resource have type CUSTOM. The role can then be assigned within a space using `atlassian_confluence_space_role_assignment`. Updates and deletes are asynchronous in Confluence; the provider tracks their tasks and verifies the observable final state before completing.
 
+Confluence allows at most 10 custom roles per tenant.
+
 ## Required OAuth scopes
 
 - Read: `read:space.permission:confluence`
@@ -40,8 +42,8 @@ resource "atlassian_confluence_space_role" "example" {
 
 ### Optional
 
-- `anonymous_reassignment_role_id` (String) Update-only API field, so it cannot be set while the role is being created. When anonymous access uses this role, move those assignments to this role ID. Confluence applies the migration whenever principals hold the role, not only when an update removes their access, so the provider sends this value only on the apply that changes it. Confluence does not return the value, so the provider preserves the configured one in state.
-- `guest_reassignment_role_id` (String) Update-only API field, so it cannot be set while the role is being created. When guest access uses this role, move those assignments to this role ID. Confluence applies the migration whenever principals hold the role, not only when an update removes their access, so the provider sends this value only on the apply that changes it. Confluence does not return the value, so the provider preserves the configured one in state.
+- `anonymous_reassignment_role_id` (String) Update-only API field, so it cannot be set while the role is being created. Set it to the role ID that anonymous assignments should move to when an update would give this role permissions anonymous access may not hold. Confluence rejects such an update with `400 Role is currently held by anonymous and new permissions cannot be assigned to anonymous access` unless this value is set, and ignores it for updates that create no such conflict. Confluence does not return the value, so the provider preserves the configured one in state.
+- `guest_reassignment_role_id` (String) Update-only API field, so it cannot be set while the role is being created. Set it to the role ID that guest assignments should move to when an update would give this role permissions guests may not hold. This mirrors `anonymous_reassignment_role_id`, whose behaviour was measured against a live tenant; the guest case is assumed to work the same way and has not been verified, because it needs a guest account. Confluence does not return the value, so the provider preserves the configured one in state.
 
 ### Read-Only
 

@@ -16,10 +16,15 @@ import (
 	"github.com/oapi-codegen/nullable"
 )
 
-// taskPollInterval and taskPollTimeout govern Confluence long-task polling.
-// Gate 7 (plans/confluence-space-verification.json) showed both gate
-// deletions finished inside the first 5-second poll, so 2s/5m is generous
-// rather than tight.
+// taskPollInterval and taskPollTimeout bound both kinds of waiting this
+// package does: the v1 long-task poll after an asynchronous space or role
+// mutation, and the role-catalogue convergence poll in waitForSpaceRole.
+// Gate 7 (plans/confluence-space-verification.json) showed both gate space
+// deletions finishing inside the first 5-second poll, and a role permission
+// task finished in 274 ms (plans/trigger-verification.json), so 2s/5m is
+// generous rather than tight for the task polls. Catalogue convergence was
+// not measured, and shares the budget because it waits on the same
+// server-side work.
 // errorBodyLimit caps how much of a non-2xx body is read for diagnostics.
 const errorBodyLimit = 1 << 20
 

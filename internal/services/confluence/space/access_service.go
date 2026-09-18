@@ -230,9 +230,15 @@ func permissionAssignmentFromGenerated(row v2gen.SpacePermissionAssignment) (Per
 	}, nil
 }
 
+// ErrIncompleteRole marks a role the API returned without a field this
+// provider needs. It is a sentinel because a by-id read that cannot be
+// converted is not evidence about whether the role exists, and the resource
+// layer has to tell that apart from a transport failure.
+var ErrIncompleteRole = errors.New("space role omitted a required field")
+
 func spaceRoleFromGenerated(row v2gen.SpaceRole) (SpaceRole, error) {
 	if row.Id == nil || row.Name == nil || row.Type == nil || row.SpacePermissions == nil {
-		return SpaceRole{}, fmt.Errorf("space role omitted a required field")
+		return SpaceRole{}, ErrIncompleteRole
 	}
 	description := ""
 	if row.Description != nil {
