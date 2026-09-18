@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -31,10 +31,6 @@ import (
 // Atlassian could raise it, in which case this check would reject a name the
 // API would now take.
 const spaceRoleNameMaxCharacters = 25
-
-// spaceRoleNonBlank rejects a value that is present but holds only
-// whitespace, which the API would take and store verbatim.
-var spaceRoleNonBlank = stringvalidator.RegexMatches(regexp.MustCompile(`\S`), "must not be empty")
 
 var _ resource.Resource = &spaceRoleResource{}
 var _ resource.ResourceWithIdentity = &spaceRoleResource{}
@@ -76,7 +72,7 @@ func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Description: "Name of the space role. Confluence accepts at most 25 characters.",
 				Required:    true,
 				Validators: []validator.String{
-					spaceRoleNonBlank,
+					validation.NonBlank,
 					// UTF8LengthAtMost counts characters; LengthAtMost counts
 					// bytes and would reject a name the API accepts.
 					stringvalidator.UTF8LengthAtMost(spaceRoleNameMaxCharacters),
@@ -85,7 +81,7 @@ func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"description": schema.StringAttribute{
 				Description: "Description of the space role.",
 				Required:    true,
-				Validators:  []validator.String{spaceRoleNonBlank},
+				Validators:  []validator.String{validation.NonBlank},
 			},
 			"space_permissions": schema.SetAttribute{
 				Description: "IDs of the space permissions included in the role, such as `read/space`.",
@@ -98,12 +94,12 @@ func (r *spaceRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"anonymous_reassignment_role_id": schema.StringAttribute{
 				Description: "Update-only API field, so it cannot be set while the role is being created. Set it to the role ID that anonymous assignments should move to when an update would give this role permissions anonymous access may not hold. Confluence rejects such an update with `400 Role is currently held by anonymous and new permissions cannot be assigned to anonymous access` unless this value is set, and ignores it for updates that create no such conflict. Confluence does not return the value, so the provider preserves the configured one in state.",
 				Optional:    true,
-				Validators:  []validator.String{spaceRoleNonBlank},
+				Validators:  []validator.String{validation.NonBlank},
 			},
 			"guest_reassignment_role_id": schema.StringAttribute{
 				Description: "Update-only API field, so it cannot be set while the role is being created. Set it to the role ID that guest assignments should move to when an update would give this role permissions guests may not hold. This mirrors `anonymous_reassignment_role_id`, whose behaviour was measured against a live tenant; the guest case is assumed to work the same way and has not been verified, because it needs a guest account. Confluence does not return the value, so the provider preserves the configured one in state.",
 				Optional:    true,
-				Validators:  []validator.String{spaceRoleNonBlank},
+				Validators:  []validator.String{validation.NonBlank},
 			},
 		},
 	}
