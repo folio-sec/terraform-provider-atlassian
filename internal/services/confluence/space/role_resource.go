@@ -263,6 +263,15 @@ func (r *spaceRoleResource) Update(ctx context.Context, req resource.UpdateReque
 		)
 		return
 	}
+	// A task error is terminal here, unlike in Delete. The update task is
+	// Confluence's BulkReassignRolePermissionsTaskRunner, which propagates the
+	// new permission set to every principal holding the role
+	// (plans/trigger-verification.json). A role read shows only the
+	// definition, so a definition that matches after a failed or timed-out
+	// task would say nothing about whether that propagation happened, and
+	// reporting success from it is the inference this update path was written
+	// to avoid. Delete can verify afterwards because catalogue absence is its
+	// whole goal state.
 	if taskID != "" {
 		if err := r.client.waitForTask(ctx, taskID); err != nil {
 			resp.Diagnostics.AddError("Unable to confirm Confluence space role update", err.Error())
