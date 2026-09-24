@@ -351,7 +351,10 @@ func (r *spaceRoleResource) waitForSpaceRole(ctx context.Context, id string, wan
 				if roleMatches(current, *want) {
 					return current, nil
 				}
-			case confluence.IsNotFound(err):
+			case confluence.IsNotFound(err) || errors.Is(err, ErrIncompleteRole):
+				// Neither a 404 nor a body missing a required field is evidence
+				// about the role, which is how Read treats them too, so the
+				// complete catalogue decides whether it is gone.
 				absent, verifyErr := r.spaceRoleAbsent(pollCtx, id)
 				if verifyErr != nil {
 					return SpaceRole{}, verifyErr
@@ -359,11 +362,11 @@ func (r *spaceRoleResource) waitForSpaceRole(ctx context.Context, id string, wan
 				if absent {
 					return SpaceRole{}, fmt.Errorf("space role %s no longer exists", id)
 				}
-				// The catalogue still lists the role, so getSpaceRolesById
-				// returned its documented "no permission to view" 404 rather
-				// than absence. Keep polling in case the update instead left
-				// a transient state, but carry the error so a timeout reports
-				// it instead of looking like slow convergence.
+				// The catalogue still lists the role, so this was the
+				// documented "no permission to view" 404 or an incomplete
+				// read rather than absence. Keep polling in case the update
+				// left a transient state, but carry the error so a timeout
+				// reports it instead of looking like slow convergence.
 				unreadable = err
 			default:
 				return SpaceRole{}, err

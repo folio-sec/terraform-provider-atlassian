@@ -29,6 +29,9 @@ type fakeSpaceRoles struct {
 	bodies    map[string][]byte
 	deleted   bool
 	staleByID bool
+	// incompleteReads is how many by-id reads answer 200 without
+	// spacePermissions before the complete body is served again.
+	incompleteReads int
 }
 
 func newFakeSpaceRoles(t *testing.T) (*fakeSpaceRoles, *httptest.Server) {
@@ -67,7 +70,15 @@ func (f *fakeSpaceRoles) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		deleted := f.deleted
 		staleByID := f.staleByID
+		incomplete := f.incompleteReads > 0
+		if incomplete {
+			f.incompleteReads--
+		}
 		f.mu.Unlock()
+		if incomplete {
+			_, _ = w.Write([]byte(`{"id":"role-1","type":"CUSTOM","name":"Editors","description":"Can edit"}`))
+			return
+		}
 		if deleted && !staleByID {
 			w.WriteHeader(http.StatusNotFound)
 			_, _ = w.Write([]byte(`{"errors":[{"status":404,"code":"NOT_FOUND","title":"not found"}]}`))
@@ -400,5 +411,44 @@ func TestGetSpaceRoleByIDReportsAnIncompleteBody(t *testing.T) {
 	}
 	if confluence.IsNotFound(err) {
 		t.Fatal("an incomplete body must not be reported as a Confluence not-found")
+	}
+}
+
+// An update's confirmation poll treats a by-id read that omits a required field
+// the way Read does: not as evidence, so it keeps polling while the catalogue
+// still lists the role.
+func TestWaitForSpaceRoleUpdateKeepsPollingThroughAnIncompleteRead(t *testing.T) {
+	t.Parallel()
+	fake, server := newFakeSpaceRoles(t)
+	resource := &spaceRoleResource{client: NewService(newTestClient(t, server))}
+	fake.mu.Lock()
+	fake.incompleteReads = 1
+	fake.mu.Unlock()
+
+	want := SpaceRoleWriteRequest{Name: "Editors", Description: "Can edit", PermissionIDs: []string{"read/space"}}
+	role, err := resource.waitForSpaceRole(context.Background(), "role-1", &want)
+	if err != nil {
+		t.Fatalf("waitForSpaceRole() error = %v, want convergence after the incomplete read", err)
+	}
+	if role.ID != "role-1" {
+		t.Fatalf("waitForSpaceRole() role = %#v", role)
+	}
+}
+
+// When the catalogue no longer lists the role, an incomplete read ends the poll
+// at once instead of waiting out the timeout.
+func TestWaitForSpaceRoleUpdateReportsARoleGoneBehindAnIncompleteRead(t *testing.T) {
+	t.Parallel()
+	fake, server := newFakeSpaceRoles(t)
+	resource := &spaceRoleResource{client: NewService(newTestClient(t, server))}
+	fake.mu.Lock()
+	fake.incompleteReads = 1
+	fake.deleted = true
+	fake.mu.Unlock()
+
+	want := SpaceRoleWriteRequest{Name: "Editors", Description: "Can edit", PermissionIDs: []string{"read/space"}}
+	_, err := resource.waitForSpaceRole(context.Background(), "role-1", &want)
+	if err == nil || !strings.Contains(err.Error(), "no longer exists") {
+		t.Fatalf("waitForSpaceRole() error = %v, want the role reported as gone", err)
 	}
 }
