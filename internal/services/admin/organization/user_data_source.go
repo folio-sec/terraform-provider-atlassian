@@ -8,8 +8,8 @@ import (
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
+	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization/generated"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -75,16 +75,18 @@ func (d *userDataSource) Metadata(_ context.Context, req datasource.MetadataRequ
 }
 
 func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	// Each filter carries the count the endpoint accepts, and the ones with a
-	// closed value list carry that list too.
-	filterSet := func(description string, maximum int, allowed ...string) schema.SetAttribute {
-		validators := []validator.Set{setvalidator.SizeBetween(1, maximum)}
-		if len(allowed) > 0 {
-			validators = append(validators, setvalidator.ValueStringsAre(stringvalidator.OneOf(allowed...)))
-		} else {
-			validators = append(validators, setvalidator.ValueStringsAre(validation.NonBlank))
+	// Each filter carries the count the endpoint accepts. A filter with a
+	// closed value set is checked against the generated enum's own Valid
+	// method, so a regenerated client widens it without a copied list to
+	// update; the others only have to be non-blank.
+	filterSet := func(description string, maximum int, element ...validator.String) schema.SetAttribute {
+		if len(element) == 0 {
+			element = []validator.String{validation.NonBlank}
 		}
-		return schema.SetAttribute{Description: description, Optional: true, ElementType: types.StringType, Validators: validators}
+		return schema.SetAttribute{
+			Description: description, Optional: true, ElementType: types.StringType,
+			Validators: []validator.Set{setvalidator.SizeBetween(1, maximum), setvalidator.ValueStringsAre(element...)},
+		}
 	}
 	computedString := func(description string) schema.StringAttribute {
 		return schema.StringAttribute{Description: description, Computed: true}
@@ -100,11 +102,11 @@ func (d *userDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			"resource_ids":      filterSet("Resource ARIs to match. Accepts 1 to 20 values.", 20),
 			"group_ids":         filterSet("Group IDs to match. Accepts 1 to 10 values.", 10),
 			"mfa_enabled":       schema.BoolAttribute{Description: "Filter by whether MFA is enabled.", Optional: true},
-			"claim_status":      schema.StringAttribute{Description: "Filter by claim status: managed or unmanaged.", Optional: true, Validators: []validator.String{stringvalidator.OneOf("managed", "unmanaged")}},
-			"status":            filterSet("Composite user statuses to match. Accepts 1 to 4 API-supported values.", 4, "active", "suspended", "not_invited", "deactivated", "for_deletion"),
-			"account_status":    filterSet("Account lifecycle statuses to match: active, inactive, or closed.", 3, "active", "inactive", "closed"),
-			"membership_status": filterSet("Organization membership statuses to match: active, suspended, or no_membership.", 3, "active", "suspended", "no_membership"),
-			"role_ids":          filterSet("Atlassian role IDs to match. Accepts 1 to 10 API-supported values.", 10, "atlassian/user", "atlassian/admin", "atlassian/guest", "atlassian/customer", "atlassian/user-access-admin", "atlassian/contributor", "atlassian/basic", "atlassian/stakeholder", "atlassian/org-admin", "atlassian/site-admin", "atlassian/ai-access"),
+			"claim_status":      schema.StringAttribute{Description: "Filter by claim status: managed or unmanaged.", Optional: true, Validators: []validator.String{validation.Enum[generated.MultiDirectoryUserSearchRequestClaimStatus]()}},
+			"status":            filterSet("Composite user statuses to match: active, suspended, not_invited, deactivated, or for_deletion. Accepts 1 to 4 values.", 4, validation.Enum[generated.MultiDirectoryUserSearchRequestStatus]()),
+			"account_status":    filterSet("Account lifecycle statuses to match: active, inactive, or closed.", 3, validation.Enum[generated.MultiDirectoryUserSearchRequestAccountStatus]()),
+			"membership_status": filterSet("Organization membership statuses to match: active, suspended, or no_membership.", 3, validation.Enum[generated.MultiDirectoryUserSearchRequestMembershipStatus]()),
+			"role_ids":          filterSet("Atlassian role IDs to match, such as atlassian/user or atlassian/org-admin. Accepts 1 to 10 values the Organization API declares.", 10, validation.Enum[generated.MultiDirectoryUserSearchRequestRoleIds]()),
 			"email_domains":     filterSet("Email domains to match. Accepts 1 to 10 values.", 10),
 			"search_term":       schema.StringAttribute{Description: "Free-text display name or email search. Mutually exclusive with emails.", Optional: true, Validators: []validator.String{validation.NonBlank}},
 			"emails":            filterSet("Full email addresses to match exactly. Accepts 1 to 100 values and is mutually exclusive with search_term.", 100),

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	v2gen "github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence/v2/generated"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
 
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
@@ -15,7 +17,6 @@ import (
 )
 
 var _ datasource.DataSource = &spacesDataSource{}
-var _ datasource.DataSourceWithValidateConfig = &spacesDataSource{}
 
 type spacesDataSource struct {
 	client *Service
@@ -73,8 +74,8 @@ func (d *spacesDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		Attributes: map[string]schema.Attribute{
 			"ids":              filterSet("Space IDs to match."),
 			"keys":             filterSet("Space keys to match."),
-			"type":             schema.StringAttribute{Description: "Space type to match.", Optional: true, Validators: []validator.String{validation.NonBlank}},
-			"status":           schema.StringAttribute{Description: "Space status to match. Set this to exclude archived spaces from the result.", Optional: true, Validators: []validator.String{validation.NonBlank}},
+			"type":             schema.StringAttribute{Description: "Space type to match.", Optional: true, Validators: []validator.String{validation.Enum[v2gen.GetSpacesParamsType]()}},
+			"status":           schema.StringAttribute{Description: "Space status to match. Set this to exclude archived spaces from the result.", Optional: true, Validators: []validator.String{validation.Enum[v2gen.GetSpacesParamsStatus]()}},
 			"labels":           filterSet("Space labels to match."),
 			"favorited_by":     schema.StringAttribute{Description: "Account ID of a user; matches spaces that user has favorited.", Optional: true, Validators: []validator.String{validation.NonBlank}},
 			"not_favorited_by": schema.StringAttribute{Description: "Account ID of a user; matches spaces that user has not favorited.", Optional: true, Validators: []validator.String{validation.NonBlank}},
@@ -121,21 +122,6 @@ func (d *spacesDataSource) Configure(_ context.Context, req datasource.Configure
 		return
 	}
 	d.client = NewService(atlassianClient.Confluence)
-}
-
-func (d *spacesDataSource) ValidateConfig(ctx context.Context, req datasource.ValidateConfigRequest, resp *datasource.ValidateConfigResponse) {
-	var config spacesDataSourceModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// The blank checks are schema validators. These two stay here because they
-	// ask the generated enums' own Valid method rather than repeating their
-	// value lists, which a OneOf validator would require.
-	const summary = "Invalid Confluence space filters"
-	resp.Diagnostics.Append(validateSpaceType(summary, config.Type)...)
-	resp.Diagnostics.Append(validateSpaceStatus(summary, config.Status)...)
 }
 
 func (d *spacesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

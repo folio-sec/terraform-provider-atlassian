@@ -27,8 +27,9 @@ func validateSpacesConfig(t *testing.T, model spacesDataSourceModel) datasource.
 		t.Fatalf("build config: %v", diagnostics)
 	}
 	config := tfsdk.Config{Raw: state.Raw, Schema: schemaResp.Schema}
+	// Every rule this data source applies is an attribute validator, so there
+	// is no ValidateConfig; the schema walk is what Terraform would run.
 	var resp datasource.ValidateConfigResponse
-	(&spacesDataSource{}).ValidateConfig(ctx, datasource.ValidateConfigRequest{Config: config}, &resp)
 	resp.Diagnostics.Append(datasourceSchemaStringDiagnostics(ctx, config, schemaResp.Schema.Attributes, nil)...)
 	return resp
 }

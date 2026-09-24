@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	v2gen "github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence/v2/generated"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -78,29 +77,4 @@ func parsePrincipalImport[Identity any](
 	}
 	resp.Diagnostics.Append(validate(*identity)...)
 	return !resp.Diagnostics.HasError()
-}
-
-// validateSpaceType reports an error when a configured type filter is not one
-// of the values getSpaces accepts, reusing the generated enum's own Valid
-// method rather than duplicating the value list.
-func validateSpaceType(summary string, value types.String) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	if knownString(value) && strings.TrimSpace(value.ValueString()) != "" {
-		if !v2gen.GetSpacesParamsType(value.ValueString()).Valid() {
-			diagnostics.AddError(summary, fmt.Sprintf("type %q is not a known space type.", value.ValueString()))
-		}
-	}
-	return diagnostics
-}
-
-// validateSpaceStatus reports an error when a configured status filter is not
-// one of the values getSpaces accepts.
-func validateSpaceStatus(summary string, value types.String) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	if knownString(value) && strings.TrimSpace(value.ValueString()) != "" {
-		if !v2gen.GetSpacesParamsStatus(value.ValueString()).Valid() {
-			diagnostics.AddError(summary, fmt.Sprintf("status %q is not a known space status.", value.ValueString()))
-		}
-	}
-	return diagnostics
 }

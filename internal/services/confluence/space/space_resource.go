@@ -214,7 +214,7 @@ func (r *spaceResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						Description: "The principal the role is assigned to.",
 						Required:    true,
 						Attributes: map[string]schema.Attribute{
-							"principal_type": schema.StringAttribute{Description: "One of USER, GROUP, ACCESS_CLASS.", Required: true},
+							"principal_type": schema.StringAttribute{Description: "One of USER, GROUP, ACCESS_CLASS.", Required: true, Validators: []validator.String{validation.Enum[v2gen.PrincipalType]()}},
 							"principal_id":   schema.StringAttribute{Description: "ID of the principal.", Required: true},
 						},
 					},
@@ -265,7 +265,6 @@ func (r *spaceResource) ValidateConfig(ctx context.Context, req resource.Validat
 	}
 
 	resp.Diagnostics.Append(validateSpaceIdentity(config)...)
-	resp.Diagnostics.Append(validateSpaceConfigRoleAssignments(ctx, config)...)
 	resp.Diagnostics.Append(validateSpaceConfigCopySource(config)...)
 }
 
@@ -304,29 +303,6 @@ func validateSpaceIdentity(config spaceResourceModel) diag.Diagnostics {
 		diagnostics.AddError(spaceStatusInvalid, "key and alias are mutually exclusive; set exactly one.")
 	case !keySet && !aliasSet && !config.Key.IsUnknown() && !config.Alias.IsUnknown():
 		diagnostics.AddError(spaceStatusInvalid, "exactly one of key or alias must be set.")
-	}
-	return diagnostics
-}
-
-// validateSpaceConfigStatus rejects any status other than current or archived.
-func validateSpaceConfigRoleAssignments(ctx context.Context, config spaceResourceModel) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	if config.RoleAssignments.IsNull() || config.RoleAssignments.IsUnknown() {
-		return diagnostics
-	}
-	var assignments []roleAssignmentResourceModel
-	diagnostics.Append(config.RoleAssignments.ElementsAs(ctx, &assignments, false)...)
-	for _, assignment := range assignments {
-		if assignment.Principal.IsNull() || assignment.Principal.IsUnknown() {
-			continue
-		}
-		var principal principalResourceModel
-		diagnostics.Append(assignment.Principal.As(ctx, &principal, basetypes.ObjectAsOptions{})...)
-		if knownString(principal.PrincipalType) && strings.TrimSpace(principal.PrincipalType.ValueString()) != "" {
-			if !v2gen.PrincipalType(principal.PrincipalType.ValueString()).Valid() {
-				diagnostics.AddError(spaceStatusInvalid, fmt.Sprintf("role_assignments principal_type must be USER, GROUP, or ACCESS_CLASS, got %q.", principal.PrincipalType.ValueString()))
-			}
-		}
 	}
 	return diagnostics
 }

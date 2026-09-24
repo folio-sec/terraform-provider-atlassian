@@ -29,6 +29,14 @@ func resourceSchemaStringDiagnostics(ctx context.Context, config tfsdk.Config, a
 			diagnostics.Append(configStringDiagnostics(ctx, config, attributePath, typed.Validators)...)
 		case resourceschema.SingleNestedAttribute:
 			diagnostics.Append(resourceSchemaStringDiagnostics(ctx, config, typed.Attributes, &attributePath)...)
+		case resourceschema.SetNestedAttribute:
+			for _, elementPath := range setElementPaths(ctx, config, attributePath) {
+				diagnostics.Append(resourceSchemaStringDiagnostics(ctx, config, typed.NestedObject.Attributes, &elementPath)...)
+			}
+		case resourceschema.ListNestedAttribute:
+			for _, elementPath := range listElementPaths(ctx, config, attributePath) {
+				diagnostics.Append(resourceSchemaStringDiagnostics(ctx, config, typed.NestedObject.Attributes, &elementPath)...)
+			}
 		}
 	}
 	return diagnostics
@@ -43,9 +51,44 @@ func datasourceSchemaStringDiagnostics(ctx context.Context, config tfsdk.Config,
 			diagnostics.Append(configStringDiagnostics(ctx, config, attributePath, typed.Validators)...)
 		case datasourceschema.SingleNestedAttribute:
 			diagnostics.Append(datasourceSchemaStringDiagnostics(ctx, config, typed.Attributes, &attributePath)...)
+		case datasourceschema.SetNestedAttribute:
+			for _, elementPath := range setElementPaths(ctx, config, attributePath) {
+				diagnostics.Append(datasourceSchemaStringDiagnostics(ctx, config, typed.NestedObject.Attributes, &elementPath)...)
+			}
+		case datasourceschema.ListNestedAttribute:
+			for _, elementPath := range listElementPaths(ctx, config, attributePath) {
+				diagnostics.Append(datasourceSchemaStringDiagnostics(ctx, config, typed.NestedObject.Attributes, &elementPath)...)
+			}
 		}
 	}
 	return diagnostics
+}
+
+// setElementPaths and listElementPaths return the path of every configured
+// element of a nested collection, so the walk reaches rules declared on the
+// attributes inside it. A null or unknown collection has no elements to check.
+func setElementPaths(ctx context.Context, config tfsdk.Config, attribute path.Path) []path.Path {
+	var set types.Set
+	if diagnostics := config.GetAttribute(ctx, attribute, &set); diagnostics.HasError() || set.IsNull() || set.IsUnknown() {
+		return nil
+	}
+	paths := make([]path.Path, 0, len(set.Elements()))
+	for _, element := range set.Elements() {
+		paths = append(paths, attribute.AtSetValue(element))
+	}
+	return paths
+}
+
+func listElementPaths(ctx context.Context, config tfsdk.Config, attribute path.Path) []path.Path {
+	var list types.List
+	if diagnostics := config.GetAttribute(ctx, attribute, &list); diagnostics.HasError() || list.IsNull() || list.IsUnknown() {
+		return nil
+	}
+	paths := make([]path.Path, 0, len(list.Elements()))
+	for index := range list.Elements() {
+		paths = append(paths, attribute.AtListIndex(index))
+	}
+	return paths
 }
 
 func attributeChildPath(parent *path.Path, name string) path.Path {
