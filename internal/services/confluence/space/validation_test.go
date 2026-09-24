@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
 // The helpers below let a test assert that Terraform would refuse a
@@ -196,6 +197,79 @@ func TestPrincipalPermissionsSchemaCarriesItsRules(t *testing.T) {
 			t.Parallel()
 			if got := rejectsThrough(t, testCase.attribute, "attribute", testCase.value); got != testCase.wantError {
 				t.Fatalf("rejected = %t, want %t", got, testCase.wantError)
+			}
+		})
+	}
+}
+
+// importDiagnosticPaths runs ImportState for subject and returns the attribute
+// path of every error diagnostic, so a test can check that an invalid import
+// is reported against the identity schema rather than resource state.
+func importDiagnosticPaths(t *testing.T, subject resource.ResourceWithImportState, identity any, id string) []path.Path {
+	t.Helper()
+	ctx := context.Background()
+	withIdentity, ok := subject.(resource.ResourceWithIdentity)
+	if !ok {
+		t.Fatalf("%T does not implement resource identity", subject)
+	}
+	var schemaResponse resource.SchemaResponse
+	subject.Schema(ctx, resource.SchemaRequest{}, &schemaResponse)
+	var identityResponse resource.IdentitySchemaResponse
+	withIdentity.IdentitySchema(ctx, resource.IdentitySchemaRequest{}, &identityResponse)
+	identityType := identityResponse.IdentitySchema.Type().TerraformType(ctx)
+
+	request := resource.ImportStateRequest{ID: id}
+	if identity != nil {
+		requestIdentity := &tfsdk.ResourceIdentity{Raw: tftypes.NewValue(identityType, nil), Schema: identityResponse.IdentitySchema}
+		if diagnostics := requestIdentity.Set(ctx, identity); diagnostics.HasError() {
+			t.Fatalf("build identity: %v", diagnostics)
+		}
+		request.Identity = requestIdentity
+	}
+	response := &resource.ImportStateResponse{
+		State:    tfsdk.State{Raw: tftypes.NewValue(schemaResponse.Schema.Type().TerraformType(ctx), nil), Schema: schemaResponse.Schema},
+		Identity: &tfsdk.ResourceIdentity{Raw: tftypes.NewValue(identityType, nil), Schema: identityResponse.IdentitySchema},
+	}
+	subject.ImportState(ctx, request, response)
+
+	var paths []path.Path
+	for _, diagnostic := range response.Diagnostics.Errors() {
+		if withPath, ok := diagnostic.(diag.DiagnosticWithPath); ok {
+			paths = append(paths, withPath.Path())
+		}
+	}
+	return paths
+}
+
+// The principal-scoped resources nest the principal in state, but their import
+// identities are flat, so an invalid import has to name the flat attribute.
+func TestPrincipalImportsReportAtIdentityPaths(t *testing.T) {
+	t.Parallel()
+	for _, testCase := range []struct {
+		name     string
+		subject  resource.ResourceWithImportState
+		identity any
+		id       string
+	}{
+		{
+			name:     "role assignment identity",
+			subject:  &roleAssignmentResource{},
+			identity: &roleAssignmentIdentity{SpaceID: types.StringValue("123"), PrincipalType: types.StringValue("OTHER"), PrincipalID: types.StringValue("abc")},
+		},
+		{name: "role assignment string id", subject: &roleAssignmentResource{}, id: "123,OTHER,abc"},
+		{
+			name:     "custom access identity",
+			subject:  &principalPermissionsResource{},
+			identity: &principalPermissionsIdentity{SpaceID: types.StringValue("123"), PrincipalType: types.StringValue("USER"), PrincipalID: types.StringValue("abc")},
+		},
+		{name: "custom access string id", subject: &principalPermissionsResource{}, id: "123,USER,abc"},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			paths := importDiagnosticPaths(t, testCase.subject, testCase.identity, testCase.id)
+			want := path.Root("principal_type")
+			if len(paths) != 1 || !paths[0].Equal(want) {
+				t.Fatalf("error paths = %v, want exactly %s", paths, want)
 			}
 		})
 	}

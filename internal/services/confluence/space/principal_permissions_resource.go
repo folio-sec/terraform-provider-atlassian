@@ -620,18 +620,25 @@ func permissionsIdentityFromState(ctx context.Context, state principalPermission
 		diagnostics.Append(state.Principal.As(ctx, &principal, basetypes.ObjectAsOptions{})...)
 	}
 	identity := principalPermissionsIdentity{SpaceID: state.SpaceID, PrincipalType: principal.Type, PrincipalID: principal.ID}
-	diagnostics.Append(validatePermissionsIdentity(ctx, identity)...)
+	diagnostics.Append(validatePermissionsIdentity(ctx, identity, permissionsStatePaths)...)
 	return identity, diagnostics
 }
 
+// permissionsStatePaths is where the identity's parts live in resource state.
+var permissionsStatePaths = principalPaths{
+	spaceID:       path.Root("space_id"),
+	principalType: path.Root("principal").AtName("type"),
+	principalID:   path.Root("principal").AtName("id"),
+}
+
 // validatePermissionsIdentity applies the schema's own attribute validators to
-// identity values, which Terraform does not validate for us.
-func validatePermissionsIdentity(ctx context.Context, identity principalPermissionsIdentity) diag.Diagnostics {
+// identity values, which Terraform does not validate for us, reporting at paths
+// in the layout the caller is validating.
+func validatePermissionsIdentity(ctx context.Context, identity principalPermissionsIdentity, paths principalPaths) diag.Diagnostics {
 	var diagnostics diag.Diagnostics
-	diagnostics.Append(validation.RunString(ctx, path.Root("space_id"), identity.SpaceID, permissionsSpaceIDValidators)...)
-	principal := path.Root("principal")
-	diagnostics.Append(validation.RunString(ctx, principal.AtName("type"), identity.PrincipalType, permissionsPrincipalTypeValidator)...)
-	diagnostics.Append(validation.RunString(ctx, principal.AtName("id"), identity.PrincipalID, permissionsPrincipalIDValidators)...)
+	diagnostics.Append(validation.RunString(ctx, paths.spaceID, identity.SpaceID, permissionsSpaceIDValidators)...)
+	diagnostics.Append(validation.RunString(ctx, paths.principalType, identity.PrincipalType, permissionsPrincipalTypeValidator)...)
+	diagnostics.Append(validation.RunString(ctx, paths.principalID, identity.PrincipalID, permissionsPrincipalIDValidators)...)
 	return diagnostics
 }
 
@@ -743,7 +750,7 @@ func parsePermissionsImport(ctx context.Context, req resource.ImportStateRequest
 	ok := parsePrincipalImport(ctx, req, resp, &identity, func(parts [3]string) principalPermissionsIdentity {
 		return principalPermissionsIdentity{SpaceID: types.StringValue(parts[0]), PrincipalType: types.StringValue(parts[1]), PrincipalID: types.StringValue(parts[2])}
 	}, func(identity principalPermissionsIdentity) diag.Diagnostics {
-		return validatePermissionsIdentity(ctx, identity)
+		return validatePermissionsIdentity(ctx, identity, importIdentityPaths)
 	})
 	return identity, ok
 }

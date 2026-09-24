@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -15,6 +17,23 @@ import (
 // internal/services/admin/organization/validation.go.
 func knownString(value types.String) bool {
 	return !value.IsNull() && !value.IsUnknown()
+}
+
+// principalPaths names where each part of a principal-scoped identity lives.
+// The resources nest the principal in an object in state, while their import
+// identity schemas are flat, so a diagnostic has to use the layout of whichever
+// value is being validated or it points at an attribute that does not exist.
+type principalPaths struct {
+	spaceID, principalType, principalID path.Path
+}
+
+// importIdentityPaths is the flat layout both principal-scoped identity schemas
+// share. A string import ID splits into the same three parts, so it reports at
+// these paths too.
+var importIdentityPaths = principalPaths{
+	spaceID:       path.Root("space_id"),
+	principalType: path.Root("principal_type"),
+	principalID:   path.Root("principal_id"),
 }
 
 func principalImportIDParts(id string) ([3]string, error) {

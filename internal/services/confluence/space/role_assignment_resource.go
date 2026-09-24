@@ -344,18 +344,25 @@ func roleIdentityFromState(ctx context.Context, state roleAssignmentState) (role
 	}
 	diagnostics.Append(state.Principal.As(ctx, &principal, basetypes.ObjectAsOptions{})...)
 	identity := roleAssignmentIdentity{SpaceID: state.SpaceID, PrincipalType: principal.PrincipalType, PrincipalID: principal.PrincipalID}
-	diagnostics.Append(validateRoleAssignmentIdentity(ctx, identity)...)
+	diagnostics.Append(validateRoleAssignmentIdentity(ctx, identity, roleAssignmentStatePaths)...)
 	return identity, diagnostics
 }
 
+// roleAssignmentStatePaths is where the identity's parts live in resource state.
+var roleAssignmentStatePaths = principalPaths{
+	spaceID:       path.Root("space_id"),
+	principalType: path.Root("principal").AtName("principal_type"),
+	principalID:   path.Root("principal").AtName("principal_id"),
+}
+
 // validateRoleAssignmentIdentity applies the schema's own attribute validators
-// to identity values, which Terraform does not validate for us.
-func validateRoleAssignmentIdentity(ctx context.Context, identity roleAssignmentIdentity) diag.Diagnostics {
+// to identity values, which Terraform does not validate for us, reporting at
+// paths in the layout the caller is validating.
+func validateRoleAssignmentIdentity(ctx context.Context, identity roleAssignmentIdentity, paths principalPaths) diag.Diagnostics {
 	var diagnostics diag.Diagnostics
-	diagnostics.Append(validation.RunString(ctx, path.Root("space_id"), identity.SpaceID, assignmentSpaceIDValidators)...)
-	principal := path.Root("principal")
-	diagnostics.Append(validation.RunString(ctx, principal.AtName("principal_type"), identity.PrincipalType, assignmentPrincipalTypeValidator)...)
-	diagnostics.Append(validation.RunString(ctx, principal.AtName("principal_id"), identity.PrincipalID, assignmentPrincipalIDValidators)...)
+	diagnostics.Append(validation.RunString(ctx, paths.spaceID, identity.SpaceID, assignmentSpaceIDValidators)...)
+	diagnostics.Append(validation.RunString(ctx, paths.principalType, identity.PrincipalType, assignmentPrincipalTypeValidator)...)
+	diagnostics.Append(validation.RunString(ctx, paths.principalID, identity.PrincipalID, assignmentPrincipalIDValidators)...)
 	return diagnostics
 }
 
@@ -364,7 +371,7 @@ func parseRoleAssignmentImport(ctx context.Context, req resource.ImportStateRequ
 	ok := parsePrincipalImport(ctx, req, resp, &identity, func(parts [3]string) roleAssignmentIdentity {
 		return roleAssignmentIdentity{SpaceID: types.StringValue(parts[0]), PrincipalType: types.StringValue(parts[1]), PrincipalID: types.StringValue(parts[2])}
 	}, func(identity roleAssignmentIdentity) diag.Diagnostics {
-		return validateRoleAssignmentIdentity(ctx, identity)
+		return validateRoleAssignmentIdentity(ctx, identity, importIdentityPaths)
 	})
 	return identity, ok
 }
