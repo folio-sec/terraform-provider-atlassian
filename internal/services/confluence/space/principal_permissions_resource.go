@@ -628,10 +628,10 @@ func permissionsIdentityFromState(ctx context.Context, state principalPermission
 // identity values, which Terraform does not validate for us.
 func validatePermissionsIdentity(ctx context.Context, identity principalPermissionsIdentity) diag.Diagnostics {
 	var diagnostics diag.Diagnostics
-	diagnostics.Append(runStringValidators(ctx, path.Root("space_id"), identity.SpaceID, permissionsSpaceIDValidators)...)
+	diagnostics.Append(validation.RunString(ctx, path.Root("space_id"), identity.SpaceID, permissionsSpaceIDValidators)...)
 	principal := path.Root("principal")
-	diagnostics.Append(runStringValidators(ctx, principal.AtName("type"), identity.PrincipalType, permissionsPrincipalTypeValidator)...)
-	diagnostics.Append(runStringValidators(ctx, principal.AtName("id"), identity.PrincipalID, permissionsPrincipalIDValidators)...)
+	diagnostics.Append(validation.RunString(ctx, principal.AtName("type"), identity.PrincipalType, permissionsPrincipalTypeValidator)...)
+	diagnostics.Append(validation.RunString(ctx, principal.AtName("id"), identity.PrincipalID, permissionsPrincipalIDValidators)...)
 	return diagnostics
 }
 

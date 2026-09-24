@@ -461,7 +461,7 @@ func TestUserFilterSetValidators(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			diagnostics := runSetValidators(context.Background(), path.Root("status"), test.value, statusAttribute.Validators)
+			diagnostics := validation.RunSet(context.Background(), path.Root("status"), test.value, statusAttribute.Validators)
 			if diagnostics.HasError() != test.wantErrors {
 				t.Fatalf("HasError() = %t, want %t; diagnostics = %v", diagnostics.HasError(), test.wantErrors, diagnostics)
 			}
@@ -552,7 +552,7 @@ func TestSharedValueValidators(t *testing.T) {
 
 	run := func(t *testing.T, value types.String, validators []validator.String) bool {
 		t.Helper()
-		return runStringValidators(context.Background(), path.Root("attribute"), value, validators).HasError()
+		return validation.RunString(context.Background(), path.Root("attribute"), value, validators).HasError()
 	}
 
 	t.Run("non-empty", func(t *testing.T) {
@@ -656,8 +656,8 @@ func TestWorkspaceQueryFieldValidators(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			fieldPath := path.Root("query").AtName("fields").AtListIndex(0)
-			diagnostics := runStringValidators(context.Background(), fieldPath.AtName("name"), test.name, nameAttribute.Validators)
-			diagnostics.Append(runSetValidators(context.Background(), fieldPath.AtName("values"), test.values, valuesAttribute.Validators)...)
+			diagnostics := validation.RunString(context.Background(), fieldPath.AtName("name"), test.name, nameAttribute.Validators)
+			diagnostics.Append(validation.RunSet(context.Background(), fieldPath.AtName("values"), test.values, valuesAttribute.Validators)...)
 			if diagnostics.HasError() != test.wantError {
 				t.Fatalf("diagnostics = %v, wantError = %t", diagnostics, test.wantError)
 			}
@@ -718,7 +718,7 @@ func TestResourceSchemasCarryTheirRules(t *testing.T) {
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
-			diagnostics := runStringValidators(context.Background(), path.Root("attribute"),
+			diagnostics := validation.RunString(context.Background(), path.Root("attribute"),
 				types.StringValue(testCase.value), testCase.attribute.Validators)
 			if diagnostics.HasError() != testCase.wantError {
 				t.Fatalf("rejected = %t, want %t; diagnostics = %v", diagnostics.HasError(), testCase.wantError, diagnostics)

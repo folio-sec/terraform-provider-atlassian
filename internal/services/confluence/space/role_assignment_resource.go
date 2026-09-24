@@ -352,10 +352,10 @@ func roleIdentityFromState(ctx context.Context, state roleAssignmentState) (role
 // to identity values, which Terraform does not validate for us.
 func validateRoleAssignmentIdentity(ctx context.Context, identity roleAssignmentIdentity) diag.Diagnostics {
 	var diagnostics diag.Diagnostics
-	diagnostics.Append(runStringValidators(ctx, path.Root("space_id"), identity.SpaceID, assignmentSpaceIDValidators)...)
+	diagnostics.Append(validation.RunString(ctx, path.Root("space_id"), identity.SpaceID, assignmentSpaceIDValidators)...)
 	principal := path.Root("principal")
-	diagnostics.Append(runStringValidators(ctx, principal.AtName("principal_type"), identity.PrincipalType, assignmentPrincipalTypeValidator)...)
-	diagnostics.Append(runStringValidators(ctx, principal.AtName("principal_id"), identity.PrincipalID, assignmentPrincipalIDValidators)...)
+	diagnostics.Append(validation.RunString(ctx, principal.AtName("principal_type"), identity.PrincipalType, assignmentPrincipalTypeValidator)...)
+	diagnostics.Append(validation.RunString(ctx, principal.AtName("principal_id"), identity.PrincipalID, assignmentPrincipalIDValidators)...)
 	return diagnostics
 }
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	datasourceschema "github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -107,7 +109,7 @@ func configStringDiagnostics(ctx context.Context, config tfsdk.Config, attribute
 	if readDiagnostics := config.GetAttribute(ctx, attribute, &value); readDiagnostics.HasError() {
 		return diagnostics
 	}
-	return runStringValidators(ctx, attribute, value, validators)
+	return validation.RunString(ctx, attribute, value, validators)
 }
 
 // The resources below carry every configuration rule on their schema
@@ -127,7 +129,7 @@ func schemaStringAttribute(t *testing.T, attributes map[string]resourceschema.At
 
 func rejectsThrough(t *testing.T, attribute resourceschema.StringAttribute, name, value string) bool {
 	t.Helper()
-	return runStringValidators(context.Background(), path.Root(name), types.StringValue(value), attribute.Validators).HasError()
+	return validation.RunString(context.Background(), path.Root(name), types.StringValue(value), attribute.Validators).HasError()
 }
 
 func TestRoleAssignmentSchemaCarriesItsRules(t *testing.T) {
