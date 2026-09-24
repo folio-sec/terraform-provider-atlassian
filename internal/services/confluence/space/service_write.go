@@ -16,16 +16,21 @@ import (
 	"github.com/oapi-codegen/nullable"
 )
 
-// deletePollInterval and deletePollTimeout govern the delete long-task poll.
-// Gate 7 (plans/confluence-space-verification.json) showed both gate
-// deletions finished inside the first 5-second poll, so 2s/5m is generous
-// rather than tight.
+// taskPollInterval and taskPollTimeout bound both kinds of waiting this
+// package does: the v1 long-task poll after an asynchronous space or role
+// mutation, and the role-catalogue convergence poll in waitForSpaceRole.
+// Gate 7 (plans/confluence-space-verification.json) showed both gate space
+// deletions finishing inside the first 5-second poll, and a role permission
+// task finished in 274 ms (plans/trigger-verification.json), so 2s/5m is
+// generous rather than tight for the task polls. Catalogue convergence was
+// not measured, and shares the budget because it waits on the same
+// server-side work.
 // errorBodyLimit caps how much of a non-2xx body is read for diagnostics.
 const errorBodyLimit = 1 << 20
 
 const (
-	deletePollInterval = 2 * time.Second
-	deletePollTimeout  = 5 * time.Minute
+	taskPollInterval = 2 * time.Second
+	taskPollTimeout  = 5 * time.Minute
 )
 
 // ErrRequestNotSent marks a failure that happened before the request left the
@@ -284,35 +289,35 @@ func (s *Service) DeleteSpace(ctx context.Context, spaceKey string) error {
 func (s *Service) waitForTask(ctx context.Context, taskID string) error {
 	v1, err := s.client.V1(ctx)
 	if err != nil {
-		return fmt.Errorf("poll delete task: %w", err)
+		return fmt.Errorf("poll task: %w", err)
 	}
 
-	pollCtx, cancel := context.WithTimeout(ctx, deletePollTimeout)
+	pollCtx, cancel := context.WithTimeout(ctx, taskPollTimeout)
 	defer cancel()
-	ticker := time.NewTicker(deletePollInterval)
+	ticker := time.NewTicker(taskPollInterval)
 	defer ticker.Stop()
 
 	for {
 		resp, err := v1.GetTaskWithResponse(pollCtx, taskID)
 		if err != nil {
-			return fmt.Errorf("poll delete task %s: %w", taskID, err)
+			return fmt.Errorf("poll task %s: %w", taskID, err)
 		}
 		if err := confluence.CheckResponse(http.MethodGet, "/wiki/rest/api/longtask/"+taskID, resp.StatusCode(), resp.Body); err != nil {
-			return fmt.Errorf("poll delete task %s: %w", taskID, err)
+			return fmt.Errorf("poll task %s: %w", taskID, err)
 		}
 		if resp.JSON200 == nil {
-			return fmt.Errorf("poll delete task %s: API returned an invalid success response", taskID)
+			return fmt.Errorf("poll task %s: API returned an invalid success response", taskID)
 		}
 		if resp.JSON200.Finished {
 			if !resp.JSON200.Successful {
-				return fmt.Errorf("delete task %s did not succeed: %s", taskID, taskMessages(resp.JSON200.Messages))
+				return fmt.Errorf("task %s did not succeed: %s", taskID, taskMessages(resp.JSON200.Messages))
 			}
 			return nil
 		}
 
 		select {
 		case <-pollCtx.Done():
-			return fmt.Errorf("timed out after %s waiting for delete task %s to finish", deletePollTimeout, taskID)
+			return fmt.Errorf("timed out after %s waiting for task %s to finish", taskPollTimeout, taskID)
 		case <-ticker.C:
 		}
 	}
