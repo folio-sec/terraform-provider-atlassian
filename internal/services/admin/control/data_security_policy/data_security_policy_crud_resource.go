@@ -115,6 +115,12 @@ func ruleEffectPlanValue(ctx context.Context, value types.Object, allowUnknown b
 	return result, diagnostics
 }
 
+// validateAttributes stays hand-written rather than moving to attribute
+// validators, for the same reason as the organization policy resource: its
+// rules are phase-dependent. allowUnknown is true while validating
+// configuration and false before a mutation, where a value that is still
+// unknown is an error, and an attribute validator always skips an unknown
+// value.
 func validateAttributes(attributes attributesModel, allowUnknown bool) diag.Diagnostics {
 	var diagnostics diag.Diagnostics
 	for name, value := range map[string]types.String{

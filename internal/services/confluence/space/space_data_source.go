@@ -6,11 +6,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -58,11 +61,13 @@ func (d *spaceDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 				Description: "Numeric-string ID of the space. Exactly one of id or key is required; the other is computed from the lookup.",
 				Optional:    true,
 				Computed:    true,
+				Validators:  []validator.String{validation.NonBlank},
 			},
 			"key": schema.StringAttribute{
 				Description: "Key of the space. Exactly one of id or key is required; the other is computed from the lookup.",
 				Optional:    true,
 				Computed:    true,
+				Validators:  []validator.String{validation.NonBlank},
 			},
 			"name":                 computedString("Name of the space."),
 			"type":                 computedString("Type of the space."),
@@ -107,12 +112,10 @@ func (d *spaceDataSource) ValidateConfig(ctx context.Context, req datasource.Val
 		return
 	}
 
+	// Each attribute's blank check is a schema validator. This rule reads both
+	// attributes at once and treats a blank value as unset, which an attribute
+	// validator cannot express.
 	const summary = "Invalid Confluence space lookup"
-	resp.Diagnostics.Append(validateNonEmpty(summary, namedValue{"id", config.ID}, namedValue{"key", config.Key})...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	idSet := setNonBlank(config.ID)
 	keySet := setNonBlank(config.Key)
 	switch {

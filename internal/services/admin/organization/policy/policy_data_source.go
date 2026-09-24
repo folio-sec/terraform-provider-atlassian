@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization/generated"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -35,8 +38,6 @@ type policiesDataSourceModel struct {
 	Type           types.String `tfsdk:"type"`
 	Data           types.Set    `tfsdk:"data"`
 }
-
-var _ datasource.DataSourceWithValidateConfig = &policyDataSource{}
 
 func NewPolicyDataSource() datasource.DataSource   { return &policyDataSource{} }
 func NewPoliciesDataSource() datasource.DataSource { return &policyDataSource{collection: true} }
@@ -112,6 +113,7 @@ func (d *policyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		"organization_id": schema.StringAttribute{
 			Required:            true,
 			MarkdownDescription: "Organization ID used in the API path.",
+			Validators:          []validator.String{validation.NonBlank},
 		},
 	}
 	markdownDescription := "Reads one organization policy. Requires `read:policies:admin`.\n\n" +
@@ -122,6 +124,7 @@ func (d *policyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		fields["type"] = schema.StringAttribute{
 			Optional:            true,
 			MarkdownDescription: "API policy type filter. Undocumented type values are passed through.",
+			Validators:          []validator.String{validation.NonBlank},
 		}
 		fields["data"] = schema.SetNestedAttribute{
 			Computed:            true,
@@ -134,6 +137,7 @@ func (d *policyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest,
 		fields["policy_id"] = schema.StringAttribute{
 			Required:            true,
 			MarkdownDescription: "Policy ID used in the API path.",
+			Validators:          []validator.String{validation.NonBlank},
 		}
 		fields["data"] = schema.SingleNestedAttribute{
 			Computed:            true,
@@ -161,18 +165,6 @@ func (d *policyDataSource) Configure(_ context.Context, req datasource.Configure
 		return
 	}
 	d.client = c.Organization
-}
-
-func (d *policyDataSource) ValidateConfig(ctx context.Context, req datasource.ValidateConfigRequest, resp *datasource.ValidateConfigResponse) {
-	if d.collection {
-		var config policiesDataSourceModel
-		resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-		resp.Diagnostics.Append(validateNonEmpty("Invalid policy lookup", namedValue{"organization_id", config.OrganizationID}, namedValue{"type", config.Type})...)
-		return
-	}
-	var config policyDataSourceModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-	resp.Diagnostics.Append(validateNonEmpty("Invalid policy lookup", namedValue{"organization_id", config.OrganizationID}, namedValue{"policy_id", config.PolicyID})...)
 }
 
 func (d *policyDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

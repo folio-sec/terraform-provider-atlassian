@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	v2gen "github.com/folio-sec/terraform-provider-atlassian/internal/client/confluence/v2/generated"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -18,22 +19,21 @@ func knownString(value types.String) bool {
 	return !value.IsNull() && !value.IsUnknown()
 }
 
-// namedValue pairs a schema attribute name with its configured value so
-// validation diagnostics can name the attribute that is at fault.
-type namedValue struct {
-	name  string
-	value types.String
+// principalPaths names where each part of a principal-scoped identity lives.
+// The resources nest the principal in an object in state, while their import
+// identity schemas are flat, so a diagnostic has to use the layout of whichever
+// value is being validated or it points at an attribute that does not exist.
+type principalPaths struct {
+	spaceID, principalType, principalID path.Path
 }
 
-// validateNonEmpty reports every attribute that is set to blank or whitespace.
-func validateNonEmpty(summary string, values ...namedValue) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	for _, item := range values {
-		if knownString(item.value) && strings.TrimSpace(item.value.ValueString()) == "" {
-			diagnostics.AddError(summary, fmt.Sprintf("%s must not be empty.", item.name))
-		}
-	}
-	return diagnostics
+// importIdentityPaths is the flat layout both principal-scoped identity schemas
+// share. A string import ID splits into the same three parts, so it reports at
+// these paths too.
+var importIdentityPaths = principalPaths{
+	spaceID:       path.Root("space_id"),
+	principalType: path.Root("principal_type"),
+	principalID:   path.Root("principal_id"),
 }
 
 func principalImportIDParts(id string) ([3]string, error) {
@@ -72,29 +72,4 @@ func parsePrincipalImport[Identity any](
 	}
 	resp.Diagnostics.Append(validate(*identity)...)
 	return !resp.Diagnostics.HasError()
-}
-
-// validateSpaceType reports an error when a configured type filter is not one
-// of the values getSpaces accepts, reusing the generated enum's own Valid
-// method rather than duplicating the value list.
-func validateSpaceType(summary string, value types.String) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	if knownString(value) && strings.TrimSpace(value.ValueString()) != "" {
-		if !v2gen.GetSpacesParamsType(value.ValueString()).Valid() {
-			diagnostics.AddError(summary, fmt.Sprintf("type %q is not a known space type.", value.ValueString()))
-		}
-	}
-	return diagnostics
-}
-
-// validateSpaceStatus reports an error when a configured status filter is not
-// one of the values getSpaces accepts.
-func validateSpaceStatus(summary string, value types.String) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	if knownString(value) && strings.TrimSpace(value.ValueString()) != "" {
-		if !v2gen.GetSpacesParamsStatus(value.ValueString()).Valid() {
-			diagnostics.AddError(summary, fmt.Sprintf("status %q is not a known space status.", value.ValueString()))
-		}
-	}
-	return diagnostics
 }

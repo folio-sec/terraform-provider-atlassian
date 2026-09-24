@@ -4,14 +4,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 var _ datasource.DataSource = &roleDataSource{}
-var _ datasource.DataSourceWithValidateConfig = &roleDataSource{}
 
 type roleDataSource struct{ client *Service }
 
@@ -37,7 +39,7 @@ func (d *roleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Reads one tenant-wide Confluence space role by ID.\n\n## Required OAuth scopes\n\n- `read:space.permission:confluence`\n",
 		Attributes: map[string]schema.Attribute{
-			"id":                schema.StringAttribute{Description: "Tenant-specific space role ID.", Required: true},
+			"id":                schema.StringAttribute{Description: "Tenant-specific space role ID.", Required: true, Validators: []validator.String{validation.NonBlank}},
 			"name":              computedString("Name of the space role."),
 			"description":       computedString("Description of the space role."),
 			"type":              computedString("Role type returned by Confluence."),
@@ -60,15 +62,6 @@ func (d *roleDataSource) Configure(_ context.Context, req datasource.ConfigureRe
 		return
 	}
 	d.client = NewService(atlassianClient.Confluence)
-}
-
-func (d *roleDataSource) ValidateConfig(ctx context.Context, req datasource.ValidateConfigRequest, resp *datasource.ValidateConfigResponse) {
-	var config roleDataSourceModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	resp.Diagnostics.Append(validateNonEmpty("Invalid Confluence space role lookup", namedValue{"id", config.ID})...)
 }
 
 func (d *roleDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

@@ -7,15 +7,19 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -62,10 +66,11 @@ func (r *userRoleAssignmentResource) Metadata(_ context.Context, req resource.Me
 }
 
 func (r *userRoleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	requiredReplace := func(description string) schema.StringAttribute {
+	requiredReplace := func(description string, validators ...validator.String) schema.StringAttribute {
 		return schema.StringAttribute{
 			Description: description,
 			Required:    true,
+			Validators:  validators,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},
@@ -75,11 +80,11 @@ func (r *userRoleAssignmentResource) Schema(_ context.Context, _ resource.Schema
 		Description: "Assigns an application resource and platform role directly to an organization user.",
 		Attributes: map[string]schema.Attribute{
 			"id":              schema.StringAttribute{Description: "Composite assignment identifier.", Computed: true},
-			"organization_id": requiredReplace("Atlassian organization ID used in the Organization API path."),
-			"directory_id":    requiredReplace("Directory ID used to read the assignment."),
-			"account_id":      requiredReplace("Atlassian account ID."),
-			"resource":        requiredReplace("Application resource ARI beginning with ari:cloud:, such as ari:cloud:jira::site/<site-id>."),
-			"role":            requiredReplace("Atlassian application role. Organization-level atlassian/org-admin is not supported by this resource."),
+			"organization_id": requiredReplace("Atlassian organization ID used in the Organization API path.", userRoleAssignmentIdentifierValidators...),
+			"directory_id":    requiredReplace("Directory ID used to read the assignment.", userRoleAssignmentIdentifierValidators...),
+			"account_id":      requiredReplace("Atlassian account ID.", userRoleAssignmentIdentifierValidators...),
+			"resource":        requiredReplace("Application resource ARI beginning with ari:cloud:, such as ari:cloud:jira::site/<site-id>.", resourceARIValidators...),
+			"role":            requiredReplace("Atlassian application role. Organization-level atlassian/org-admin is not supported by this resource.", applicationRoleValidators...),
 		},
 	}
 }
@@ -124,7 +129,7 @@ func (r *userRoleAssignmentResource) ValidateConfig(ctx context.Context, req res
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(validateUserRoleAssignmentValues(userRoleAssignmentValues{
+	resp.Diagnostics.Append(validateUserRoleAssignmentValues(ctx, userRoleAssignmentValues{
 		OrganizationID: config.OrganizationID,
 		DirectoryID:    config.DirectoryID,
 		AccountID:      config.AccountID,
@@ -133,23 +138,33 @@ func (r *userRoleAssignmentResource) ValidateConfig(ctx context.Context, req res
 	})...)
 }
 
-func validateUserRoleAssignmentValues(values userRoleAssignmentValues) diag.Diagnostics {
-	const summary = "Invalid user role assignment"
-	diagnostics := validateNonEmpty(summary,
-		namedValue{"organization_id", values.OrganizationID},
-		namedValue{"directory_id", values.DirectoryID},
-		namedValue{"account_id", values.AccountID},
-		namedValue{"resource", values.Resource},
-		namedValue{"role", values.Role},
+// These lists are the single definition of each attribute's rules. The schema
+// applies them to configuration and validateUserRoleAssignmentValues applies
+// the same instances to identity values.
+var (
+	userRoleAssignmentIdentifierValidators = []validator.String{validation.NonBlank}
+	resourceARIValidators                  = []validator.String{resourceARI}
+	// OneOf already excludes a blank value, so validation.NonBlank would only add a
+	// second diagnostic for the same input. Organization-level
+	// atlassian/org-admin is deliberately absent: it is granted through
+	// separate organization endpoints with different lifecycle semantics.
+	applicationRoleValidators = []validator.String{stringvalidator.OneOf(
+		"atlassian/user", "atlassian/user-access-admin", "atlassian/admin", "atlassian/guest",
+		"atlassian/contributor", "atlassian/customer", "atlassian/basic", "atlassian/stakeholder",
+		"atlassian/site-admin",
+	)}
+)
+
+// validateUserRoleAssignmentValues applies the schema's own attribute
+// validators to values Terraform does not validate for us.
+func validateUserRoleAssignmentValues(ctx context.Context, values userRoleAssignmentValues) diag.Diagnostics {
+	return runIdentityStringValidators(ctx,
+		identityStringValidators{"organization_id", values.OrganizationID, userRoleAssignmentIdentifierValidators},
+		identityStringValidators{"directory_id", values.DirectoryID, userRoleAssignmentIdentifierValidators},
+		identityStringValidators{"account_id", values.AccountID, userRoleAssignmentIdentifierValidators},
+		identityStringValidators{"resource", values.Resource, resourceARIValidators},
+		identityStringValidators{"role", values.Role, applicationRoleValidators},
 	)
-	diagnostics.Append(validateResourceARI(summary, values.Resource)...)
-	if knownString(values.Role) {
-		allowedRoles := stringSet("atlassian/user", "atlassian/user-access-admin", "atlassian/admin", "atlassian/guest", "atlassian/contributor", "atlassian/customer", "atlassian/basic", "atlassian/stakeholder", "atlassian/site-admin")
-		if _, allowed := allowedRoles[values.Role.ValueString()]; !allowed {
-			diagnostics.AddError("Invalid user role assignment", fmt.Sprintf("%q is not a supported application role.", values.Role.ValueString()))
-		}
-	}
-	return diagnostics
 }
 
 func (r *userRoleAssignmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -254,7 +269,7 @@ func (r *userRoleAssignmentResource) ImportState(ctx context.Context, req resour
 		return
 	}
 
-	resp.Diagnostics.Append(validateUserRoleAssignmentValues(userRoleAssignmentValues(identity))...)
+	resp.Diagnostics.Append(validateUserRoleAssignmentValues(ctx, userRoleAssignmentValues(identity))...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

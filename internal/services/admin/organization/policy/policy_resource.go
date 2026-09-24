@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization/generated"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -13,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -50,6 +53,7 @@ func (r *policyResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 		"organization_id": schema.StringAttribute{
 			Required:            true,
 			MarkdownDescription: "Organization ID used in the API path.",
+			Validators:          []validator.String{validation.NonBlank},
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},
@@ -124,7 +128,8 @@ func (r *policyResource) ValidateConfig(ctx context.Context, req resource.Valida
 		return
 	}
 
-	resp.Diagnostics.Append(validateNonEmpty("Invalid policy", namedValue{"organization_id", model.OrganizationID})...)
+	// organization_id's blank check is a schema validator; what stays here
+	// reads several attributes at once or parses a duration.
 	_, diagnostics := policyPlanValues(ctx, model, true)
 	resp.Diagnostics.Append(diagnostics...)
 	for name, value := range map[string]types.String{

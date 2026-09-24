@@ -40,9 +40,9 @@ data "atlassian_organization_users" "example" {
 - `membership_status` (Set of String) Organization membership statuses to match: active, suspended, or no_membership.
 - `mfa_enabled` (Boolean) Filter by whether MFA is enabled.
 - `resource_ids` (Set of String) Resource ARIs to match. Accepts 1 to 20 values.
-- `role_ids` (Set of String) Atlassian role IDs to match. Accepts 1 to 10 API-supported values.
+- `role_ids` (Set of String) Atlassian role IDs to match, such as atlassian/user or atlassian/org-admin. Accepts 1 to 10 values the Organization API declares.
 - `search_term` (String) Free-text display name or email search. Mutually exclusive with emails.
-- `status` (Set of String) Composite user statuses to match. Accepts 1 to 4 API-supported values.
+- `status` (Set of String) Composite user statuses to match: active, suspended, not_invited, deactivated, or for_deletion. Accepts 1 to 4 values.
 
 ### Read-Only
 

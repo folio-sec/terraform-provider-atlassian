@@ -5,13 +5,18 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
@@ -19,7 +24,18 @@ import (
 var _ resource.Resource = &roleAssignmentResource{}
 var _ resource.ResourceWithIdentity = &roleAssignmentResource{}
 var _ resource.ResourceWithImportState = &roleAssignmentResource{}
-var _ resource.ResourceWithValidateConfig = &roleAssignmentResource{}
+
+// These lists are the single definition of each attribute's rules. The schema
+// applies them to configuration and validateRoleAssignmentIdentity applies the
+// same instances to identity values.
+var (
+	// The numeric pattern already excludes a blank value, so validation.NonBlank would
+	// only add a second diagnostic for the same input.
+	assignmentSpaceIDValidators      = []validator.String{stringvalidator.RegexMatches(numericIDPattern, "must be a numeric string")}
+	assignmentPrincipalTypeValidator = []validator.String{stringvalidator.OneOf("GROUP", "USER")}
+	assignmentPrincipalIDValidators  = []validator.String{validation.NonBlank}
+	assignmentRoleIDValidators       = []validator.String{validation.NonBlank}
+)
 
 type roleAssignmentResource struct{ client *Service }
 
@@ -44,8 +60,12 @@ func (r *roleAssignmentResource) Metadata(_ context.Context, req resource.Metada
 }
 
 func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	requiredReplace := func(description string) schema.StringAttribute {
-		return schema.StringAttribute{Description: description, Required: true, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}}
+	requiredReplace := func(description string, validators ...validator.String) schema.StringAttribute {
+		return schema.StringAttribute{
+			Description: description, Required: true,
+			PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			Validators:    validators,
+		}
 	}
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manages one Confluence space role assignment for a `GROUP` or `USER` principal. A principal can hold at most one role per space, so changing `role_id` updates this resource in place. Custom access is a separate server state and is never overwritten or adopted.\n\n## Required OAuth scopes\n\n- `read:space:confluence`\n- `read:space.permission:confluence`\n- `write:space.permission:confluence`\n",
@@ -55,15 +75,15 @@ func (r *roleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Computed:      true,
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
-			"space_id": requiredReplace("Numeric-string ID of the space."),
+			"space_id": requiredReplace("Numeric-string ID of the space.", assignmentSpaceIDValidators...),
 			"principal": schema.SingleNestedAttribute{
 				Description: "Principal that receives the role.", Required: true,
 				Attributes: map[string]schema.Attribute{
-					"principal_type": requiredReplace("Principal type: GROUP or USER."),
-					"principal_id":   requiredReplace("Immutable Atlassian group or account ID."),
+					"principal_type": requiredReplace("Principal type: GROUP or USER.", assignmentPrincipalTypeValidator...),
+					"principal_id":   requiredReplace("Immutable Atlassian group or account ID.", assignmentPrincipalIDValidators...),
 				},
 			},
-			"role_id": schema.StringAttribute{Description: "Tenant-specific space role ID.", Required: true},
+			"role_id": schema.StringAttribute{Description: "Tenant-specific space role ID.", Required: true, Validators: assignmentRoleIDValidators},
 		},
 	}
 }
@@ -93,20 +113,6 @@ func (r *roleAssignmentResource) Configure(_ context.Context, req resource.Confi
 		return
 	}
 	r.client = NewService(atlassianClient.Confluence)
-}
-
-func (r *roleAssignmentResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var config roleAssignmentState
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	_, diagnostics := roleIdentityFromState(ctx, config)
-	resp.Diagnostics.Append(diagnostics...)
-	resp.Diagnostics.Append(validateNonEmpty("Invalid Confluence space role assignment", namedValue{"space_id", config.SpaceID}, namedValue{"role_id", config.RoleID})...)
-	if knownString(config.SpaceID) && !numericIDPattern.MatchString(config.SpaceID.ValueString()) {
-		resp.Diagnostics.AddError("Invalid Confluence space role assignment", "space_id must be a numeric string.")
-	}
 }
 
 func (r *roleAssignmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -338,22 +344,25 @@ func roleIdentityFromState(ctx context.Context, state roleAssignmentState) (role
 	}
 	diagnostics.Append(state.Principal.As(ctx, &principal, basetypes.ObjectAsOptions{})...)
 	identity := roleAssignmentIdentity{SpaceID: state.SpaceID, PrincipalType: principal.PrincipalType, PrincipalID: principal.PrincipalID}
-	diagnostics.Append(validateRoleAssignmentIdentity(identity)...)
+	diagnostics.Append(validateRoleAssignmentIdentity(ctx, identity, roleAssignmentStatePaths)...)
 	return identity, diagnostics
 }
 
-func validateRoleAssignmentIdentity(identity roleAssignmentIdentity) diag.Diagnostics {
-	diagnostics := validateNonEmpty("Invalid Confluence space role assignment",
-		namedValue{"space_id", identity.SpaceID}, namedValue{"principal.principal_type", identity.PrincipalType}, namedValue{"principal.principal_id", identity.PrincipalID})
-	if knownString(identity.SpaceID) && !numericIDPattern.MatchString(identity.SpaceID.ValueString()) {
-		diagnostics.AddError("Invalid Confluence space role assignment", "space_id must be a numeric string.")
-	}
-	if knownString(identity.PrincipalType) {
-		value := identity.PrincipalType.ValueString()
-		if value != "GROUP" && value != "USER" {
-			diagnostics.AddError("Invalid Confluence space role assignment", fmt.Sprintf("principal.principal_type must be GROUP or USER, got %q.", value))
-		}
-	}
+// roleAssignmentStatePaths is where the identity's parts live in resource state.
+var roleAssignmentStatePaths = principalPaths{
+	spaceID:       path.Root("space_id"),
+	principalType: path.Root("principal").AtName("principal_type"),
+	principalID:   path.Root("principal").AtName("principal_id"),
+}
+
+// validateRoleAssignmentIdentity applies the schema's own attribute validators
+// to identity values, which Terraform does not validate for us, reporting at
+// paths in the layout the caller is validating.
+func validateRoleAssignmentIdentity(ctx context.Context, identity roleAssignmentIdentity, paths principalPaths) diag.Diagnostics {
+	var diagnostics diag.Diagnostics
+	diagnostics.Append(validation.RunString(ctx, paths.spaceID, identity.SpaceID, assignmentSpaceIDValidators)...)
+	diagnostics.Append(validation.RunString(ctx, paths.principalType, identity.PrincipalType, assignmentPrincipalTypeValidator)...)
+	diagnostics.Append(validation.RunString(ctx, paths.principalID, identity.PrincipalID, assignmentPrincipalIDValidators)...)
 	return diagnostics
 }
 
@@ -361,7 +370,9 @@ func parseRoleAssignmentImport(ctx context.Context, req resource.ImportStateRequ
 	var identity roleAssignmentIdentity
 	ok := parsePrincipalImport(ctx, req, resp, &identity, func(parts [3]string) roleAssignmentIdentity {
 		return roleAssignmentIdentity{SpaceID: types.StringValue(parts[0]), PrincipalType: types.StringValue(parts[1]), PrincipalID: types.StringValue(parts[2])}
-	}, validateRoleAssignmentIdentity)
+	}, func(identity roleAssignmentIdentity) diag.Diagnostics {
+		return validateRoleAssignmentIdentity(ctx, identity, importIdentityPaths)
+	})
 	return identity, ok
 }
 

@@ -8,16 +8,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/folio-sec/terraform-provider-atlassian/internal/validation"
+
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/client/admin"
 	organizationclient "github.com/folio-sec/terraform-provider-atlassian/internal/client/admin/organization"
 	"github.com/folio-sec/terraform-provider-atlassian/internal/docs"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/identityschema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -75,10 +79,11 @@ func (r *userOrganizationRoleAssignmentResource) Metadata(_ context.Context, req
 }
 
 func (r *userOrganizationRoleAssignmentResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
-	requiredReplace := func(description string) schema.StringAttribute {
+	requiredReplace := func(description string, validators ...validator.String) schema.StringAttribute {
 		return schema.StringAttribute{
 			Description: description,
 			Required:    true,
+			Validators:  validators,
 			PlanModifiers: []planmodifier.String{
 				stringplanmodifier.RequiresReplace(),
 			},
@@ -98,10 +103,10 @@ func (r *userOrganizationRoleAssignmentResource) Schema(_ context.Context, _ res
 		),
 		Attributes: map[string]schema.Attribute{
 			"id":              schema.StringAttribute{Description: "Composite organization-level role assignment identifier.", Computed: true},
-			"organization_id": requiredReplace("Atlassian organization ID used in the Organization API path."),
-			"directory_id":    requiredReplace("Directory ID used to read the user's current role assignments."),
-			"account_id":      requiredReplace("Opaque Atlassian account ID."),
-			"role":            requiredReplace("Atlassian organization-level role. Currently only atlassian/org-admin is supported."),
+			"organization_id": requiredReplace("Atlassian organization ID used in the Organization API path.", organizationRoleAssignmentIdentifierValidators...),
+			"directory_id":    requiredReplace("Directory ID used to read the user's current role assignments.", organizationRoleAssignmentIdentifierValidators...),
+			"account_id":      requiredReplace("Opaque Atlassian account ID.", organizationRoleAssignmentIdentifierValidators...),
+			"role":            requiredReplace("Atlassian organization-level role. Currently only atlassian/org-admin is supported.", organizationAdminRoleValidators...),
 		},
 	}
 }
@@ -142,29 +147,26 @@ func (r *userOrganizationRoleAssignmentResource) ValidateConfig(ctx context.Cont
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	resp.Diagnostics.Append(validateUserOrganizationRoleAssignment(config.OrganizationID, config.DirectoryID, config.AccountID, config.Role)...)
+	resp.Diagnostics.Append(validateUserOrganizationRoleAssignment(ctx, config.OrganizationID, config.DirectoryID, config.AccountID, config.Role)...)
 }
 
-func validateUserOrganizationRoleAssignment(organizationID, directoryID, accountID, role types.String) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-	values := []struct {
-		name  string
-		value types.String
-	}{
-		{"organization_id", organizationID},
-		{"directory_id", directoryID},
-		{"account_id", accountID},
-		{"role", role},
-	}
-	for _, item := range values {
-		if !item.value.IsNull() && !item.value.IsUnknown() && strings.TrimSpace(item.value.ValueString()) == "" {
-			diagnostics.AddError("Invalid organization role assignment", fmt.Sprintf("%s must not be empty.", item.name))
-		}
-	}
-	if !role.IsNull() && !role.IsUnknown() && role.ValueString() != organizationAdminRole {
-		diagnostics.AddError("Invalid organization role assignment", fmt.Sprintf("role must be %q.", organizationAdminRole))
-	}
-	return diagnostics
+// These lists are the single definition of each attribute's rules.
+var (
+	organizationRoleAssignmentIdentifierValidators = []validator.String{validation.NonBlank}
+	// OneOf already excludes a blank value. Only the organization admin role
+	// is granted through these endpoints.
+	organizationAdminRoleValidators = []validator.String{stringvalidator.OneOf(organizationAdminRole)}
+)
+
+// validateUserOrganizationRoleAssignment applies the schema's own attribute
+// validators to values Terraform does not validate for us.
+func validateUserOrganizationRoleAssignment(ctx context.Context, organizationID, directoryID, accountID, role types.String) diag.Diagnostics {
+	return runIdentityStringValidators(ctx,
+		identityStringValidators{"organization_id", organizationID, organizationRoleAssignmentIdentifierValidators},
+		identityStringValidators{"directory_id", directoryID, organizationRoleAssignmentIdentifierValidators},
+		identityStringValidators{"account_id", accountID, organizationRoleAssignmentIdentifierValidators},
+		identityStringValidators{"role", role, organizationAdminRoleValidators},
+	)
 }
 
 func (r *userOrganizationRoleAssignmentResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -271,7 +273,7 @@ func (r *userOrganizationRoleAssignmentResource) ImportState(ctx context.Context
 	if !ok {
 		return
 	}
-	resp.Diagnostics.Append(validateUserOrganizationRoleAssignment(identity.OrganizationID, identity.DirectoryID, identity.AccountID, identity.Role)...)
+	resp.Diagnostics.Append(validateUserOrganizationRoleAssignment(ctx, identity.OrganizationID, identity.DirectoryID, identity.AccountID, identity.Role)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
